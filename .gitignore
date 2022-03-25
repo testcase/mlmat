@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Mac Specific
+.DS_Store
+
+# Max
+*.mxo
+*.mxe64
+
+build/
