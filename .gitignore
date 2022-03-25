@@ -39,3 +39,5 @@
 *.mxe64
 
 build/
+docs/
+externals/
