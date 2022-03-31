@@ -7,8 +7,8 @@ set(C74_MIN_API_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../min-api)
 include(${C74_MIN_API_DIR}/script/min-pretarget.cmake)
 
 # Set directory for support folder
-set(MLMAT_SUPPORT_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../support)
-
+set(ARMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../armadillo)
+set(MLPACK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../mlpack)
 
 #############################################################
 # MAX EXTERNAL
@@ -18,10 +18,12 @@ find_path(MLPACK_HEADERS mlpack)
 include_directories( 
 	"${C74_INCLUDES}"
     "${MLMAT_SUPPORT_DIR}/mlpack/build/include"
-    "${MLMAT_SUPPORT_DIR}/armadillo-code/include"
-    "${MLMAT_SUPPORT_DIR}/include"
+    "${ARMA_DIR}/include"
+    "${MLPACK_DIR}/build/include"
+    "/usr/local/include"
     "../shared"
 )
+
 
 set( SOURCE_FILES
 	${PROJECT_NAME}.cpp
@@ -40,17 +42,16 @@ find_library(
 )
 
 
-target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLMAT_SUPPORT_DIR}/armadillo-code/build/Debug/libarmadillo.a")
-target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLMAT_SUPPORT_DIR}/mlpack/build/lib/Debug/libmlpack.a")
+target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/libarmadillo.a")
+target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/lib/Debug/libmlpack.a")
 
 
-target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLMAT_SUPPORT_DIR}/armadillo-code/build/Release/libarmadillo.a")
-target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLMAT_SUPPORT_DIR}/mlpack/build/lib/Release/libmlpack.a")
+target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
+target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
-
 
 #############################################################
 # UNIT TEST

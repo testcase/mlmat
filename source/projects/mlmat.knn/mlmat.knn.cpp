@@ -3,11 +3,6 @@
 /// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Other distance Metrics?
-/// TODO: Serialization read/write
-/// TODO: Testing
-
-//#define ARMA_DONT_USE_WRAPPER
-
 
 #include "c74_min.h"
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
@@ -41,11 +36,6 @@ public:
     MIN_TAGS		    {"ML"};
     MIN_AUTHOR		    {"Todd Ingalls"};
     MIN_RELATED		    {"mlmat.kfn, mlmat.svm"};
-    
-    inlet<>  input1	    { this, "(matrix) Matrix containing query points.", "matrix"  };
-    inlet<>  input2     { this, "(matrix) Matrix containing the reference dataset." , "matrix"  };
-    outlet<> output1    { this, "(matrix) Matrix to output neighbors into.", "matrix"  };
-    outlet<> output2    { this, "(matrix) Matrix to output distances into.", "matrix"  };
 
     attribute<int> neighbors { this, "neighbors", 1,
         description {
@@ -54,9 +44,10 @@ public:
         setter { MIN_FUNCTION {
             double value = args[0];
             
-            if (value < 1)
+            if (value < 1) {
                 value = 1;
-                return {value};
+            }
+            return {value};
         }}
     };
 
@@ -70,9 +61,10 @@ public:
         setter { MIN_FUNCTION {
             double value = args[0];
             
-            if (value > 1)
+            if (value > 1) {
                 value = 1;
-                return {value};
+            }
+            return {value};
         }}
     };
     
@@ -97,9 +89,10 @@ public:
         setter { MIN_FUNCTION {
             double value = args[0];
             
-            if (value < 1)
+            if (value < 1) {
                 value = 1;
-                return {value};
+            }
+            return {value};
         }}
     };
     
@@ -110,9 +103,10 @@ public:
         setter { MIN_FUNCTION {
             double value = args[0];
             
-            if (value < 0.)
+            if (value < 0.) {
                 value = 0.;
-                return {value};
+            }
+            return {value};
         }}
     };
     
@@ -373,10 +367,11 @@ public:
         m_model.model->Tau() = tau;
         m_model.model->Rho() = rho;
 
-        if (seed != 0)
+        if (seed != 0) {
           mlpack::math::RandomSeed((size_t) seed);
-        else
+        } else {
           mlpack::math::RandomSeed((size_t) std::time(NULL));
+        }
         
         scaler_fit(m_model, dat);
         out_data = scaler_transform(m_model, dat, out_data);
@@ -409,7 +404,7 @@ private:
             }
         }
     }
-    // override jitclass_setup so we can have our own matrix_calc. jitclass_setup is called first (and only once when the object is loaded for the first time) during the intitialization of the object.
+
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         // add mop
@@ -420,11 +415,10 @@ private:
         jit_mop_input_nolink(mop, 2);
         jit_mop_output_nolink(mop, 1);
         jit_mop_output_nolink(mop, 2);
-        
+
         auto input2 = jit_object_method(mop,_jit_sym_getinput,2);
-    
         //always adapt
-        jit_object_method(input2,_jit_sym_ioproc,jit_mop_ioproc_copy_adapt);
+         jit_object_method(input2,_jit_sym_ioproc,jit_mop_ioproc_copy_adapt);
         
         jit_class_addadornment(c, mop);
         
