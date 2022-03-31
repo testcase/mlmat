@@ -37,11 +37,6 @@ public:
     MIN_TAGS            {"ML"};
     MIN_AUTHOR          {"Todd Ingalls"};
     MIN_RELATED         {"mlmat.knn"};
-    
-    inlet<>  input1     { this, "(matrix) Matrix containing query points.", "matrix"  };
-    inlet<>  input2     { this, "(matrix) Matrix containing the reference dataset." , "matrix"  };
-    outlet<> output1    { this, "(matrix) Matrix to output neighbors into.", "matrix"  };
-    outlet<> output2    { this, "(matrix) Matrix to output distances into.", "matrix"  };
 
     attribute<int> neighbors { this, "neighbors", 1,
         description {
@@ -406,14 +401,11 @@ private:
         
         // force type
         jit_mop_single_type(mop, _jit_sym_float64);
-        jit_mop_input_nolink(mop, 2);
-        jit_mop_output_nolink(mop, 1);
-        jit_mop_output_nolink(mop, 2);
        
-        auto input2 = jit_object_method(mop,_jit_sym_getinput,2);
+        auto ref_input = jit_object_method(mop,_jit_sym_getinput,2);
    
         //always adapt
-        jit_object_method(input2,_jit_sym_ioproc,jit_mop_ioproc_copy_adapt);
+        jit_object_method(ref_input,_jit_sym_ioproc,jit_mop_ioproc_copy_adapt);
 
         jit_class_addadornment(c, mop);
        
@@ -421,14 +413,7 @@ private:
         jit_class_addmethod(c, (method)mlmat_matrix_calc, "matrix_calc", A_CANT, 0);
         return {};
     }};
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
-    
+
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         

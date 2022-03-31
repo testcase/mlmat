@@ -70,33 +70,6 @@ t_object* maxob_from_jitob(c74::max::t_object* job) {
     return mwrap;
 }
 
-class MyPrintLoss
-{
-public:
-    MyPrintLoss(void* outlet) : outlet(outlet)
-    {}
-    
-    template<typename OptimizerType, typename FunctionType, typename MatType>
-    void EndEpoch(OptimizerType& /* optimizer */,
-                  FunctionType& /* function */,
-                  const MatType& /* coordinates */,
-                  const size_t /* epoch */,
-                  const double objective)
-    {
-        
-        t_atom a[1];
-        
-        atom_setfloat(a,objective);
-        outlet_anything(outlet, gensym("loss"), 1, a);
-        
-    }
-private:
-    
-    void* outlet;
-    
-    
-};
-
 template<class class_type>
 class mlmat_serializable_model
 {
@@ -136,6 +109,12 @@ public:
         }}
     };
     
+    message<> maxob_setup {this, "maxob_setup",
+        MIN_FUNCTION {
+            c74::max::t_object* mob = maxob_from_jitob(c74::min::object_base::maxobj());
+            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
+            return {};
+    }};
     
     template<typename matrix_type>
     matrix_type calc_cell(matrix_type input, const matrix_info& info, matrix_coord& position) {
@@ -148,7 +127,6 @@ protected:
     bool m_mode_changed = true;
     void* m_dumpoutlet { nullptr };
 };
-
 
 template<class min_class_type, threadsafe threadsafety = threadsafe::no>
 class mlmat_operator_autoscale :  public c74::min::object<min_class_type>, public matrix_operator<> {
@@ -163,14 +141,14 @@ public:
             return args;
         }}
     };
-    
+
     //this will likely be moved to mlmat_operator
     attribute<bool> autoscale { this, "autoscale", false,
         description {
             "Automatically scale data based on scaling_type."
         }
     };
-    
+
     attribute<min::symbol> scaler { this, "scaler", "normalization",
         description {
             "The scaler type."
@@ -181,21 +159,21 @@ public:
         }},
         range {"standard","min_max", "normalization", "abs", "pca_whitening", "zca_whitening"}
     };
-    
+
     attribute<int> scaler_min { this, "scaler_min", 0,
         description {
             "Minimum value. "
             "Minimum value. "
         }
     };
-    
+
     attribute<int> scaler_max { this, "scaler_max", 1,
         description {
             "Maximum value. "
             "Maximum value. "
         }
     };
-    
+
     attribute<double> scaler_epsilon { this, "scaler_epsilon", .00005,
         description {
             "Epsilon value. "
@@ -203,17 +181,19 @@ public:
         }
     };
     
+
+
     template<typename matrix_type>
     matrix_type calc_cell(matrix_type input, const matrix_info& info, matrix_coord& position) {
         matrix_type output;
         return output;
     }
-    
+
 
     template<typename ModelType>
     void scaler_fit(ModelType& s, arma::Mat<double>& arma_matrix) {
         const string scalertype_string = scaler.get().c_str();
-        
+
         if(autoscale) {
             s.scaler = std::make_unique<ScalingModel>(scaler_min, scaler_max, scaler_epsilon);
             if(scalertype_string == "standard") {
@@ -232,7 +212,7 @@ public:
             s.scaler->Fit(arma_matrix);
         }
     }
-    
+
     template<typename ModelType>
     arma::mat& scaler_transform(ModelType& s, arma::Mat<double>& input, arma::Mat<double> &output) {
         if(autoscale) {
@@ -246,7 +226,7 @@ public:
             return input;
         }
     }
-    
+
     template<typename ModelType>
     arma::mat& scaler_inverse_transform(ModelType& s, arma::Mat<double>& input, arma::Mat<double> &output) {
         if(autoscale) {
@@ -256,6 +236,8 @@ public:
             return input;
         }
     }
+    
+    
 
 protected:
     bool m_mode_changed = true;
@@ -265,3 +247,34 @@ protected:
 
 
 
+
+
+
+
+
+//class MyPrintLoss
+//{
+//public:
+//    MyPrintLoss(void* outlet) : outlet(outlet)
+//    {}
+//
+//    template<typename OptimizerType, typename FunctionType, typename MatType>
+//    void EndEpoch(OptimizerType& /* optimizer */,
+//                  FunctionType& /* function */,
+//                  const MatType& /* coordinates */,
+//                  const size_t /* epoch */,
+//                  const double objective)
+//    {
+//
+//        t_atom a[1];
+//
+//        atom_setfloat(a,objective);
+//        outlet_anything(outlet, gensym("loss"), 1, a);
+//
+//    }
+//private:
+//
+//    void* outlet;
+//
+//
+//};

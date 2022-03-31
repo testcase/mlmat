@@ -412,14 +412,12 @@ private:
         
         // force type
         jit_mop_single_type(mop, _jit_sym_float64);
-        jit_mop_input_nolink(mop, 2);
-        jit_mop_output_nolink(mop, 1);
-        jit_mop_output_nolink(mop, 2);
-
-        auto input2 = jit_object_method(mop,_jit_sym_getinput,2);
-        //always adapt
-         jit_object_method(input2,_jit_sym_ioproc,jit_mop_ioproc_copy_adapt);
         
+
+        auto ref_input = jit_object_method(mop,_jit_sym_getinput,2);
+        //always adapt
+        jit_object_method(ref_input,_jit_sym_ioproc,jit_mop_ioproc_copy_adapt);
+
         jit_class_addadornment(c, mop);
         
         // add our custom matrix_calc method
@@ -427,13 +425,7 @@ private:
         return {};
     }};
     
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
-    
+
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         

@@ -41,6 +41,104 @@ In this mode jitter matrices are going to be 1 or 2d with a single plane. Each r
 ### mode 2: 
 In this mode jitter matrices are going to be 1 or 2d with a single plane. Each column is a data point and each row in the column is an element of that point. This corresponds to the typical layout used by mlpack for armadillo matrices and would make it easier to replicate examples using mlpack.
 	
+## Building on macOS
+
+Over view
+0. Clone repo 
+1. Build armadillo static lib
+2. Install prereqs for buildng mlpack (I am using homebrew)
+3. Build mlpack static lib
+4. Generate projects and build objects
+
+
+### Clone rep
+
+remember this to get all min-api stuff :
+* `git submodule init`
+* `git submodule update --init --recursive`
+
+
+### Build armadillo static lib
+
+`cd source/armadillo` to go to armadillo directory
+
+run `mkdir build` to create build directory
+
+`cd build`
+
+This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
+
+`cmake  -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -G Xcode ..`
+
+You can now use 
+
+`cmake --build . --config Release` to build release version of library
+
+if wanting to debug also do
+
+`cmake --build . --config Debug`
+
+You should now have static library at build/Release/libarmadillo.a
+
+### Build mlpack static lib 
+
+mlpack has a number of prerequisites
+
+The minimal I find to work need boost, ensmallen and cereal libraries. I can them from homebrew
+
+`brew install boost`
+`brew install ensmallen`
+`brew install cereal`
+
+From the source/mlpack directory run
+`mkdir build`
+
+`cd build`
+
+These are the cmake options I use. mlpack has a number of potential bindings but these are not of use for this project
+
+`cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -G Xcode ..`
+
+
+You can now use 
+
+`cmake --build . --config Release` to build release version of library
+
+if wanting to debug also do
+
+`cmake --build . --config Debug`
+
+
+### Generate projects and build
+
+cd into main mlmat directory
+
+run 
+`mkdir build`
+
+`cd build`
+
+`cmake -GXcode ..`
+
+
+You should now be able to do the following but I have not figure out how to disable or bypass testing. Or maybe better make suitable tests. You can run builds from individual projects or modify the mlmat project to skip the testing. 
+
+`cmake --build . --config Release` to build release version of library
+
+if wanting to debug also do
+
+`cmake --build . --config Debug`
+
+
+
+
+
+
+
+
+
+
+
 	
 ## Objects
 The following 7 objects have been started and have working code. All need to have the ability to use built in serialization capabilities to save models to a file. Can be text file, xml or binary. I guess xml would be best at this point.
@@ -49,6 +147,7 @@ The following 7 objects have been started and have working code. All need to hav
 *	mlpack.kfn - highly configurable k-farthest neighbor search. 
 *	mlpack.knn - highly configurable k-nearest neighbor search. 
 *	mlpack.kmeans - kmeans clustering given labels and cluster centroids. centroids can be fed back into object to speed up clustering
+*   mlpack.mean_shift - another clustering algorithm. 
 *	mlpack.linear_svm - linear state vector machine. supervised learning for classification.
 *	mlpack.som - self-organizing map - unsupervised clustering. not really part of mlpack but useful.
 *	mlpack.gmm - gaussian mixture model for identification and generative uses. 
@@ -56,14 +155,13 @@ The following 7 objects have been started and have working code. All need to hav
 *	mlpack.linear_regression - simple linear regression.
 *	mlpack.sparse_autoencoder -  does do dimensionality reduction and generation
 *	mlpack.pca - dimensionality reduction
-	
-These objects have not been started but are planned. 
 *	mlpack.mlp - multi-layer perceptron. vanilla ann for learning/mapping. should have one-hot-encoding option. allow for various activiation functions - ReLU, tanh, etc.
 *	mlpack.hmm - hidden markov model
 *	mlpack.hoeffding_tree - is a decision tree that does incremental learning so useful for dealing with realtime developement of decision tree.
-*	mlpack.lstm - long short term memory. type of rnn
-*  	********* will like to get to here before making public. **********
-*	mlpack.meanshift - another clustering algorithm. 
+*   mlpack.sparse_autoencoder
+
+potential future objects
+
 *	mlpack.naive_bayes - probabilistic clustering. 
 *	mlpack.random_forest - ensemble of trees.
 *	mlpack.gan - generative adversarial network. not really suitable for doing typical image stuff but could be interesting particularly on 3d objects. can also do DCGAN, WGAN, WGANP variants. not sure those are useful.
@@ -82,28 +180,6 @@ to have objects that create a bank of objects and can dynamically add to the ban
 ## Examples 
 Have been working on examples and helpfiles. Will be going back and adding more descriptions so auto-generated ref files are better. 
 	
-mlmat.convert -> n/a 
-mlmat.gmm
-mlmat.hmm
-mlmat.hoeffding_tree
-mlmat.id3_tree
-mlmat.kfn
-mlmat.kmeans
-mlmat.knn
-mlmat.linear_regression -> how to do auto scaling with this?
-mlmat.linear_svm
-mlmat.load
-mlmat.lookup
-mlmat.mean_shift
-mlmat.mlp_classifier
-mlmat.mlp_regressor
-mlmat.pca -> has special case of scaling. 
-mlmat.scaling
-mlmat.som
-mlmat.sparse_autoencoder
-mlmat.split
-mlmat.variational_autoendoder
-
 
 	
 	
@@ -134,3 +210,57 @@ Further details:
 https://undocs.org/A/RES/ES-11/1
 https://digitallibrary.un.org/record/3965290/files/A_RES_ES-11_1-EN.pdf
 https://digitallibrary.un.org/record/3965290/files/A_RES_ES-11_1-RU.pdf
+
+
+
+mlpack is provided without any warranty of fitness for any purpose.  You
+can redistribute the library and/or modify it under the terms of the 3-clause
+BSD license.  The text of the 3-clause BSD license is contained below.
+
+mlpack contains some reproductions of the source code of Armadillo, which is
+licensed under the Mozilla Public License v2.0 (MPL2).  This code is found in
+src/mlpack/core/arma_extend/ and more details on the licensing are available
+there.
+
+mlpack also contains some reproductions of the source code of Boost, which is
+licensed under the Boost Software License, version 1.0.  This code is found in
+src/mlpack/core/boost_backport/ and more details on the licensing are available
+there.
+
+mlpack contain some usage of the source code of MNMLSTC Core library, which is
+a backport of C++17 features to C++11. MNMLSTC is licensed under the Apache 2.0
+License. This code can be found in src/mlpack/core/std_backport/ and more
+details about licensing can be found there.
+
+mlpack may contain some usage of the source code of stb, which is licensed 
+under the MIT License and the Public Domain (www.unlicense.org). This code
+is used in src/mlpack/core/data/load_image.hpp.
+
+----
+Copyright (c) 2007-2020, mlpack contributors (see COPYRIGHT.txt)
+All rights reserved.
+
+Redistribution and use of mlpack in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
