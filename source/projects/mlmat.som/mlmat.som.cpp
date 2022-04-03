@@ -1,6 +1,6 @@
 /// @file mlmat.som.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// http://www.ai-junkie.com/ann/som/som4.html
 /// TODO: in mode 1 and 2 needs to output 3d matrix
@@ -18,18 +18,6 @@ using namespace mlpack::metric;
 using namespace mlpack::util;
 
 typedef NeighborSearch<NearestNeighborSort, mlpack::metric::SquaredEuclideanDistance> SomKNN;
-
-/*
- initialization modes
- uniform 0 - 1
- gaussian
- sampled
- 
- ////
- batch_mode
- 
- 
- */
 
 class SOM {
 public:
@@ -49,12 +37,11 @@ public:
             m_nodes = std::make_unique<arma::Mat<double>>(weights, cols*rows, arma::fill::randn);
         }
         m_map_radius = std::max(cols, rows) / 2;
-       //td::cout << " Map radisus " << m_map_radius << std::endl;
+
         if(neighborhood != 0) {
             m_map_radius = MIN(neighborhood, m_map_radius);
         }
-        //std::cout << " Map radius " << m_map_radius << std::endl;
-        //m_map_radius = CLAMP(neighbors, 1, std::max(cols, rows));
+
         m_time_constant = m_num_iterations/log(m_map_radius);
     }
     
@@ -135,7 +122,6 @@ public:
             }
             
             for(auto j=0;j<m_nodes->n_cols;j++) {
-                //std::cout << denominator[j] << std::endl;
                 m_nodes->col(j) = numerator.col(j)/denominator[j];
             }
         }
@@ -211,11 +197,6 @@ public:
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.kmeans, mlmat.mean_shift"};
-
-    inlet<>  input1	{ this, "(bang) post greeting to the max console", "matrix" };
-    inlet<>  input2    { this, "(bang) post greeting to the max console", "matrix" };
-    outlet<> output	{ this, "(anything) output the message which is posted to the max console", "matrix" };
-
 
     attribute<int> rows { this, "rows", 8,
     	description {"The number of rows in map."}

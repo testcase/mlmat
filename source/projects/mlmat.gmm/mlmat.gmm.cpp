@@ -1,7 +1,7 @@
-/// @file
-///	@ingroup 	minexamples
-///	@copyright	Copyright 2018 The Min-DevKit Authors. All rights reserved.
-///	@license	Use of this source code is governed by the MIT License found in the License.md file.
+/// @file mlmat.gmm.cpp
+/// @ingroup mlmat
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
+/// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 
 #include "c74_min.h"
@@ -26,7 +26,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
 
-class mlmat_gmm : public mlmat_operator_autoscale<mlmat_gmm>
+class mlmat_gmm : public mlmat_operator_autoscale<mlmat_gmm, GMM>
 {
 public:
 
@@ -35,13 +35,6 @@ public:
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.knn, mlmat.hmm, mlmat.linear_svm"};
     MIN_DISCUSSION  {"In addition to being able to determine the probability that input comes from the learned distribution, this object has a number of features for generating data based ont the learned model. The <at>generate</at> message can be used to create N number of randomly generated observations based on the model. The <at>component</at> message can be used to generate N observations from a single component of the model. The <at>weights</at> message can be used to alter the relative weights of the components when generating random observations using the <at>weighted_generate</at> message."};
-    
-    inlet<>  input1     { this, "(matrix) Input matrix to calculate probabilities of belonging to model.", "matrix" };
-    inlet<>  input2     { this, "(matrix) The training data on which the model will be fit." , "matrix" };
-    outlet<> output1    { this, "(matrix) Generated", "matrix" };
-    outlet<> output2    { this, "(matrix) Probabilities", "matrix" };
-    outlet<> output3    { this, "(matrix) Log-probabilities", "matrix" };
-    outlet<> output4    { this, "(matrix) Classifications", "matrix" };
     
     attribute<bool> autoclear { this, "autoclear", false, 
     	description {"Clear training data from memory after the model has been trained."}
@@ -159,67 +152,13 @@ public:
         range {0.0, 1.0}
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-           description {
-               "File"
-           },
-           title {
-               "File"
-           },
-           setter { MIN_FUNCTION {
-               if(args[0] != k_sym__empty) {
-                   load_model_file(args);
-               }
-               return args;
-           }}
-       };
-       
-       message<> write {this, "write",
-           MIN_FUNCTION {
-              try {
-                  m_model.autoscale = autoscale;
-                  save_model_file(args, m_model, "gmm");
-              } catch (const std::runtime_error& s) {
-                  (cerr << s.what() << endl);
-              }
-              return {};
-           }
-       };
-       
-       message<> read {this, "read",
-           MIN_FUNCTION {
-               load_model_file(args);
-               autoscale = m_model.autoscale;
-               m_mode_changed = false;
-               return {};
-           }
-       };
-        
-        message<> clear { this, "clear", "clear data and model",
-            MIN_FUNCTION {
-                m_data.reset();
-                m_model.model.reset();
-                return {};
-            }
-        };
-                   
-       void load_model_file(const atoms& args) {
-          atoms f{};
-
-          if(!args.empty()) {
-              f.push_back(args[0]);
-          }
-          
-          path p {f, path::filetype::any};
-
-          if(p) {
-              try {
-                  mlpack::data::Load(string(p), "gmm", m_model, true);
-              } catch (const std::runtime_error& s) {
-                  std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-              }
-          }
-       }
+    message<> clear { this, "clear", "clear data and model",
+        MIN_FUNCTION {
+            m_data.reset();
+            m_model.model.reset();
+            return {};
+        }
+    };
     
     message<> weights { this, "weights", "weights for gaussians",
         MIN_FUNCTION {
@@ -351,7 +290,6 @@ public:
 
     message<> generate { this, "generate",
         MIN_FUNCTION {
-           // t_object *x = (t_object*)max_jit_obex_jitob_get(this);
             auto num = 1;
             if(args.size() > 0) {
                 num = args[0];
@@ -780,7 +718,7 @@ public:
     }
 
 private:
-    mlmat_serializable_model<GMM> m_model;
+    
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
     std::unique_ptr<arma::vec> m_weights { nullptr };
 };

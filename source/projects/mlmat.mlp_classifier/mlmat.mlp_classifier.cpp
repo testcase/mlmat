@@ -1,6 +1,6 @@
 /// @file mlmat.mlp_classifier.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Validate optimizer settings. Don't seem to be working well. Could be because not scaling?
 
@@ -22,19 +22,13 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) ;
 void mlmat_mlp_assist(void* x, void* b, long io, long index, char* s);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
-class mlmat_mlp_classifier : public mlmat_operator_autoscale<mlmat_mlp_classifier> {
+class mlmat_mlp_classifier : public mlmat_operator_autoscale<mlmat_mlp_classifier, FFN<>> {
 public:
     MIN_DESCRIPTION     {"Multi layer perceptron. This mlp can be used as a classifier."};
     MIN_TAGS            {"ML"};
     MIN_AUTHOR          {"Todd Ingalls"};
     MIN_RELATED         {"mlmat.svm"};
     
-    inlet<>  input1 {this, "(matrix) Testing dataset", "matrix"};
-    inlet<>  input2 {this, "(matrix) Training dataset.", "matrix"};
-    inlet<>  input3 {this, "(matrix) Training labels.", "matrix"};
-    outlet<> output1 {this, "(matrix) Class likelihoods for each test point.", "matrix"};
-    outlet<> output2 {this, "(matrix) Class predictions for each test point.", "matrix"};
-
     attribute<int> output_neurons { this, "output_neurons", 1,
         description {
             "Number of output neurons."
@@ -60,7 +54,6 @@ public:
         }
     };
     
-    //TODO: will add this functionality later
     attribute<min::symbol> optimizer { this, "optimizer", "rmsprop",
         range { "rmsprop", "sgd", "lbfgs", "adam"},
         description {
@@ -86,21 +79,6 @@ public:
         description { "Convergence tolerance for optimizer." }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-        description {
-            "File"
-        },
-        title {
-            "File"
-        },
-        setter { MIN_FUNCTION {
-            if(args[0] != k_sym__empty) {
-                load_model_file(args);
-            }
-            return args;
-        }}
-    };
-
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
             arma::Mat<double> labels(*m_labels);
@@ -185,45 +163,7 @@ public:
         }
     };
     
-    message<> write {this, "write",
-        MIN_FUNCTION {
-           try {
-               m_model.autoscale = autoscale;
-               save_model_file(args, m_model, "mlp_classifier");
-           } catch (const std::runtime_error& s) {
-               (cout << s.what() << endl);
-           }
-           return {};
-        }
-    };
-
-    message<> read {this, "read",
-        MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
-            return {};
-        }
-    };
-
-    void load_model_file(const atoms& args) {
-       atoms f{};
-
-       if(!args.empty()) {
-           f.push_back(args[0]);
-       }
-       
-       path p {f, path::filetype::any};
-
-       if(p) {
-           try {
-               mlpack::data::Load(string(p), "mlp_classifier", m_model, true);
-           } catch (const std::runtime_error& s) {
-               std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-           }
-       }
-    }
-        
+    
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         // ignore last two inputs as they have already been processed
         t_jit_err err = JIT_ERR_NONE;
@@ -418,14 +358,7 @@ private:
         jit_class_addmethod(c, (method)mlmat_matrix_calc, "matrix_calc", A_CANT, 0);
         return {};
     }};
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-       }};
-    
+
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         max_jit_class_mop_wrap(c, this_jit_class, 0);
@@ -436,18 +369,18 @@ private:
 
     }};
     
-    mlmat_serializable_model<FFN<>> m_model;
     std::unique_ptr<arma::Mat<double>> m_training;
     std::unique_ptr<arma::Mat<double>> m_labels;
     double m_labels_min = 0.;
     double m_labels_max = 0.;
     
 };
+
 MIN_EXTERNAL(mlmat_mlp_classifier);
 
 
 
-void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv) {
+void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc, t_atom *argv) {
     //found need to call this first or the
     // info for the incoming matrix is incorrect
     // this does not seem right

@@ -1,6 +1,6 @@
 /// @file mlmat.linear_svm.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
@@ -40,19 +40,13 @@ class LinearSVMModel
 };
 
 
-class mlmat_linear_svm : public mlmat_operator_autoscale<mlmat_linear_svm>
+class mlmat_linear_svm : public mlmat_operator_autoscale<mlmat_linear_svm, LinearSVMModel>
 {
 public:
     MIN_DESCRIPTION	{"Linear SVM. An implementation of linear SVM for multiclass classification. Given labeled data, a model can be trained and saved for future use; or, a pre-trained model can be used to classify new points."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.linear_regression, mlmat.mlp_classifier"};
-
-    inlet<>  input1 {this, "(matrix) Testing dataset", "matrix"};
-    inlet<>  input2 {this, "(matrix) Training dataset.", "matrix"};
-    inlet<>  input3 {this, "(matrix) Training labels.", "matrix"};
-    outlet<> output1 {this, "(matrix) Class probabilities for each test point.", "matrix"};
-    outlet<> output2 {this, "(matrix) Class scores for each test point.", "matrix"};
 
     attribute<double> lambda { this, "lambda", .0001,
         description { "L2-regularization parameter for training." }
@@ -100,22 +94,6 @@ public:
             "Random seed if random basis being used. 0 indicates no seed."
         }
     };
-    
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-        description {
-            "File"
-        },
-        title {
-            "File"
-        },
-        setter { MIN_FUNCTION {
-            if(args[0] != k_sym__empty) {
-                load_model_file(args);
-            }
-            return args;
-        }}
-    };
-    
     
     message<> train {this, "train", "Train model",
         MIN_FUNCTION {
@@ -179,7 +157,6 @@ public:
         }
     };
     
-    
     message<> clear { this, "clear", "clear model.",
         MIN_FUNCTION {
             m_model.model.reset();
@@ -189,45 +166,6 @@ public:
         }
     };
     
-    
-    message<> write {this, "write",
-        MIN_FUNCTION {
-           try {
-               m_model.autoscale = autoscale;
-               save_model_file(args, m_model, "linear_svm");
-           } catch (const std::runtime_error& s) {
-               (cerr << s.what() << endl);
-           }
-           return {};
-        }
-    };
-    
-    message<> read {this, "read",
-        MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
-            return {};
-        }
-    };
-    
-    void load_model_file(const atoms& args) {
-        atoms f{};
-
-        if(!args.empty()) {
-            f.push_back(args[0]);
-        }
-     
-        path p {f, path::filetype::any};
-
-        if(p) {
-            try {
-                mlpack::data::Load(string(p), "linear_svm", m_model, true);
-            } catch (const std::runtime_error& s) {
-                std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-            }
-        }
-    }
     
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
@@ -364,13 +302,7 @@ public:
         }
         
     };
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
+
     
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
@@ -382,8 +314,7 @@ public:
         
         return {};
     }};
-    
-    mlmat_serializable_model<LinearSVMModel> m_model;
+
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
     std::unique_ptr<arma::Row<size_t>> m_labels { nullptr };
 };

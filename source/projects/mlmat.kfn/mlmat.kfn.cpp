@@ -1,6 +1,6 @@
 /// @file mlmat.kfn.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Other distance Metrics?
 /// TODO: Serialization read/write
@@ -30,7 +30,7 @@ void mlmat_kfn_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 
-class mlmat_kfn : public mlmat_operator_autoscale<mlmat_kfn>
+class mlmat_kfn : public mlmat_operator_autoscale<mlmat_kfn, KFNModel>
 {
 public:
     MIN_DESCRIPTION     {"K-farthest neighbor search. An implementation of k-farthest-neighbor search using single-tree and dual-tree algorithms. Given a set of reference points and query points, this can find the k furthest neighbors in the reference set of each query point using trees; trees that are built can be saved for future use."};
@@ -114,49 +114,12 @@ public:
         }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-        description {
-            "File"
-        },
-        title {
-            "File"
-        },
-        setter { MIN_FUNCTION {
-            if(args[0] != k_sym__empty) {
-                load_model_file(args);
-            }
-            return args;
-        }}
-    };
-    
-    
     message<> clear { this, "clear", "clear model.",
         MIN_FUNCTION {
             m_model.model.reset();
             return {};
         }
         
-    };
-    
-    message<> write {this, "write",
-        MIN_FUNCTION {
-            try {
-                m_model.autoscale = autoscale;
-                save_model_file(args, m_model, "kfn_model");
-            } catch (const std::runtime_error& s) {
-                (cerr << s.what() << endl);
-            }
-            return {};
-        }
-    };
-    
-    message<> read {this, "read",
-        MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
-            return {};
-        }
     };
     
 
@@ -424,8 +387,7 @@ private:
 
         return {};
     }};
-    
-    mlmat_serializable_model<KFNModel> m_model;
+
 };
 
 MIN_EXTERNAL(mlmat_kfn);

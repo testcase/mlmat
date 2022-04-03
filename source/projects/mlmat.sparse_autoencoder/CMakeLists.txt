@@ -27,6 +27,7 @@ include_directories(
 
 set( SOURCE_FILES
 	${PROJECT_NAME}.cpp
+    "../shared/sparse_autoencoder_ext.cpp"
 )
 
 

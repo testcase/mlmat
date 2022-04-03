@@ -1,6 +1,6 @@
 /// @file mlmat.load.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
@@ -24,9 +24,6 @@ public:
     MIN_AUTHOR		{"Cycling '74"};
     MIN_RELATED		{"jit.matrix"};
     MIN_DISCUSSION  {"There are a number of file formats supported. These include:\n csv (comma-separated values), denoted by .csv or .txt\n tsv (tab-separated values), denoted by .tsv, .csv, or .txt\n ASCII (raw ASCII, with space-separated values), denoted by .txt\n Armadillo ASCII (Armadillo's text format with a header), denoted by .txt\n PGM, denoted by .pgm\n PPM, denoted by .ppm\n Armadillo binary, denoted by .bin\n Raw binary, denoted by .bin (note: this will be loaded as one-dimensional data, which is likely not what is desired.)\n ARFF, denoted by .arff.\n"};
-
-    inlet<>  input	{ this, "messages" };
-    outlet<> output	{ this, "Data in matrix form" , "matrix"};
     
     attribute<min::symbol> file {this, "file", k_sym__empty,
         description {
@@ -122,12 +119,6 @@ private:
         return {};
     }};
     
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
     
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];

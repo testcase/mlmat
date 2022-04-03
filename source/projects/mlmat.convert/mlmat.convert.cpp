@@ -1,7 +1,7 @@
-/// @file
-///	@ingroup 	minexamples
-///	@copyright	Copyright 2018 The Min-DevKit Authors. All rights reserved.
-///	@license	Use of this source code is governed by the MIT License found in the License.md file.
+/// @file mlmat.convert.cpp
+/// @ingroup mlmat
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
+/// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
 #include "mlmat_operator.hpp"
@@ -14,19 +14,12 @@ void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 
-
-
-
 class mlmat_convert : public mlmat_operator<mlmat_convert> {
 public:
     MIN_DESCRIPTION	{"Convert matrices between mlmat modes. Converts a matrix to between different mlmat modes. <at>input</at> specifies the expected input mode and <at>output</at> indicates the mode to convert to. Note that this will fail if attempting to convert from mode 1 or 2 to mode 0 if the resulting matrix would require more than 32 planes."};
     MIN_TAGS		{"ml"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.scaling, mlmat.lookup"};
-    
-    
-    inlet<>  input1	{ this, "(matrix) Matrix to convert.", "matrix"};
-    outlet<> output1	{ this, "(matrix) Converted matrix.", "matrix"};
 
     attribute<int, threadsafe::no, limit::clamp, allow_repetitions::no> input_mode { this, "input", 0,
         range {0,2},
@@ -82,7 +75,6 @@ public:
         if(m_jit_transpose) {
             c74::max::freeobject(m_jit_transpose);
         }
-
     }
     
     
@@ -151,8 +143,6 @@ public:
         err = (t_jit_err)jit_object_method((t_object*)m_jit_coerce, _jit_sym_matrix_calc,in_matrix, tmp_matrix);
         if(err) { std::cerr << err << std::endl;}
 
-        ///
-
         minfo.flags = 0 ;
         
         jit_object_method(out_matrix, _jit_sym_setinfo, &minfo);
@@ -161,8 +151,6 @@ public:
         
         if(err) { std::cerr << err << std::endl;}
 
-        
-        //jit_object_free(coerced_matrix);
         if (tmp_matrix) jit_object_free(tmp_matrix);
         
         return err;
@@ -248,8 +236,6 @@ public:
 
         jit_object_method(initial_matrix, _jit_sym_getinfo, &in_info);
         
-     
-        
         minfo.type = in_info.type;
         minfo.dimcount = 1;
         minfo.planecount = in_info.dim[0];
@@ -324,10 +310,8 @@ public:
             } else {
                 jitter_extrude((t_object*)in_matrix, (t_object*)out_matrix, true);
             }
-            
         }
-    
-
+        
     out:
        object_method(in_matrix,_jit_sym_lock,in_savelock);
        object_method(out_matrix,_jit_sym_lock,out_savelock);
@@ -361,16 +345,8 @@ private:
         return {};
     }};
     
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
-    
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
-        
         max_jit_class_mop_wrap(c, this_jit_class, 0);
         max_jit_class_wrap_standard(c, this_jit_class, 0);
         class_addmethod(c, (method)mlmat_assist, "assist", A_CANT, 0);

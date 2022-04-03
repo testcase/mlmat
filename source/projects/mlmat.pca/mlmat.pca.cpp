@@ -1,6 +1,6 @@
 /// @file mlmat.pca.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: add seed as some strategies use random initialization??
 
@@ -29,11 +29,6 @@ public:
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.linear_regression"};
-
-    inlet<>  input	{ this, "(matrix) Input dataset to perform PCA on", "matrix" };
-    outlet<> output1	{ this, "(matrix) Transformed Data", "matrix" };
-    outlet<> output2    { this, "(matrix) Eigenvalues", "matrix" };
-    outlet<> output3    { this, "(matrix) Eigenvectors", "matrix" };
 
 
     attribute<int> new_dimensionality { this, "new_dimensionality", 2,
@@ -81,14 +76,7 @@ public:
         jit_class_addmethod(c, (method)mlmat_matrix_calc, "matrix_calc", A_CANT, 0);
         return {};
     }};
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
-    
+
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         

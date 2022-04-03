@@ -1,15 +1,13 @@
 /// @file mlmat.variational_autoencoder.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Need to make autoencode serializable
 ///
 ///   based on code from https://github.com/mlpack/models/blob/master/vae/
 ///   @author Atharva Khandait
-///
-///
-///
-///
+
+
 #include "c74_min.h"
 
 #include <mlpack/core/data/split_data.hpp>
@@ -83,13 +81,6 @@ public:
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.mlp_regressor"};
-    
-    inlet<>  input1 {this, "(matrix) Data", "matrix"};
-    inlet<>  input2 {this, "(matrix) Features.", "matrix"};
-    inlet<>  input3 {this, "(matrix) Training dataset.", "matrix"};
-    outlet<> output1 {this, "(matrix) Features from data.", "matrix"};
-    outlet<> output2 {this, "(matrix) Predicted output from features.", "matrix"};
-    
     
     using ivec = vector<int>;
     attribute<ivec> hidden_sizes { this, "hidden_sizes", {0}, description {"Hidden layer sizes."} };
@@ -307,15 +298,6 @@ public:
         }
     };
     
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            m_mode_changed = false;
-            return {};
-        }
-    };
-    
     message<> jitclass_setup {this, "jitclass_setup",
         MIN_FUNCTION {
             t_class* c = args[0];
@@ -326,7 +308,7 @@ public:
             jit_mop_single_type(mop, _jit_sym_float64);
             
             jit_class_addadornment(c, mop);
-            
+            fa
             //unlink dimesions between left and right i/o
             //keep planecounts same for now.
             

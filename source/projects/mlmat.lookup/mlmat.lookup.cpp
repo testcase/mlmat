@@ -1,6 +1,6 @@
-/// @file mlmat.growth.cpp
+/// @file mlmat.lookup.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Other distance Metrics?
 /// TODO: Serialization read/write

@@ -1,8 +1,8 @@
 /// @file mlmat.mlp_regressor.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
-/// TODO: Validate optimizer settings. Don't seem to be working well. Could be because not scaling?
+/// TODO: Validate optimizer settings.
 
 
 #include "c74_min.h"
@@ -26,18 +26,12 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
 
-class mlmat_mlp_regressor : public mlmat_operator_autoscale<mlmat_mlp_regressor> {
+class mlmat_mlp_regressor : public mlmat_operator_autoscale<mlmat_mlp_regressor, FFN<MeanSquaredError<>, RandomInitialization>> {
 public:
     MIN_DESCRIPTION     {"Multi layer perceptron. This mlp can be used as a regressor."};
     MIN_TAGS            {"ML"};
     MIN_AUTHOR          {"Todd Ingalls"};
     MIN_RELATED          {"mlmat.linear_regression"};
-    
-    inlet<>  input1 {this, "(matrix) Testing dataset", "matrix"};
-    inlet<>  input2 {this, "(matrix) Training dataset.", "matrix"};
-    inlet<>  input3 {this, "(matrix) Training targets.", "matrix"};
-    outlet<> output1 {this, "(matrix) Predictions for each test point.", "matrix"};
-
 
     attribute<int> hidden_layers { this, "hidden_layers", 1,
         description {
@@ -76,21 +70,7 @@ public:
     attribute<double> tolerance { this, "tolerance", 1e-7,
         description { "Convergence tolerance for optimizer." }
     };
-    
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-        description {
-            "File"
-        },
-        title {
-            "File"
-        },
-        setter { MIN_FUNCTION {
-            if(args[0] != k_sym__empty) {
-                load_model_file(args);
-            }
-            return args;
-        }}
-    };
+
     message<> clear { this, "clear", "clear data and model",
         MIN_FUNCTION {
             m_target.reset();
@@ -141,47 +121,8 @@ public:
             return {};
         }
     };
-    
-    message<> write {this, "write",
-        MIN_FUNCTION {
-           try {
-               m_model.autoscale = autoscale;
-               save_model_file(args, m_model, "mlp_classifier");
-           } catch (const std::runtime_error& s) {
-               (cout << s.what() << endl);
-           }
-           return {};
-        }
-    };
 
-    message<> read {this, "read",
-        MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
-            return {};
-        }
-    };
-    
-    
-    void load_model_file(const atoms& args) {
-       atoms f{};
 
-       if(!args.empty()) {
-           f.push_back(args[0]);
-       }
-       
-       path p {f, path::filetype::any};
-
-       if(p) {
-           try {
-               mlpack::data::Load(string(p), "mlp_regressor", m_model, true);
-           } catch (const std::runtime_error& s) {
-               std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-           }
-       }
-    }
-        
     void add_layer(const min::symbol& layer_type) {
         const string layer_string = layer_type.c_str();
         
@@ -361,13 +302,6 @@ private:
         jit_class_addmethod(c, (method)mlmat_matrix_calc, "matrix_calc", A_CANT, 0);
         return {};
     }};
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-       }};
     
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];

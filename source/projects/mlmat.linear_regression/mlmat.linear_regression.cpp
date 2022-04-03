@@ -1,6 +1,6 @@
 /// @file mlmat.linear_regression.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
@@ -17,35 +17,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s);
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
-class mlmat_linear_regression : public mlmat_operator_autoscale<mlmat_linear_regression> {
+class mlmat_linear_regression : public mlmat_operator_autoscale<mlmat_linear_regression, LinearRegression> {
 public:
     MIN_DESCRIPTION {"A Linear Regression Model. An implementation of simple linear regression and ridge regression using ordinary least squares.  Given a dataset and responses, a model can be trained and saved for later use, or a pre-trained model can be used to output regression predictions for a test set."};
     MIN_TAGS        {"ML"};
     MIN_AUTHOR      {"Todd Ingalls"};
     MIN_RELATED     {"mlmat.gmm"};
-    
-    inlet<>  input1	{ this, "(matrix) Matrix containing query points.", "matrix" };
-    inlet<>  input2 { this, "(matrix) Matrix containingtraining set X (predictors)", "matrix" };
-    inlet<>  input3 { this, "(matrix) Matrix containing y (responses). ", "matrix" };
-    outlet<> output	{ this, "(matrix) Matrix containing predictions.", "matrix" };
 
     attribute<double> lambda { this, "lambda", 0.0,
         description { "Tikhonov regularization for ridge regression. If 0, the method reduces to linear regression."},
-    };
-    
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-        description {
-            "File"
-        },
-        title {
-            "File"
-        },
-        setter { MIN_FUNCTION {
-            if(args[0] != k_sym__empty) {
-                load_model_file(args);
-            }
-            return args;
-        }}
     };
     
     message<> train {this, "train", "Train model.",
@@ -122,53 +102,6 @@ public:
         
     };
 
-    
-    message<> write {this, "write",
-        MIN_FUNCTION {
-           try {
-               m_model.autoscale = autoscale;
-               save_model_file(args, m_model, "linear_regression");
-           } catch (const std::runtime_error& s) {
-               (cerr << s.what() << endl);
-           }
-           return {};
-        }
-    };
-    
-    message<> read {this, "read",
-        MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
-            return {};
-        }
-    };
-                
-    void load_model_file(const atoms& args) {
-       atoms f{};
-
-       if(!args.empty()) {
-           f.push_back(args[0]);
-       }
-       
-       path p {f, path::filetype::any};
-
-       if(p) {
-           try {
-               mlpack::data::Load(string(p), "linear_regression", m_model, true);
-           } catch (const std::runtime_error& s) {
-               std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-           }
-       }
-    }
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
-                
     message<> maxclass_setup { this, "maxclass_setup",
         MIN_FUNCTION {
              t_class* c = args[0];
@@ -307,7 +240,6 @@ public:
     }
                 
 private:
-    mlmat_serializable_model<LinearRegression> m_model;
     std::unique_ptr<arma::Mat<double>> m_regressors { nullptr };
     std::unique_ptr<arma::Row<double>> m_responses { nullptr };
 };

@@ -1,6 +1,6 @@
 /// @file mlmat.sparse_autoencoder.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Need to make autoencode serializable
 #include "c74_min.h"
@@ -28,13 +28,6 @@ public:
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.mlp_regressor"};
-    
-    inlet<>  input1 {this, "(matrix) Data", "matrix"};
-    inlet<>  input2 {this, "(matrix) Features.", "matrix"};
-    inlet<>  input3 {this, "(matrix) Training dataset.", "matrix"};
-    outlet<> output1 {this, "(matrix) Features from data.", "matrix"};
-    outlet<> output2 {this, "(matrix) Predicted output from features.", "matrix"};
-    
     
     attribute<int> hidden_size { this, "hidden_size", 2,
         description {
@@ -156,18 +149,6 @@ public:
             return {};
         }
     };
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            m_mode_changed = false;
-            return {};
-        }
-    };
-
-
-
      
     message<> jitclass_setup {this, "jitclass_setup",
         MIN_FUNCTION {

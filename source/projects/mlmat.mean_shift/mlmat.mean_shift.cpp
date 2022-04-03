@@ -1,6 +1,6 @@
 /// @file mlmat.mean_shift.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 ///
 
@@ -27,11 +27,7 @@ public:
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.kmeans, mlmat.knn"};
-    MIN_DISCUSSION  {""};
 
-    inlet<>  input1	    { this, "(matrix) Input dataset to perform clustering on.", "matrix" };
-    outlet<> output1    { this, "(matrix) Cluster assignments.", "matrix" };
-    outlet<> output2    { this, "(matrix) Cluster centroids.", "matrix" };
 
     attribute<int> max_iterations { this, "max_iterations", 1000,
         description {"Maximum number of iterations before k-means terminates."}
@@ -127,13 +123,7 @@ private:
         jit_class_addmethod(c, (method)mlmat_matrix_calc, "matrix_calc", A_CANT, 0);
         return {};
     }};
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
+
     
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];

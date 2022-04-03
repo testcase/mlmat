@@ -1,6 +1,6 @@
 /// @file mlmat.id3_tree.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 //
 // TODO: use mop to filter more that 2d
@@ -43,20 +43,12 @@ void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *ar
 
 
 
-class mlmat_id3_tree : public mlmat_operator_autoscale<mlmat_id3_tree> {
+class mlmat_id3_tree : public mlmat_operator_autoscale<mlmat_id3_tree, DecisionTreeModel> {
 public:
     MIN_DESCRIPTION	{"ID3 Decision Tree Classifier."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR      {"Todd Ingalls"};
     MIN_RELATED		{"mlmat.hoeffding_tree"};
-    
-    
-    inlet<>  input1 {this, "(matrix) Testing dataset", "matrix"};
-    inlet<>  input2 {this, "(matrix) Training dataset.", "matrix"};
-    inlet<>  input3 {this, "(matrix) Training labels.", "matrix"};
-    outlet<> output1 {this, "(matrix) Class probabilities for each test point.", "matrix"};
-    outlet<> output2 {this, "(matrix) Class predictions for each test point.", "matrix"};
-    
     
     attribute<int> minimum_leaf_size { this, "minimum_leaf_size", 10,
         description {
@@ -98,21 +90,6 @@ public:
                 value = 1e-10; //just guessing here
             }
             return {value};
-        }}
-    };
-    
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-        description {
-            "File"
-        },
-        title {
-            "File"
-        },
-        setter { MIN_FUNCTION {
-            if(args[0] != k_sym__empty) {
-                load_model_file(args);
-            }
-            return args;
         }}
     };
     
@@ -178,23 +155,6 @@ public:
         }
         
     };
-    
-    message<> read {this, "read",
-        MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
-            return {};
-        }
-    };
-    
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-        }};
     
     // post to max window == but only when the class is loaded the first time
     message<> maxclass_setup { this, "maxclass_setup",
@@ -371,25 +331,7 @@ public:
     }
     
 private:
-    
-    void load_model_file(const atoms& args) {
-        atoms f{};
-        
-        if(!args.empty()) {
-            f.push_back(args[0]);
-        }
-        
-        path p {f, path::filetype::any};
-        
-        if(p) {
-            try {
-                mlpack::data::Load(string(p), "id3_tree_classifier", m_model, true);
-            } catch (const std::runtime_error& s) {
-                std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-            }
-        }
-    }
-    mlmat_serializable_model<DecisionTreeModel> m_model;
+
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
     std::unique_ptr<arma::Row<size_t>> m_labels { nullptr };
 };

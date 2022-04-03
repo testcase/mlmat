@@ -1,6 +1,6 @@
 /// @file mlmat.hoeffding_tree.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2018 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: is capable of using categorical data - this is not implemented here
 
@@ -28,7 +28,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
 
-class mlmat_hoeffding_tree : public mlmat_operator_autoscale<mlmat_hoeffding_tree> {
+class mlmat_hoeffding_tree : public mlmat_operator_autoscale<mlmat_hoeffding_tree, HoeffdingTreeModel> {
 public:
     MIN_DESCRIPTION	{"Hoeffding Decision Tree. An implementation of Hoeffding trees, a form of streaming decision tree for classification. Given labeled data, a Hoeffding tree can be trained and saved for later use, or a pre-trained Hoeffding tree can be used for predicting the classifications of new points."};
     MIN_TAGS		{"ML"};
@@ -36,14 +36,6 @@ public:
     MIN_RELATED		{"mlmat.id3_tree"};
     MIN_DISCUSSION  {"The Hoeffding tree is well suited for incremental learning meaning that rather than provide all the data at once it will refine the decision tree as it receives more data. However, it can be used as a traditional decision tree if the <at>batch_mode</at> attribute is set to 1."};
     
-    inlet<>  input1 {this, "(matrix) Testing dataset", "matrix"};
-    inlet<>  input2 {this, "(matrix) Training dataset.", "matrix"};
-    inlet<>  input3 {this, "(matrix) Training labels.", "matrix"};
-    outlet<> output1 {this, "(matrix) Class probabilities for each test point.", "matrix"};
-    outlet<> output2 {this, "(matrix) Class predictions for each test point.", "matrix"};
-    
-
-
     // define an optional argument for setting the message
     attribute<bool> batch_mode { this, "batch_mode", false,
         description {
@@ -114,22 +106,6 @@ public:
         }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
-        description {
-            "File"
-        },
-        title {
-            "File"
-        },
-        setter { MIN_FUNCTION {
-            if(args[0] != k_sym__empty) {
-                load_model_file(args);
-            }
-            return args;
-        }}
-    };
-    
-    
     message<> clear { this, "clear", "clear model.",
         MIN_FUNCTION {
             m_model.model.reset();
@@ -138,27 +114,6 @@ public:
             return {};
         }
         
-    };
-
-    message<> write {this, "write",
-        MIN_FUNCTION {
-            try {
-                m_model.autoscale = autoscale;
-                save_model_file(args, m_model, "hoeffding_tree");
-            } catch (const std::runtime_error& s) {
-                (cerr << s.what() << endl);
-            }
-            return {};
-        }
-    };
-    
-    message<> read {this, "read",
-        MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
-            return {};
-        }
     };
     
     message<> train {this, "train", "Train model.",
@@ -250,15 +205,7 @@ public:
             return {};
         }
     };
-
-
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
-                
+        
     // post to max window == but only when the class is loaded the first time
     message<> maxclass_setup { this, "maxclass_setup",
         MIN_FUNCTION {
@@ -421,9 +368,7 @@ private:
             }
         }
     }
-    
-    mlmat_serializable_model<HoeffdingTreeModel> m_model;
-    
+
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
     std::unique_ptr<arma::Row<size_t>> m_labels { nullptr };
 };
