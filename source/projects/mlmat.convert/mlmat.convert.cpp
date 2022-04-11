@@ -4,7 +4,7 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 using namespace c74;
 using namespace c74::min;
@@ -14,7 +14,7 @@ void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 
-class mlmat_convert : public mlmat_operator<mlmat_convert> {
+class mlmat_convert : public mlmat_object<mlmat_convert> {
 public:
     MIN_DESCRIPTION	{"Convert matrices between mlmat modes. Converts a matrix to between different mlmat modes. <at>input</at> specifies the expected input mode and <at>output</at> indicates the mode to convert to. Note that this will fail if attempting to convert from mode 1 or 2 to mode 0 if the resulting matrix would require more than 32 planes."};
     MIN_TAGS		{"ml"};
@@ -77,6 +77,55 @@ public:
         }
     }
     
+    
+    t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
+        t_jit_err err = JIT_ERR_NONE;
+        t_jit_matrix_info out_minfo;
+        //t_object* flat_matrix = nullptr;
+        
+        auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
+        auto out_matrix = object_method(outputs, _jit_sym_getindex, 0);
+
+        auto in_savelock = object_method(in_matrix, _jit_sym_lock, 1);
+        auto out_savelock = object_method(out_matrix, _jit_sym_lock, 1);
+        err = (t_jit_err)max::object_method(out_matrix,_jit_sym_getinfo,&out_minfo);
+
+        if(input_mode == output_mode) {
+            //just pass through
+            err = (t_jit_err)jit_object_method(out_matrix,_jit_sym_setinfo,&out_minfo);
+            err = (t_jit_err)jit_object_method(out_matrix,_jit_sym_frommatrix,in_matrix,NULL);
+
+            goto out;
+        }
+        
+        if(input_mode == 0) {
+            if(output_mode == 1) {
+                jitter_flatten((t_object*)in_matrix, (t_object*)out_matrix, false);
+            } else {
+                jitter_flatten((t_object*)in_matrix, (t_object*)out_matrix, true);
+            }
+        } else if(input_mode == 1) {
+            if(output_mode == 2) {
+                jitter_transpose((t_object*)in_matrix, (t_object*)out_matrix);
+            } else {
+                jitter_extrude((t_object*)in_matrix, (t_object*)out_matrix, false);
+            }
+        } else if(input_mode == 2) {
+            if(output_mode == 1) {
+                jitter_transpose((t_object*)in_matrix, (t_object*)out_matrix);
+            } else {
+                jitter_extrude((t_object*)in_matrix, (t_object*)out_matrix, true);
+            }
+        }
+        
+    out:
+       object_method(in_matrix,_jit_sym_lock,in_savelock);
+       object_method(out_matrix,_jit_sym_lock,out_savelock);
+       return err;
+    }
+
+private:
+
     
     t_jit_err jitter_transpose(t_object* in_matrix, t_object* out_matrix) {
         t_jit_err err = JIT_ERR_NONE;
@@ -271,56 +320,6 @@ public:
         
         return err;
     }
-    
-    t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
-        t_jit_err err = JIT_ERR_NONE;
-        t_jit_matrix_info out_minfo;
-        //t_object* flat_matrix = nullptr;
-        
-        auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
-        auto out_matrix = object_method(outputs, _jit_sym_getindex, 0);
-
-        auto in_savelock = object_method(in_matrix, _jit_sym_lock, 1);
-        auto out_savelock = object_method(out_matrix, _jit_sym_lock, 1);
-        err = (t_jit_err)max::object_method(out_matrix,_jit_sym_getinfo,&out_minfo);
-
-        if(input_mode == output_mode) {
-            //just pass through
-            err = (t_jit_err)jit_object_method(out_matrix,_jit_sym_setinfo,&out_minfo);
-            err = (t_jit_err)jit_object_method(out_matrix,_jit_sym_frommatrix,in_matrix,NULL);
-
-            goto out;
-        }
-        
-        if(input_mode == 0) {
-            if(output_mode == 1) {
-                jitter_flatten((t_object*)in_matrix, (t_object*)out_matrix, false);
-            } else {
-                jitter_flatten((t_object*)in_matrix, (t_object*)out_matrix, true);
-            }
-        } else if(input_mode == 1) {
-            if(output_mode == 2) {
-                jitter_transpose((t_object*)in_matrix, (t_object*)out_matrix);
-            } else {
-                jitter_extrude((t_object*)in_matrix, (t_object*)out_matrix, false);
-            }
-        } else if(input_mode == 2) {
-            if(output_mode == 1) {
-                jitter_transpose((t_object*)in_matrix, (t_object*)out_matrix);
-            } else {
-                jitter_extrude((t_object*)in_matrix, (t_object*)out_matrix, true);
-            }
-        }
-        
-    out:
-       object_method(in_matrix,_jit_sym_lock,in_savelock);
-       object_method(out_matrix,_jit_sym_lock,out_savelock);
-       return err;
-    }
-
-
-private:
-
     
     message<> fileusage {this, "fileusage",
         MIN_FUNCTION {

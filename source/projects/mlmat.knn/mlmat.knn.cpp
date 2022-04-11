@@ -10,7 +10,7 @@
 #include <mlpack/core/util/timers.hpp>
 #include <mlpack/methods/neighbor_search/ns_model.hpp>
 #include <mlpack/methods/preprocess/scaling_model.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 #include <string>
 
 using namespace c74;
@@ -29,7 +29,7 @@ void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 
-class mlmat_knn : public mlmat_operator_autoscale<mlmat_knn, KNNModel>
+class mlmat_knn : public mlmat_object_writable<mlmat_knn, KNNModel>
 {
 public:
     MIN_DESCRIPTION	    {"K-nearest neighbor search. An implementation of k-nearest-neighbor search using single-tree and dual-tree algorithms. Given a set of reference points and query points, this can find the k nearest neighbors in the reference set of each query point using trees; trees that are built can be saved for future use."};

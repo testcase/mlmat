@@ -8,7 +8,7 @@
 #include <mlpack/core.hpp>
 #include <mlpack/methods/linear_svm/linear_svm.hpp>
 #include <ensmallen.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 #include <string>
 
@@ -40,7 +40,7 @@ class LinearSVMModel
 };
 
 
-class mlmat_linear_svm : public mlmat_operator_autoscale<mlmat_linear_svm, LinearSVMModel>
+class mlmat_linear_svm : public mlmat_object_writable<mlmat_linear_svm, LinearSVMModel>
 {
 public:
     MIN_DESCRIPTION	{"Linear SVM. An implementation of linear SVM for multiclass classification. Given labeled data, a model can be trained and saved for future use; or, a pre-trained model can be used to classify new points."};

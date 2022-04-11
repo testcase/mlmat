@@ -11,7 +11,7 @@
 #include <mlpack/methods/hmm/hmm_model.hpp>
 #include <mlpack/methods/gmm/gmm.hpp>
 #include <mlpack/methods/gmm/diagonal_gmm.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 using namespace c74::min;
 using namespace c74::max;
@@ -29,7 +29,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s);
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
-class mlmat_hmm : public mlmat_operator_autoscale<mlmat_hmm, HMMModel>
+class mlmat_hmm : public mlmat_object_writable<mlmat_hmm, HMMModel>
 {
 public:
     MIN_DESCRIPTION	{"Hidden Markov Model. An implementation Hidden Markov Model (HMM). The model can be based on one of four basic types set by <at>hmm_type</at>."};

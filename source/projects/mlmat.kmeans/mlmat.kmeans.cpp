@@ -18,7 +18,7 @@
 #include <mlpack/methods/kmeans/hamerly_kmeans.hpp>
 #include <mlpack/methods/kmeans/pelleg_moore_kmeans.hpp>
 #include <mlpack/methods/kmeans/dual_tree_kmeans.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
@@ -28,7 +28,7 @@ using namespace mlpack::kmeans;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void mlmat_assist(void* x, void* b, long io, long index, char* s);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
-class mlmat_kmeans : public mlmat_operator<mlmat_kmeans> {
+class mlmat_kmeans : public mlmat_object<mlmat_kmeans> {
 public:
     MIN_DESCRIPTION	{"K means clustering. An implementation of several strategies for efficient k-means clustering. Given a dataset and a value of k, this computes and returns a k-means."};
     MIN_TAGS		{"ML"};

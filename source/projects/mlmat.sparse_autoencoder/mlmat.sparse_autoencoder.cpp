@@ -7,7 +7,7 @@
 
 #include "sparse_autoencoder_ext.hpp"
 
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 #include <mlpack/core.hpp>
 
 
@@ -22,7 +22,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
-class mlmat_sparse_autoencoder : public mlmat_operator_autoscale<mlmat_sparse_autoencoder> {
+class mlmat_sparse_autoencoder : public mlmat_object_writable<mlmat_sparse_autoencoder, SparseAutoencoderExt> {
 public:
     MIN_DESCRIPTION	{"Sparse autoencoder. An autoencoder with a single hidden layer that attempt to impose a sparsity constraint."};
     MIN_TAGS		{"ML"};
@@ -343,7 +343,6 @@ public:
     }
     
 private:
-    mlmat_serializable_model<SparseAutoencoderExt> m_model;
     std::unique_ptr<arma::Mat<double>> m_training;
 };
 

@@ -10,7 +10,7 @@
 
 #include "c74_min.h"
 #include <mlpack/methods/decision_tree/decision_tree.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
@@ -43,7 +43,7 @@ void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *ar
 
 
 
-class mlmat_id3_tree : public mlmat_operator_autoscale<mlmat_id3_tree, DecisionTreeModel> {
+class mlmat_id3_tree : public mlmat_object_writable<mlmat_id3_tree, DecisionTreeModel> {
 public:
     MIN_DESCRIPTION	{"ID3 Decision Tree Classifier."};
     MIN_TAGS		{"ML"};

@@ -10,7 +10,7 @@
 #include <mlpack/methods/hoeffding_trees/information_gain.hpp>
 #include <mlpack/methods/hoeffding_trees/hoeffding_tree_model.hpp>
 #include <mlpack/methods/preprocess/scaling_model.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 #include <queue>
 
 using namespace c74;
@@ -28,7 +28,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
 
-class mlmat_hoeffding_tree : public mlmat_operator_autoscale<mlmat_hoeffding_tree, HoeffdingTreeModel> {
+class mlmat_hoeffding_tree : public mlmat_object_writable<mlmat_hoeffding_tree, HoeffdingTreeModel> {
 public:
     MIN_DESCRIPTION	{"Hoeffding Decision Tree. An implementation of Hoeffding trees, a form of streaming decision tree for classification. Given labeled data, a Hoeffding tree can be trained and saved for later use, or a pre-trained Hoeffding tree can be used for predicting the classifications of new points."};
     MIN_TAGS		{"ML"};

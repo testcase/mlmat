@@ -1,4 +1,4 @@
-# Copyright 2018 The Min-DevKit Authors. All rights reserved.
+			# Copyright 2018 The Min-DevKit Authors. All rights reserved.
 # Use of this source code is governed by the MIT License found in the License.md file.
 
 cmake_minimum_required(VERSION 3.0)
@@ -58,3 +58,13 @@ include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 #############################################################
 
 include(${C74_MIN_API_DIR}/test/min-object-unittest.cmake)
+
+target_link_libraries(${PROJECT_NAME}_test PRIVATE debug "${ARMA_DIR}/build/Debug/libarmadillo.a")
+target_link_libraries(${PROJECT_NAME}_test PRIVATE debug "${MLPACK_DIR}/build/lib/Debug/libmlpack.a")
+
+target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
+target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
+
+target_link_libraries(${PROJECT_NAME}_test PRIVATE general "${ACCELERATE_LIB}")
+
+

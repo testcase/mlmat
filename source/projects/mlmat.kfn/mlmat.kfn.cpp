@@ -12,7 +12,7 @@
 #include <mlpack/methods/neighbor_search/unmap.hpp>
 #include <mlpack/core/util/timers.hpp>
 #include <mlpack/methods/neighbor_search/ns_model.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 #include <string>
 using namespace c74;
 using namespace c74::min;
@@ -30,7 +30,7 @@ void mlmat_kfn_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 
-class mlmat_kfn : public mlmat_operator_autoscale<mlmat_kfn, KFNModel>
+class mlmat_kfn : public mlmat_object_writable<mlmat_kfn, KFNModel>
 {
 public:
     MIN_DESCRIPTION     {"K-farthest neighbor search. An implementation of k-farthest-neighbor search using single-tree and dual-tree algorithms. Given a set of reference points and query points, this can find the k furthest neighbors in the reference set of each query point using trees; trees that are built can be saved for future use."};

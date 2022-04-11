@@ -3,7 +3,7 @@
 /// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: add seed as some strategies use random initialization??
-
+#include <string>
 #include "c74_min.h"
 #include "pca_ext.hpp"
 #include "pca_ext_impl.hpp"
@@ -11,8 +11,8 @@
 #include <mlpack/methods/pca/decomposition_policies/quic_svd_method.hpp>
 #include <mlpack/methods/pca/decomposition_policies/randomized_svd_method.hpp>
 #include <mlpack/methods/pca/decomposition_policies/randomized_block_krylov_method.hpp>
-#include "mlmat_operator.hpp"
-#include <string>
+#include "mlmat_object.hpp"
+
 using namespace c74;
 using namespace c74::min;
 using namespace c74::max;
@@ -23,7 +23,7 @@ using namespace mlpack::util;
 void mlmat_pca_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
-class mlmat_pca : public mlmat_operator<mlmat_pca> {
+class mlmat_pca : public mlmat_object<mlmat_pca> {
 public:
     MIN_DESCRIPTION	{"Principal Components Analysis. An implementation of several strategies for principal components analysis (PCA), a common preprocessing step.  Given a dataset and a desired new dimensionality, this can reduce the dimensionality of the data using the linear transformation determined by PCA."};
     MIN_TAGS		{"ML"};

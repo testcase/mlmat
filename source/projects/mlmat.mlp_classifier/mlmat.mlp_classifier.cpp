@@ -11,7 +11,7 @@
 #include <mlpack/methods/ann/loss_functions/kl_divergence.hpp>
 #include <ensmallen.hpp>
 #include <string>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 using namespace c74::min;
 using namespace c74::max;
@@ -22,7 +22,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) ;
 void mlmat_mlp_assist(void* x, void* b, long io, long index, char* s);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
-class mlmat_mlp_classifier : public mlmat_operator_autoscale<mlmat_mlp_classifier, FFN<>> {
+class mlmat_mlp_classifier : public mlmat_object_writable<mlmat_mlp_classifier, FFN<>> {
 public:
     MIN_DESCRIPTION     {"Multi layer perceptron. This mlp can be used as a classifier."};
     MIN_TAGS            {"ML"};

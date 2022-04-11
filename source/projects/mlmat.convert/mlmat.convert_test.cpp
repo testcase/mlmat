@@ -18,7 +18,7 @@ SCENARIO("object produces correct output") {
         mlmat_convert&              my_object = an_instance;
 
 	// WE ALL PASS!!!!!!
-		REQUIRE((1 == 1));
+		REQUIRE(true);
 //         // check that default attr values are correct
 //        REQUIRE((my_object.greeting == symbol("hello world")));
 // 
