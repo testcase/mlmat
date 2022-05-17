@@ -67,6 +67,6 @@ target_link_libraries(${PROJECT_NAME}_test PRIVATE debug "${MLPACK_DIR}/build/li
 target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
 target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
 
-target_link_libraries(${PROJECT_NAME}_test PRIVATE general "${ACCELERATE_LIB}")if (APPLE)
+if (APPLE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
 endif ()
