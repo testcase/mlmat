@@ -41,7 +41,7 @@ In this mode jitter matrices are going to be 1 or 2d with a single plane. Each r
 ### mode 2: 
 In this mode jitter matrices are going to be 1 or 2d with a single plane. Each column is a data point and each row in the column is an element of that point. This corresponds to the typical layout used by mlpack for armadillo matrices and would make it easier to replicate examples using mlpack.
 	
-## Building on macOS
+## Building
 
 Over view
 0. Clone repo 
@@ -57,6 +57,8 @@ remember this to get all min-api stuff :
 * `git submodule init`
 * `git submodule update --init --recursive`
 
+
+## Building on macOS
 
 ### Build armadillo static lib
 
@@ -84,7 +86,7 @@ You should now have static library at build/Release/libarmadillo.a
 
 mlpack has a number of prerequisites
 
-The minimal I find to work need boost, ensmallen and cereal libraries. I can them from homebrew
+The minimal I find to work need boost, ensmallen and cereal libraries. I get them from homebrew
 
 `brew install boost`
 `brew install ensmallen`
@@ -129,14 +131,83 @@ if wanting to debug also do
 
 `cmake --build . --config Debug`
 
+## Building on Windows
+
+### Build armadillo static lib
+
+`cd source\armadillo` to go to armadillo directory
+
+run `mkdir build` to create build directory
+
+`cd build`
+
+This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
+
+`cmake  -DBUILD_SHARED_LIBS=OFF -A x64 -G "Visual Studio 16 2019" ..`
+
+You can now use 
+
+`cmake --build . --config Release` to build release version of library
+
+if wanting to debug also do
+
+`cmake --build . --config Debug`
+
+You should now have static library at build\Release\libarmadillo.lib
+
+
+### Build mlpack static lib 
+
+mlpack has a number of prerequisites
+
+The minimal I find to work need boost as is should download ensmallen and cereal libraries if needed.
+
+vcpkg install ensmallen:x64-windows   -- this also install openblas and lapack. also installs armadillo but don't want to use this version. 
+vcpkg install cereal:x64-windows
+vcpkg install boost:x64-windows -- this takes FOREVER and mlpack uses very little of boost
 
 
 
+From the source/mlpack directory run
+`mkdir build`
+
+`cd build`
+
+These are the cmake options I use. mlpack has a number of potential bindings but these are not of use for this project
+
+Replace `[path to vcpkg]` with the correct path for your system
+
+`cmake  -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]\vcpkg\scripts\buildsystems\vcpkg.cmake"  -A x64 -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.lib" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -G "Visual Studio 16 2019" ..`
+ 
+
+You can now use 
+
+`cmake --build . --config Release` to build release version of library
+
+if wanting to debug also do
+
+`cmake --build . --config Debug`
 
 
+### Generate projects and build
+
+cd into main mlmat directory
+
+run 
+`mkdir build`
+
+`cd build`
+
+`cmake -G "Visual Studio 16 2019" ..`
 
 
+You should now be able to do the following but I have not figure out how to disable or bypass testing. Or maybe better make suitable tests. You can run builds from individual projects or modify the mlmat project to skip the testing. 
 
+`cmake --build . --config Release` to build release version of library
+
+if wanting to debug also do
+
+`cmake --build . --config Debug`
 
 
 	
