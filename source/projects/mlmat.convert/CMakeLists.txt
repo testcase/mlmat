@@ -49,7 +49,9 @@ find_library(
 #target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
 #target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
+if (APPLE)
+	target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
+endif ()
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 
