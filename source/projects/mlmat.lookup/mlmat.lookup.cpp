@@ -7,7 +7,7 @@
 /// TODO: Testing
 
 #include "c74_min.h"
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 using namespace c74;
 using namespace c74::min;
@@ -18,17 +18,12 @@ void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 
-class mlmat_lookup : public mlmat_operator<mlmat_lookup> {
+class mlmat_lookup : public mlmat_object<mlmat_lookup> {
 public:
     MIN_DESCRIPTION	{"Utility for getting indexed data from a matrix."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.scaling"};
-
-    
-    inlet<>  input1	{ this, "(matrix) Matrix containing query points.", "matrix" };
-    inlet<>  input2 { this, "(matrix) Matrix containing data matrix.", "matrix" };
-    outlet<> output	{ this, "(matrix) Matrix with lookup.", "matrix"  };
 
     message<> clear { this, "clear", "clear model.",
         MIN_FUNCTION {

@@ -10,7 +10,7 @@
 #include <mlpack/methods/gmm/no_constraint.hpp>
 #include <mlpack/methods/gmm/diagonal_constraint.hpp>
 #include <mlpack/methods/kmeans/refined_start.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 using namespace c74::min;
 using namespace c74::max;
@@ -26,7 +26,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
 
-class mlmat_gmm : public mlmat_operator_autoscale<mlmat_gmm, GMM>
+class mlmat_gmm : public mlmat_object_writable<mlmat_gmm, GMM>
 {
 public:
 
@@ -436,62 +436,37 @@ public:
         message_type::usurp_low
     };
     
-    message<> jitclass_setup {this, "jitclass_setup",
-        MIN_FUNCTION {
-            t_class* c = args[0];
-            // add mop
-            t_object* mop = static_cast<t_object*>(jit_object_new(_jit_sym_jit_mop, 2, 4));
-            
-            // force type
-            jit_mop_single_type(mop, _jit_sym_float64);
-            
-            jit_class_addadornment(c, mop);
-            
-            //unlink dimesions between left and right i/o
-            //keep planecounts same for now.
-            
-            auto output1 = object_method(mop,_jit_sym_getoutput,1);
-            jit_attr_setlong(output1,_jit_sym_dimlink,0);
-            auto output2 = object_method(mop,_jit_sym_getoutput,2);
-            jit_attr_setlong(output2,_jit_sym_dimlink,0);
-            auto output3 = object_method(mop,_jit_sym_getoutput,3);
-            jit_attr_setlong(output3,_jit_sym_dimlink,0);
-            auto output4 = object_method(mop,_jit_sym_getoutput,4);
-            jit_attr_setlong(output4,_jit_sym_dimlink,0);
-            auto input2 = object_method(mop,_jit_sym_getinput,2);
-            jit_attr_setlong(input2,_jit_sym_dimlink,0);
-           
-            //always adapt
-            object_method(input2,gensym("ioproc"),jit_mop_ioproc_copy_adapt);
-            // add our custom matrix_calc method
-            jit_class_addmethod(c, (method)mlmat_matrix_calc, "matrix_calc", A_CANT, 0);
-            return {};
+    t_jit_err process_observations_matrix(t_object *matrix) {
+        t_jit_matrix_info minfo;
+        t_jit_err err = JIT_ERR_NONE;
+        arma::mat dat;
+        arma::mat scaled_data;
+        
+        long savelock = (long) object_method((t_object*)matrix, _jit_sym_lock, 1);
+        object_method((t_object*)matrix, _jit_sym_getinfo, &minfo);
+        
+        if(minfo.dimcount > 2) {
+            (cerr << "expecting 1d or 2d matrix, received " << minfo.dimcount << "d matrix" << endl);
+            err = JIT_ERR_INVALID_INPUT;
+            goto out;
         }
-    };
-    
-    message<> maxclass_setup {this, "maxclass_setup",
-        MIN_FUNCTION {
-            t_class* c = args[0];
-            max_jit_class_mop_wrap(c, this_jit_class, 0);
-            max_jit_class_wrap_standard(c, this_jit_class, 0);
-            max_jit_classex_mop_mproc(c,this_jit_class,(void*)max_jit_mlmat_mproc);
-            
-            class_addmethod(c, (method)max_mlmat_jit_matrix, "jit_matrix", A_GIMME, 0);
-            class_addmethod(c, (method)mlmat_assist, "assist", A_CANT, 0);
+        
+        try {
+            check_mode(minfo, mode, "gmm");
+        } catch (std::invalid_argument& s) {
+            cerr << s.what() << endl;
+            goto out;
+        }
+        
+        dat = jit_to_arma(mode, matrix, dat);
+        
+        m_data = std::make_unique<arma::Mat<double>>(std::move(dat));
 
-            return {};
-        }
-    };
-    
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            m_mode_changed = false;
-            return {};
-        }
-    };
-            
+
+    out:
+        object_method(matrix, _jit_sym_lock, savelock);
+        return err;
+    }
     
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
@@ -582,6 +557,57 @@ public:
 
         return err;
     }
+    
+    
+private:
+    
+    message<> jitclass_setup {this, "jitclass_setup",
+        MIN_FUNCTION {
+            t_class* c = args[0];
+            // add mop
+            t_object* mop = static_cast<t_object*>(jit_object_new(_jit_sym_jit_mop, 2, 4));
+            
+            // force type
+            jit_mop_single_type(mop, _jit_sym_float64);
+            
+            jit_class_addadornment(c, mop);
+            
+            
+            auto output1 = object_method(mop,_jit_sym_getoutput,1);
+            jit_attr_setlong(output1,_jit_sym_dimlink,0);
+            auto output2 = object_method(mop,_jit_sym_getoutput,2);
+            jit_attr_setlong(output2,_jit_sym_dimlink,0);
+            auto output3 = object_method(mop,_jit_sym_getoutput,3);
+            jit_attr_setlong(output3,_jit_sym_dimlink,0);
+            auto output4 = object_method(mop,_jit_sym_getoutput,4);
+            jit_attr_setlong(output4,_jit_sym_dimlink,0);
+            auto input2 = object_method(mop,_jit_sym_getinput,2);
+            jit_attr_setlong(input2,_jit_sym_dimlink,0);
+            //always adapt
+            object_method(input2,gensym("ioproc"),jit_mop_ioproc_copy_adapt);
+
+            // add our custom matrix_calc method
+            jit_class_addmethod(c, (method)mlmat_matrix_calc, "matrix_calc", A_CANT, 0);
+            return {};
+        }
+    };
+    
+    message<> maxclass_setup {this, "maxclass_setup",
+        MIN_FUNCTION {
+            t_class* c = args[0];
+            max_jit_class_mop_wrap(c, this_jit_class, 0);
+            max_jit_class_wrap_standard(c, this_jit_class, 0);
+            max_jit_classex_mop_mproc(c,this_jit_class,(void*)max_jit_mlmat_mproc);
+            
+            class_addmethod(c, (method)max_mlmat_jit_matrix, "jit_matrix", A_GIMME, 0);
+            class_addmethod(c, (method)mlmat_assist, "assist", A_CANT, 0);
+
+            return {};
+        }
+    };
+     
+    
+ 
     //adapted from gmm.cpp
     //
     arma::vec WeightedRandom() {
@@ -606,39 +632,8 @@ public:
         
     }
      
-     t_jit_err process_observations_matrix(t_object *matrix) {
-         t_jit_matrix_info minfo;
-         t_jit_err err = JIT_ERR_NONE;
-         arma::mat dat;
-         arma::mat scaled_data;
-         
-         long savelock = (long) object_method((t_object*)matrix, _jit_sym_lock, 1);
-         object_method((t_object*)matrix, _jit_sym_getinfo, &minfo);
-         
-         if(minfo.dimcount > 2) {
-             (cerr << "expecting 1d or 2d matrix, received " << minfo.dimcount << "d matrix" << endl);
-             err = JIT_ERR_INVALID_INPUT;
-             goto out;
-         }
-         
-         try {
-             check_mode(minfo, mode, "gmm");
-         } catch (std::invalid_argument& s) {
-             cerr << s.what() << endl;
-             goto out;
-         }
-         
-         dat = jit_to_arma(mode, matrix, dat);
-         
-         m_data = std::make_unique<arma::Mat<double>>(std::move(dat));
 
-
-     out:
-         object_method(matrix, _jit_sym_lock, savelock);
-         return err;
-     }
-                
-
+        
     void train_gmm(arma::Mat<double>& data) {
         double likelihood;
         t_atom a[1];
@@ -716,8 +711,6 @@ public:
         atom_setfloat(a,likelihood);
         outlet_anything(m_dumpoutlet, gensym("likelihood"), 1, a);
     }
-
-private:
     
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
     std::unique_ptr<arma::vec> m_weights { nullptr };

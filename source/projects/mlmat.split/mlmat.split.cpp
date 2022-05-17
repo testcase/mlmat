@@ -7,7 +7,7 @@
 
 #include "c74_min.h"
 
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 #include <mlpack/core/data/split_data.hpp>
 
 
@@ -21,21 +21,12 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
-class mlmat_split : public mlmat_operator<mlmat_split> {
+class mlmat_split : public mlmat_object<mlmat_split> {
 public:
     MIN_DESCRIPTION	{"Splits data into testing and training."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.scaling"};
-
-    inlet<>  input1     { this, "(matrix) Matrix containing input dataset", "matrix"  };
-    inlet<>  input2     { this, "(matrix) Matrix containing input labels." , "matrix"  };
-    outlet<> output1    { this, "(matrix) Matrix to training data.", "matrix"  };
-    outlet<> output2    { this, "(matrix) Matrix to testing data.", "matrix"  };
-    outlet<> output3    { this, "(matrix) Matrix to training labels.", "matrix"  };
-    outlet<> output4    { this, "(matrix) Matrix to testing labels.", "matrix"  };
-
-
     
     attribute<int> seed { this, "seed", 0,
         description {

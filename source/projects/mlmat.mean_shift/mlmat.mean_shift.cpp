@@ -8,7 +8,7 @@
 #include "c74_min.h"
 #include <mlpack/methods/mean_shift/mean_shift.hpp>
 #include <mlpack/core/kernels/gaussian_kernel.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
@@ -21,7 +21,7 @@ using namespace mlpack::util;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void mlmat_assist(void* x, void* b, long io, long index, char* s);
 
-class mlmat_mean_shift : public mlmat_operator <mlmat_mean_shift> {
+class mlmat_mean_shift : public mlmat_object<mlmat_mean_shift> {
 public:
     MIN_DESCRIPTION	{"Mean-shift clustering. A fast implementation of mean-shift clustering using dual-tree range search. Given a dataset, this uses the mean shift algorithm to produce and return a clustering of the data."};
     MIN_TAGS		{"ML"};
@@ -99,8 +99,7 @@ public:
 
 private:
     
-    
-// override jitclass_setup so we can have our own matrix_calc. jitclass_setup is called first (and only once when the object is loaded for the first time) during the intitialization of the object.
+
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         // add mop

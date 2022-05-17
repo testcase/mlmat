@@ -4,10 +4,8 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
-
-#include "c74_min.h"
-#include "mlmat_operator.hpp"
 #include <mlpack/core.hpp>
+#include "mlmat_object.hpp"
 using namespace c74;
 using namespace c74::min;
 using namespace c74::max;
@@ -17,7 +15,7 @@ void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void mlmat_outputmatrix(max_jit_wrapper *x);
 
-class mlmat_load : public mlmat_operator<mlmat_load> {
+class mlmat_load : public mlmat_object<mlmat_load> {
 public:
     MIN_DESCRIPTION	{"Load data from file."};
     MIN_TAGS		{"ML"};

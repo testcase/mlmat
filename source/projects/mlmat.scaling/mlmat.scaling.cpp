@@ -7,7 +7,7 @@
 
 #include "c74_min.h"
 
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/preprocess/scaling_model.hpp>
 
 
@@ -21,7 +21,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
-class mlmat_scaling : public mlmat_operator<mlmat_scaling> {
+class mlmat_scaling : public mlmat_object<mlmat_scaling> {
 public:
     MIN_DESCRIPTION	{"Apply various scaling strategies. This will apply different type of scaling to datasets. Further data can be scaled using the fitting of original dataset. Inverse transform can also be applied."};
     MIN_TAGS		{"ML"};

@@ -1,0 +1,24 @@
+{
+	"author" : "Todd Ingalls",
+	"description" : "Max package for machine learning using jitter matrices.",
+	"homepatcher" : "mlmat overview.maxpat",
+	"max_version_min" : "8.0", "max_version_max" : "none",
+	"name" : "mlmat",
+	"os" : {
+		"macintosh" : {
+			"platform" : [ "x64", "aarch64" ],
+			"min_version" : "none"
+		},
+		"windows" : {
+			"platform" : [ "x64" ],
+			"min_version" : "none"
+		}
+	},
+	"package_extra" : {
+		"reverse_domain" : "org.tenuous",
+		"copyright" : "Copyright (c) Todd Ingalls"
+	},
+	"tags" : [ ],
+	"version" : "@GIT_VERSION_MAJ@.@GIT_VERSION_MIN@.@GIT_VERSION_SUB@",
+	"website" : "https://github.com/testcase/mlmat"
+}

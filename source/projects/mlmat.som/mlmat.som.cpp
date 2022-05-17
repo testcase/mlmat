@@ -8,7 +8,7 @@
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include <mlpack/methods/neighbor_search/unmap.hpp>
 #include <mlpack/methods/neighbor_search/ns_model.hpp>
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 using namespace c74::min;
 using namespace c74::max;
@@ -191,7 +191,7 @@ void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
-class mlmat_som : public mlmat_operator_autoscale<mlmat_som> {
+class mlmat_som : public mlmat_object_writable<mlmat_som, SOM> {
 public:
     MIN_DESCRIPTION	{"Self-organizing map"};
     MIN_TAGS		{"ML"};
@@ -493,9 +493,8 @@ public:
         object_method(out_matrix,_jit_sym_lock,out_savelock);
         return err;
     }
-            
-
-    mlmat_serializable_model<SOM> m_model;
+        
+        
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
 };
 

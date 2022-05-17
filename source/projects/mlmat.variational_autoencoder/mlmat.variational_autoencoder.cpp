@@ -19,7 +19,7 @@
 #include <mlpack/methods/ann/dists/bernoulli_distribution.hpp>
 #include <ensmallen.hpp>
 
-#include "mlmat_operator.hpp"
+#include "mlmat_object.hpp"
 
 using namespace c74::min;
 using namespace c74::max;
@@ -75,7 +75,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 void max_jit_mlmat_mproc(max_jit_wrapper *x, void *mop);
 
-class mlmat_variational_autoencoder : public mlmat_operator_autoscale<mlmat_variational_autoencoder> {
+class mlmat_variational_autoencoder : public mlmat_object_writable<mlmat_variational_autoencoder, ReconModel> {
 public:
     MIN_DESCRIPTION	{"variational autoencoder."};
     MIN_TAGS		{"ML"};
@@ -308,7 +308,7 @@ public:
             jit_mop_single_type(mop, _jit_sym_float64);
             
             jit_class_addadornment(c, mop);
-            fa
+            
             //unlink dimesions between left and right i/o
             //keep planecounts same for now.
             
@@ -525,7 +525,6 @@ public:
     }
     
 private:
-    mlmat_serializable_model<ReconModel> m_model;
     std::unique_ptr<arma::Mat<double>> m_data;
 };
 
