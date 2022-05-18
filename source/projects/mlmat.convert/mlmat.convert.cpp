@@ -3,7 +3,9 @@
 /// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
+
 #include "c74_min.h"
+
 #include "mlmat_object.hpp"
 
 using namespace c74;
@@ -21,10 +23,11 @@ public:
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.scaling, mlmat.lookup"};
 
-    attribute<int, threadsafe::no, limit::clamp, allow_repetitions::no> input_mode { this, "input", 0,
+    attribute<int, threadsafe::no, limit::clamp, allow_repetitions::no> input_mode{ this, "input", 0,
         range {0,2},
         description {
             "Input mode for matrices. "
+            
         }
     };
     
@@ -234,7 +237,7 @@ private:
         scanwrapped_matrix = static_cast<t_object*>(max::jit_object_new(_jit_sym_jit_matrix,&minfo));
         jit_object_method(scanwrapped_matrix, _jit_sym_getinfo, &minfo);
 
-        long newdim[2] = {minfo.dim[0], minfo.dim[1]};
+        c74::max::t_atom_long newdim[2] = {minfo.dim[0], minfo.dim[1]};
 
         err =  jit_attr_setlong_array(m_jit_scanwrap, _jit_sym_dim, 2, newdim);
         if(err) { std::cerr << err << std::endl;}

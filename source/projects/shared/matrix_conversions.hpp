@@ -768,7 +768,8 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_col(acol++) = MIN_CLAMP(*(t_int32*)p,0, (max_y)-1);
+                    t_int32 tmp = *(t_int32*)p; //added to stop VS from complaining
+                    arma_col(acol++) = MIN_CLAMP(tmp, 0, (max_y)-1);;
                     p += sizeof(t_int32);
                 }
             }
@@ -781,7 +782,8 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_col(acol++) = MIN_CLAMP(*(t_int32*)p,0, (max_x)-1);
+                    t_int32 tmp = *(t_int32*)p; //added to stop VS from complaining
+                    arma_col(acol++) = MIN_CLAMP(tmp,0, (max_x)-1);
                     p += sizeof(t_int32);
                 }
             }

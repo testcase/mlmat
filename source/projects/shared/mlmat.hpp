@@ -10,12 +10,16 @@
 // define this macro so can build without errors
 
 #ifndef MIN_DISCUSSION
-#warning "source code for min-api has not been patched to generate better doc. this will not impact functionality of object. please see README for patching instructions"
+//#warning "source code for min-api has not been patched to generate better doc. this will not impact functionality of object. please see README for patching instructions"
 
 #define MIN_DISCUSSION static constexpr const char* class_discussion
 #endif
 
 #include "c74_min.h"
+#ifdef WIN_VERSION
+#define	hypot hypot //this overrides a define which is causing conflicts with mlpack
+#endif
+
 #include <mlpack/prereqs.hpp>
 #include <mlpack/core/util/io.hpp>
 #include <mlpack/methods/preprocess/scaling_model.hpp>

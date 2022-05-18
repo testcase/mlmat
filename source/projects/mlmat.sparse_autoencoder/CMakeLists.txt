@@ -60,14 +60,14 @@ include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 # UNIT TEST
 #############################################################
 
-include(${C74_MIN_API_DIR}/test/min-object-unittest.cmake)
+#include(${C74_MIN_API_DIR}/test/min-object-unittest.cmake)
 
-target_link_libraries(${PROJECT_NAME}_test PRIVATE debug "${ARMA_DIR}/build/Debug/libarmadillo.a")
-target_link_libraries(${PROJECT_NAME}_test PRIVATE debug "${MLPACK_DIR}/build/lib/Debug/libmlpack.a")
+#target_link_libraries(${PROJECT_NAME}_test PRIVATE debug "${ARMA_DIR}/build/Debug/libarmadillo.a")
+#target_link_libraries(${PROJECT_NAME}_test PRIVATE debug "${MLPACK_DIR}/build/lib/Debug/libmlpack.a")
 
-target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
-target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
+#target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
+#target_link_libraries(${PROJECT_NAME}_test PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
 
-if (APPLE)
-	target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
-endif ()
+#if (APPLE)
+#	target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
+#endif ()

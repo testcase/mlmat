@@ -1,7 +1,7 @@
 {
-	"author" : "Todd Ingalls",
-	"description" : "Max package for machine learning using jitter matrices.",
-	"homepatcher" : "mlmat overview.maxpat",
+	"author" : "Cycling '74",
+	"description" : "Lightweight reference implementation of a package built using the Min-API.",
+	"homepatcher" : "C++ Object Development Kit.maxpat",
 	"max_version_min" : "8.0", "max_version_max" : "none",
 	"name" : "mlmat",
 	"os" : {
@@ -15,10 +15,10 @@
 		}
 	},
 	"package_extra" : {
-		"reverse_domain" : "org.tenuous",
-		"copyright" : "Copyright (c) Todd Ingalls"
+		"reverse_domain" : "com.cycling74",
+		"copyright" : "Copyright (c) 2018 Cycling '74"
 	},
 	"tags" : [ ],
-	"version" : "@GIT_VERSION_MAJ@.@GIT_VERSION_MIN@.@GIT_VERSION_SUB@",
-	"website" : "https://github.com/testcase/mlmat"
+	"version" : "1.0.0",
+	"website" : "http://www.github.com/Cycling74/min-devkit"
 }
