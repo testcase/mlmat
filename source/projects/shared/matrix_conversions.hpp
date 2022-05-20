@@ -11,11 +11,6 @@
 
 #include <algorithm>
 
-#ifdef WIN_VERSION
-#define MIN_CLAMP(input, low_bound, high_bound) std::clamp<std::remove_reference<decltype(input)>::type>(input, (decltype(input))low_bound, (decltype(input))high_bound)
-#else
-#define MIN_CLAMP(input, low_bound, high_bound) clamp<__typeof(input)>(input, low_bound, high_bound)
-#endif
 
 c74::max::t_object* convert_to_float64(c74::max::t_object *matrix, c74::max::t_jit_matrix_info& minfo) {
     c74::max::t_object *m; // destination matrix
@@ -48,17 +43,17 @@ c74::max::t_object* convert_to_long(c74::max::t_object *matrix, c74::max::t_jit_
 //feel like this template is a little hacky with the coords stuff but keeps other things cleaner
 template <typename M, typename A>
 c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, int mode, bool is_coords = false, long x = 0) {
-    uchar *dataptr = nullptr;
-    c74::max::t_jit_err err = JIT_ERR_NONE;
+    c74::max::uchar *dataptr = nullptr;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     size_t stepsize = sizeof(M);
     c74::max::t_jit_matrix_info minfo;
-    uchar *p = nullptr;
-    uchar *p2 = nullptr;
-    uchar *p1 = nullptr;
+    c74::max::uchar *p = nullptr;
+    c74::max::uchar *p2 = nullptr;
+    c74::max::uchar *p1 = nullptr;
     long aelem = 0;
     
-    err = (t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo,&minfo);
-    err = (t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo,&minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
     
     switch (mode) {
         case 0:
@@ -120,7 +115,7 @@ c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, i
             break;
             
         default:
-            (std::cerr << "could not create matrix" << endl);
+            (std::cerr << "could not create matrix" << std::endl);
             break;
     }
     return err;
@@ -716,7 +711,7 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
                         p1 = p + (jrow*minfo.dimstride[1]);
                         for(auto jplane=0;jplane<minfo.planecount;jplane++) {
                             c74::max::t_int32 d = *(c74::max::t_int32*)p1;
-                            d = MIN_CLAMP(d, 0, m);
+                            d = std::clamp(d, 0, m);
                             arma_col(alem++) = d;
                             p1 += sizeof(c74::max::t_int32);
                         }
@@ -728,11 +723,11 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
                     for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
                         
                         c74::max::t_int32 xpos = *(c74::max::t_int32*)p;
-                        xpos = MIN_CLAMP(xpos, 0, max_x-1);
+                        xpos = std::clamp(xpos, 0, max_x-1);
                         
                         p += sizeof(c74::max::t_int32);
                         c74::max::t_int32 ypos = *(c74::max::t_int32*)p;
-                        ypos = MIN_CLAMP(ypos, 0, max_y-1);
+                        ypos = std::clamp(ypos, 0, max_y-1);
                         p += sizeof(c74::max::t_int32);
                         
                         ypos *= max_x;//
@@ -749,7 +744,7 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
                     c74::max::t_int32 tmp = *(c74::max::t_int32*)p; //added to stop VS from complaining
-                    arma_col(acol++) = MIN_CLAMP(tmp, 0, (max_y)-1);;
+                    arma_col(acol++) = std::clamp(tmp, 0, (max_y)-1);;
                     p += sizeof(c74::max::t_int32);
                 }
             }
@@ -763,7 +758,7 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
                     c74::max::t_int32 tmp = *(c74::max::t_int32*)p; //added to stop VS from complaining
-                    arma_col(acol++) = MIN_CLAMP(tmp,0, (max_x)-1);
+                    arma_col(acol++) = std::clamp(tmp,0, (max_x)-1);
                     p += sizeof(c74::max::t_int32);
                 }
             }

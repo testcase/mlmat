@@ -7,7 +7,7 @@
 
 #include "sparse_autoencoder_ext.hpp"
 
-#include "mlmat_object.hpp"
+#include "mlmat.hpp"
 #include <mlpack/core.hpp>
 
 
@@ -15,7 +15,7 @@ using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack::nn;
 using namespace mlpack::util;
-using max::t_linklist;
+using c74::max::t_linklist;
 
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) ;
 void mlmat_assist(void* x, void* b, long io, long index, char* s);
@@ -58,7 +58,7 @@ public:
         }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
+    attribute<c74::min::symbol> file {this, "file", k_sym__empty,
         description {
             "File"
         },

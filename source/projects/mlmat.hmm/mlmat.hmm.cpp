@@ -6,8 +6,8 @@
 /// TODO: loglik and predict out dumpout?
 /// TODO: integrate scaling
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/methods/hmm/hmm.hpp>
 #include <mlpack/methods/hmm/hmm_model.hpp>
 #include <mlpack/methods/gmm/gmm.hpp>
@@ -72,7 +72,7 @@ public:
         }
     };
     
-    attribute<min::symbol> hmm_type { this, "hmm_type", "gaussian",
+    attribute<c74::min::symbol> hmm_type { this, "hmm_type", "gaussian",
         description {
             "Type of HMM"
         },

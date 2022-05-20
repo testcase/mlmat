@@ -4,8 +4,8 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// http://www.ai-junkie.com/ann/som/som4.html
 /// TODO: in mode 1 and 2 needs to output 3d matrix
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include <mlpack/methods/neighbor_search/unmap.hpp>
 #include <mlpack/methods/neighbor_search/ns_model.hpp>
@@ -223,7 +223,7 @@ public:
     attribute<bool> autoclear { this, "autoclear", false};
     attribute<bool> autotrain { this, "autotrain", false};
     
-    attribute<min::symbol> initialization { this, "initialization", "uniform",
+    attribute<c74::min::symbol> initialization { this, "initialization", "uniform",
         range { "uniform", "gaussian", "sample" },
         description {"Set how initialization of SOM is performed. uniform uses uniform random between 0-1, gaussian uses a guassian random distribution and sample will use randomly sampled values from the input matrix."}
     };
@@ -240,7 +240,7 @@ public:
         }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
+    attribute<c74::min::symbol> file {this, "file", k_sym__empty,
         description {
             "File"
         },

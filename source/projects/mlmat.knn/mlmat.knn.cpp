@@ -9,7 +9,6 @@
 
 #include "mlmat.hpp"
 
-
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include <mlpack/methods/neighbor_search/unmap.hpp>
 #include <mlpack/core/util/timers.hpp>

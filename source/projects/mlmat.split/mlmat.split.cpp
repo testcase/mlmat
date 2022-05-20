@@ -6,9 +6,8 @@
 /// TODO: Need to fix up error messagesß
 
 
-#include "c74_min.h"
 
-#include "mlmat_object.hpp"
+#include "mlmat.hpp"
 #include <mlpack/core/data/split_data.hpp>
 
 

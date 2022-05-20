@@ -8,8 +8,7 @@
 //
 //
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+#include "mlmat.hpp"
 #include <mlpack/methods/decision_tree/decision_tree.hpp>
 
 using namespace c74::min;

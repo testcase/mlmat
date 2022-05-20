@@ -6,8 +6,8 @@
 /// TODO: Serialization read/write
 /// TODO: Testing
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 
 using namespace c74;
 using namespace c74::min;

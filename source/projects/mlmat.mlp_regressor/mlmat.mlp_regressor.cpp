@@ -5,8 +5,8 @@
 /// TODO: Validate optimizer settings.
 
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
 #include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
@@ -45,12 +45,12 @@ public:
         }
     };
     
-    attribute<min::symbol> activation { this, "activation", "relu",
+    attribute<c74::min::symbol> activation { this, "activation", "relu",
         range { "sigmoid", "gaussian",  "relu", "tanh", "soft_plus",  "identity" }
     };
     
     //will add this functionality later
-    attribute<min::symbol> optimizer { this, "optimizer", "rmsprop",
+    attribute<c74::min::symbol> optimizer { this, "optimizer", "rmsprop",
         range { "rmsprop", "sgd", "lbfgs", "adam"}
     };
     
@@ -123,7 +123,7 @@ public:
     };
 
 
-    void add_layer(const min::symbol& layer_type) {
+    void add_layer(const c74::min::symbol& layer_type) {
         const string layer_string = layer_type.c_str();
         
         if(layer_string == "sigmoid") {

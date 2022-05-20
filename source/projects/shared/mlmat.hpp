@@ -20,7 +20,12 @@
 // define this macro so can build without errors
 
 #ifndef MIN_DISCUSSION
-#pragma warning "source code for min-api has not been patched to generate better doc. this will not impact functionality of object. please see README for patching instructions"
+
+#ifdef WIN_VERSION
+#pragma message "source code for min-api has not been patched to generate better doc. this will not impact functionality of object. please see README for patching instructions"
+#else
+#warning "source code for min-api has not been patched to generate better doc. this will not impact functionality of object. please see README for patching instructions"
+#endif
 
 #define MIN_DISCUSSION static constexpr const char* class_discussion
 #endif
@@ -46,13 +51,6 @@ inline void check_mode(const c74::max::t_jit_matrix_info& minfo,
     }
 }
 
-
-// retrieve maxob from jitter obj
-c74::max::t_object* maxob_from_jitob(c74::max::t_object* job) {
-    c74::max::t_object* mwrap = NULL;
-    object_obex_lookup(job, c74::max::gensym("maxwrapper"), &mwrap);
-    return mwrap;
-}
 
 
 

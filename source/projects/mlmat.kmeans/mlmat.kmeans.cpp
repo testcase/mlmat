@@ -8,8 +8,8 @@
 /// TODO: Serialization read/write
 /// TODO: Testing
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/methods/kmeans/kmeans.hpp>
 #include <mlpack/methods/kmeans/kmeans.hpp>
 #include <mlpack/methods/kmeans/allow_empty_clusters.hpp>
@@ -48,7 +48,7 @@ public:
         }}
     };
     
-    attribute<min::symbol> algorithm { this, "algorithm", "naive",
+    attribute<c74::min::symbol> algorithm { this, "algorithm", "naive",
         description {
             "Algorithm to use for the Lloyd iteration."
         },

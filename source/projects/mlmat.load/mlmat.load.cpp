@@ -3,8 +3,8 @@
 /// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/core.hpp>
 
 using namespace c74;

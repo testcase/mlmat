@@ -58,6 +58,12 @@ remember this to get all min-api stuff :
 * `git submodule init`
 * `git submodule update --init --recursive`
 
+### Apply patch
+
+cd source/min-api
+
+git apply ../../better_docs.patch
+
 
 ## Building on macOS
 

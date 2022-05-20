@@ -3,8 +3,8 @@
 /// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/core.hpp>
 #include <mlpack/methods/linear_svm/linear_svm.hpp>
 #include <ensmallen.hpp>
@@ -63,7 +63,7 @@ public:
         description { "Do not add the intercept term to the model." }
     };
     
-    attribute<min::symbol> optimizer { this, "optimizer", "lbfgs",
+    attribute<c74::min::symbol> optimizer { this, "optimizer", "lbfgs",
         description{ "Optimizer to use for training."},
         range { "lbfgs", "psgd" }
     };

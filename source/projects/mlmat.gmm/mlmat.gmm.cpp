@@ -4,8 +4,8 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/methods/gmm/gmm.hpp>
 #include <mlpack/methods/gmm/diagonal_gmm.hpp>
 #include <mlpack/methods/gmm/no_constraint.hpp>
@@ -17,7 +17,7 @@ using namespace c74::max;
 using namespace mlpack::gmm;
 using namespace mlpack::util;
 using namespace mlpack::kmeans;
-using max::t_linklist;
+using c74::max::t_linklist;
 
 
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);

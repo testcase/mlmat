@@ -4,8 +4,8 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: add seed as some strategies use random initialization??
 #include <string>
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include "pca_ext.hpp"
 #include "pca_ext_impl.hpp"
 #include <mlpack/methods/pca/decomposition_policies/exact_svd_method.hpp>

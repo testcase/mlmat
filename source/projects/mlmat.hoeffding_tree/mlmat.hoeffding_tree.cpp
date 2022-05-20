@@ -4,8 +4,8 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: is capable of using categorical data - this is not implemented here
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+
+#include "mlmat.hpp"
 #include <mlpack/methods/hoeffding_trees/hoeffding_tree.hpp>
 #include <mlpack/methods/hoeffding_trees/binary_numeric_split.hpp>
 #include <mlpack/methods/hoeffding_trees/information_gain.hpp>

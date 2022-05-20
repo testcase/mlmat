@@ -8,8 +8,7 @@
 ///   @author Atharva Khandait
 
 
-#include "c74_min.h"
-#include "mlmat_object.hpp"
+#include "mlmat.hpp"
 #include <mlpack/core/data/split_data.hpp>
 #include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
@@ -23,7 +22,7 @@
 using namespace c74::min;
 using namespace c74::max;
 
-using max::t_linklist;
+using c74::max::t_linklist;
 
 using namespace mlpack;
 using namespace mlpack::ann;
@@ -111,11 +110,11 @@ public:
         }
     };
     
-    attribute<min::symbol> activation { this, "activation", "relu",
+    attribute<c74::min::symbol> activation { this, "activation", "relu",
         range { "sigmoid", "gaussian",  "relu", "tanh", "soft_plus",  "identity" }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
+    attribute<c74::min::symbol> file {this, "file", k_sym__empty,
         description {
             "File"
         },
@@ -330,7 +329,7 @@ public:
         }
     };
     
-    void add_layer(Sequential<>* seq, const min::symbol& layer_type) {
+    void add_layer(Sequential<>* seq, const c74::min::symbol& layer_type) {
         const string layer_string = layer_type.c_str();
     
         if(layer_string == "sigmoid") {
