@@ -4,81 +4,61 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #pragma once
-
-
-#include "c74_min.h"
 #include <mlpack/prereqs.hpp>
 #include <mlpack/core/util/io.hpp>
-#include "matrix_conversions.hpp"
-using namespace c74;
-using namespace c74::min;
-using namespace c74::max;
 
-using max::t_object;
-using max::t_symbol;
-using max::t_atom;
-using max::t_class;
-using max::gensym;
-using max::t_jit_matrix_info;
-using max::t_jit_err;
-using max::t_int32;
-using max::JIT_ERR_NONE;
-using max::_jit_sym_float64;
-using max::_jit_sym_float32;
-using max::_jit_sym_long;
-using max::_jit_sym_char;
-using max::_jit_sym_jit_matrix;
-using max::_jit_sym_getinfo;
-using max::_jit_sym_getdata;
-using max::_jit_sym_setinfo;
-using max::object_method_imp;
-using max::_jit_sym_frommatrix;
-using max::t_jit_matrix_info;
-using max::t_jit_op_info;
+#include "c74_min.h"
 
+#include <algorithm>
 
-t_object* convert_to_float64(t_object *matrix, t_jit_matrix_info& minfo) {
-    t_object *m; // destination matrix
-    if(minfo.type == _jit_sym_float64) {
+#ifdef WIN_VERSION
+#define MIN_CLAMP(input, low_bound, high_bound) std::clamp<std::remove_reference<decltype(input)>::type>(input, (decltype(input))low_bound, (decltype(input))high_bound)
+#else
+#define MIN_CLAMP(input, low_bound, high_bound) clamp<__typeof(input)>(input, low_bound, high_bound)
+#endif
+
+c74::max::t_object* convert_to_float64(c74::max::t_object *matrix, c74::max::t_jit_matrix_info& minfo) {
+    c74::max::t_object *m; // destination matrix
+    if(minfo.type == c74::max::_jit_sym_float64) {
         return matrix;
     }
-    t_jit_matrix_info dest_info = minfo;
+    c74::max::t_jit_matrix_info dest_info = minfo;
     
-    dest_info.type = _jit_sym_float64;
-    m = static_cast<t_object*>(max::jit_object_new(_jit_sym_jit_matrix,&dest_info));
-    max::object_method(m,_jit_sym_frommatrix,matrix,NULL);
+    dest_info.type = c74::max::_jit_sym_float64;
+    m = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&dest_info));
+    c74::max::object_method(m, c74::max::_jit_sym_frommatrix,matrix,NULL);
     return m;
 }
 
 
-t_object* convert_to_long(t_object *matrix, t_jit_matrix_info& minfo) {
-    t_object *m; // destination matrix
+c74::max::t_object* convert_to_long(c74::max::t_object *matrix, c74::max::t_jit_matrix_info& minfo) {
+    c74::max::t_object *m; // destination matrix
    
     if(minfo.type == c74::max::_jit_sym_long) {
         return matrix;
     }
-    t_jit_matrix_info dest_info = minfo;
-    dest_info.type = _jit_sym_long;
-    m = static_cast<t_object*>(max::jit_object_new(_jit_sym_jit_matrix,&dest_info));
-    max::object_method(m,_jit_sym_frommatrix,matrix,NULL);
+    c74::max::t_jit_matrix_info dest_info = minfo;
+    dest_info.type = c74::max::_jit_sym_long;
+    m = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&dest_info));
+    c74::max::object_method(m, c74::max::_jit_sym_frommatrix,matrix,NULL);
     
     return m;
 }
 
 //feel like this template is a little hacky with the coords stuff but keeps other things cleaner
 template <typename M, typename A>
-t_jit_err fill_jit_matrix(t_object* jitter_matrix, A arma, int mode, bool is_coords = false, long x = 0) {
+c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, int mode, bool is_coords = false, long x = 0) {
     uchar *dataptr = nullptr;
-    t_jit_err err = JIT_ERR_NONE;
+    c74::max::t_jit_err err = JIT_ERR_NONE;
     size_t stepsize = sizeof(M);
-    t_jit_matrix_info minfo;
+    c74::max::t_jit_matrix_info minfo;
     uchar *p = nullptr;
     uchar *p2 = nullptr;
     uchar *p1 = nullptr;
     long aelem = 0;
     
-    err = (t_jit_err)max::object_method(jitter_matrix,_jit_sym_getinfo,&minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix, _jit_sym_getdata, &dataptr);
+    err = (t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo,&minfo);
+    err = (t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
     
     switch (mode) {
         case 0:
@@ -157,18 +137,18 @@ t_jit_err fill_jit_matrix(t_object* jitter_matrix, A arma, int mode, bool is_coo
  
  */
 
-t_object* arma_to_jit(const int mode,
+c74::max::t_object* arma_to_jit(const int mode,
                       const arma::Row<double>& arma,
-                      t_object *jitter_matrix,
-                      t_jit_matrix_info& target_info,
+                        c74::max::t_object *jitter_matrix,
+                        c74::max::t_jit_matrix_info& target_info,
                       const bool is_coords = false,
                       const long x = 0) {
-    t_jit_err err = JIT_ERR_NONE;
-    t_jit_matrix_info minfo;
-    t_object* tmp_matrix = nullptr;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_object* tmp_matrix = nullptr;
     
     minfo = target_info;
-    minfo.type = _jit_sym_float64;
+    minfo.type = c74::max::_jit_sym_float64;
     minfo.flags = 0;
     
     switch(mode) {
@@ -204,7 +184,7 @@ t_object* arma_to_jit(const int mode,
             break;
     }
     
-    tmp_matrix = static_cast<t_object*>(max::jit_object_new(_jit_sym_jit_matrix,&minfo));
+    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
     if(!tmp_matrix) {
         (std::cerr << "could not create matrix" << std::endl);
         return jitter_matrix;
@@ -212,24 +192,24 @@ t_object* arma_to_jit(const int mode,
     
     err = fill_jit_matrix<double, arma::Row<double>>(tmp_matrix, arma, mode, is_coords, x);
     
-    err = (t_jit_err)max::object_method(jitter_matrix,_jit_sym_setinfo,&minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix,max::_jit_sym_frommatrix,tmp_matrix,nullptr);
-    jit_object_free(tmp_matrix);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
+    c74::max::jit_object_free(tmp_matrix);
     return jitter_matrix;
 }
 
 
-t_object* arma_to_jit(const int mode,
+c74::max::t_object* arma_to_jit(const int mode,
                       const arma::Row<size_t>& arma,
-                      t_object *jitter_matrix,
-                      t_jit_matrix_info& target_info,
+                         c74::max::t_object *jitter_matrix,
+                        c74::max::t_jit_matrix_info& target_info,
                       const bool is_coords = false,
                       const long x = 0) {
-    t_jit_err err = JIT_ERR_NONE;
-    t_jit_matrix_info minfo;
-    t_object* tmp_matrix = nullptr;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_object* tmp_matrix = nullptr;
     
-    minfo.type = max::_jit_sym_long;
+    minfo.type = c74::max::_jit_sym_long;
     minfo.flags = 0;
     
     
@@ -272,16 +252,16 @@ t_object* arma_to_jit(const int mode,
     }
     
     //create temporary matrix
-    tmp_matrix = static_cast<t_object*>(max::jit_object_new(_jit_sym_jit_matrix,&minfo));
+    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
     if(!tmp_matrix) {
         //cerr << "could not create matrix" << endl;
         return jitter_matrix;
     }
     
-    err = fill_jit_matrix<t_int32, arma::Row<size_t>>(tmp_matrix, arma, mode,is_coords, x);
+    err = fill_jit_matrix<c74::max::t_int32, arma::Row<size_t>>(tmp_matrix, arma, mode,is_coords, x);
     
-    err = (t_jit_err)max::object_method(jitter_matrix,_jit_sym_setinfo,&minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix,max::_jit_sym_frommatrix,tmp_matrix,nullptr);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
     
     jit_object_free(tmp_matrix);
     
@@ -290,17 +270,17 @@ t_object* arma_to_jit(const int mode,
     
 }
 
-t_object* arma_to_jit(const int mode,
+c74::max::t_object* arma_to_jit(const int mode,
                       arma::Mat<double>& arma,
-                      t_object *jitter_matrix,
-                      t_jit_matrix_info& target_info,
+    c74::max::t_object *jitter_matrix,
+    c74::max::t_jit_matrix_info& target_info,
                       const bool is_coords = false,
                       const long x = 0) {
-    t_jit_err err = JIT_ERR_NONE;
-    t_jit_matrix_info minfo;
-    t_object* tmp_matrix = nullptr;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_object* tmp_matrix = nullptr;
     
-    minfo.type = _jit_sym_float64;
+    minfo.type = c74::max::_jit_sym_float64;
     minfo.flags = 0;
 
     minfo.dimcount = target_info.dimcount;
@@ -343,7 +323,7 @@ t_object* arma_to_jit(const int mode,
     }
     
     //create temporary matrix
-    tmp_matrix = static_cast<t_object*>(max::jit_object_new(_jit_sym_jit_matrix,&minfo));
+    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
     if(!tmp_matrix) {
         //cerr << "could not create matrix" << endl;
         return jitter_matrix;
@@ -351,24 +331,24 @@ t_object* arma_to_jit(const int mode,
     
     err = fill_jit_matrix<double, arma::Mat<double>>(tmp_matrix, arma, mode, is_coords, x);
     
-    err = (t_jit_err)max::object_method(jitter_matrix,_jit_sym_setinfo,&minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix,max::_jit_sym_frommatrix,tmp_matrix,nullptr);
-    jit_object_free(tmp_matrix);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
+    c74::max::jit_object_free(tmp_matrix);
     return jitter_matrix;
 }
 
-t_object* arma_to_jit(const int mode,
+c74::max::t_object* arma_to_jit(const int mode,
                       const arma::Mat<size_t>& arma,
-                      t_object *jitter_matrix,
-                      t_jit_matrix_info& target_info,
+    c74::max::t_object *jitter_matrix,
+    c74::max::t_jit_matrix_info& target_info,
                       const bool is_coords = false,
                       const long x = 0) {
-    t_jit_err err = JIT_ERR_NONE;
-    t_jit_matrix_info minfo;
-    t_object* tmp_matrix = nullptr;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_object* tmp_matrix = nullptr;
     
     
-    minfo.type = max::_jit_sym_long;
+    minfo.type = c74::max::_jit_sym_long;
     minfo.flags = 0;
     
     minfo.dimcount = target_info.dimcount;
@@ -413,34 +393,34 @@ t_object* arma_to_jit(const int mode,
     }
     
     //create temporary matrix
-    tmp_matrix = static_cast<t_object*>(max::jit_object_new(_jit_sym_jit_matrix,&minfo));
+    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
     if(!tmp_matrix) {
         //cerr << "could not create matrix" << endl;
         return jitter_matrix;
     }
     
-    err = fill_jit_matrix<t_int32, arma::Mat<size_t>>(tmp_matrix, arma, mode, is_coords, x);
+    err = fill_jit_matrix<c74::max::t_int32, arma::Mat<size_t>>(tmp_matrix, arma, mode, is_coords, x);
     
-    err = (t_jit_err)max::object_method(jitter_matrix,_jit_sym_setinfo,&minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix,max::_jit_sym_frommatrix,tmp_matrix,nullptr);
-    jit_object_free(tmp_matrix);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
+    c74::max::jit_object_free(tmp_matrix);
     return jitter_matrix;
 }
 
 
 arma::mat& jit_to_arma(const int mode,
-                       const t_object *jitter_matrix,
+                       const c74::max::t_object *jitter_matrix,
                        arma::Mat<double>& arma_matrix ) {
     /* this is not optimized for speed */
-    t_jit_matrix_info minfo;
-    t_jit_err err = JIT_ERR_NONE;
-    uchar *dataptr = nullptr;
-    uchar *p = nullptr;
-    uchar *p1 = nullptr;
-    object_method(jitter_matrix, _jit_sym_getinfo, &minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix, _jit_sym_getdata, &dataptr);
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::uchar *dataptr = nullptr;
+    c74::max::uchar *p = nullptr;
+    c74::max::uchar *p1 = nullptr;
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
     
-    if(minfo.type != _jit_sym_float64) {
+    if(minfo.type != c74::max::_jit_sym_float64) {
         //ERROR FOR NOW
         return arma_matrix;
     }
@@ -496,17 +476,17 @@ arma::mat& jit_to_arma(const int mode,
 }
 
 arma::Mat<size_t>& jit_to_arma(const int mode,
-                               const t_object *jitter_matrix,
+                               const c74::max::t_object *jitter_matrix,
                                arma::Mat<size_t>& arma_matrix ) {
     /* this is not optimized for speed */
-    t_jit_matrix_info minfo;
-    t_jit_err err = JIT_ERR_NONE;
-    uchar *dataptr = nullptr;
-    uchar *p = nullptr;
-    object_method((t_object*)jitter_matrix, _jit_sym_getinfo, &minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix, _jit_sym_getdata, &dataptr);
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::uchar *dataptr = nullptr;
+    c74::max::uchar *p = nullptr;
+    c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
     
-    if(minfo.type != max::_jit_sym_long) {
+    if(minfo.type != c74::max::_jit_sym_long) {
         //ERROR FOR NOW
         return arma_matrix;
     }
@@ -526,8 +506,8 @@ arma::Mat<size_t>& jit_to_arma(const int mode,
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
                     size_t *colptr = arma_matrix.colptr(acol++);
                     for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        *colptr++ = *(t_int32*)p;
-                        p += sizeof(t_int32);
+                        *colptr++ = *(c74::max::t_int32*)p;
+                        p += sizeof(c74::max::t_int32);
                     }
                 }
             }
@@ -538,8 +518,8 @@ arma::Mat<size_t>& jit_to_arma(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_matrix(jrow, jcol) = *(t_int32*)p;
-                    p += sizeof(t_int32);
+                    arma_matrix(jrow, jcol) = *(c74::max::t_int32*)p;
+                    p += sizeof(c74::max::t_int32);
                 }
             }
             break;
@@ -552,8 +532,8 @@ arma::Mat<size_t>& jit_to_arma(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_matrix(jcol, jrow) = *(t_int32*)p;
-                    p += sizeof(t_int32);
+                    arma_matrix(jcol, jrow) = *(c74::max::t_int32*)p;
+                    p += sizeof(c74::max::t_int32);
                 }
             }
         default:
@@ -564,17 +544,17 @@ arma::Mat<size_t>& jit_to_arma(const int mode,
 }
 
 arma::Row<size_t>& jit_to_arma(const int mode,
-                               t_object *jitter_matrix,
+                                 c74::max::t_object *jitter_matrix,
                                arma::Row<size_t>& arma_row ) {
     /* this is not optimized for speed */
-    t_jit_matrix_info minfo;
-    t_jit_err err = JIT_ERR_NONE;
-    uchar *dataptr = nullptr;
-    uchar *p = nullptr;
-    object_method(jitter_matrix, _jit_sym_getinfo, &minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix,max:: _jit_sym_getdata, &dataptr);
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::uchar *dataptr = nullptr;
+    c74::max::uchar *p = nullptr;
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max:: _jit_sym_getdata, &dataptr);
     
-    if(minfo.type != max::_jit_sym_long) {
+    if(minfo.type != c74::max::_jit_sym_long) {
         //ERROR FOR NOW
         return arma_row;
     }
@@ -593,8 +573,8 @@ arma::Row<size_t>& jit_to_arma(const int mode,
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
                     for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        arma_row(arow++) = *(t_int32*)p;
-                        p += sizeof(t_int32);
+                        arma_row(arow++) = *(c74::max::t_int32*)p;
+                        p += sizeof(c74::max::t_int32);
                     }
                 }
             }
@@ -604,8 +584,8 @@ arma::Row<size_t>& jit_to_arma(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_row(arow++) = *(t_int32*)p;
-                    p += sizeof(t_int32);
+                    arma_row(arow++) = *(c74::max::t_int32*)p;
+                    p += sizeof(c74::max::t_int32);
                 }
             }
             break;
@@ -617,8 +597,8 @@ arma::Row<size_t>& jit_to_arma(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_row(arow++) = *(t_int32*)p;
-                    p += sizeof(t_int32);
+                    arma_row(arow++) = *(c74::max::t_int32*)p;
+                    p += sizeof(c74::max::t_int32);
                 }
             }
         default:
@@ -630,18 +610,18 @@ arma::Row<size_t>& jit_to_arma(const int mode,
 
 /// TODO: The jit matrix iter is wrong here!!!
 arma::Col<arma::uword>& jit_to_arma(const int mode,
-                                    const t_object *jitter_matrix,
+                                    const c74::max::t_object *jitter_matrix,
                                     arma::Col<arma::uword>& arma_col) {
     /* this is not optimized for speed */
-    t_jit_matrix_info minfo;
-    t_jit_err err = JIT_ERR_NONE;
-    uchar *dataptr = nullptr;
-    uchar *p = nullptr;
-    uchar *p1 = nullptr;
-    object_method(jitter_matrix, _jit_sym_getinfo, &minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix,max::_jit_sym_getdata, &dataptr);
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::uchar *dataptr = nullptr;
+    c74::max::uchar *p = nullptr;
+    c74::max::uchar *p1 = nullptr;
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
     
-    if(minfo.type != max::_jit_sym_long) {
+    if(minfo.type != c74::max::_jit_sym_long) {
         //ERROR FOR NOW
         return arma_col;
     }
@@ -661,8 +641,8 @@ arma::Col<arma::uword>& jit_to_arma(const int mode,
                 for(auto jrow=0;jrow<minfo.dim[1];jrow++) {
                     p1 = p + (jrow*minfo.dimstride[1]);
                     for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        arma_col(alem++) = *(t_int32*)p1;
-                        p1 += sizeof(t_int32);
+                        arma_col(alem++) = *(c74::max::t_int32*)p1;
+                        p1 += sizeof(c74::max::t_int32);
                     }
                 }
             }
@@ -673,8 +653,8 @@ arma::Col<arma::uword>& jit_to_arma(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_col(acol++) = *(t_int32*)p;
-                    p += sizeof(t_int32);
+                    arma_col(acol++) = *(c74::max::t_int32*)p;
+                    p += sizeof(c74::max::t_int32);
                 }
             }
             break;
@@ -686,8 +666,8 @@ arma::Col<arma::uword>& jit_to_arma(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_col(acol++) = *(t_int32*)p;
-                    p += sizeof(t_int32);
+                    arma_col(acol++) = *(c74::max::t_int32*)p;
+                    p += sizeof(c74::max::t_int32);
                 }
             }
         default:
@@ -701,20 +681,20 @@ arma::Col<arma::uword>& jit_to_arma(const int mode,
 
 
 arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
-                                          const t_object *jitter_matrix,
+                                          const c74::max::t_object *jitter_matrix,
                                           arma::Col<arma::uword>& arma_col,
-                                          t_int32 max_x,
-                                          t_int32 max_y) {
+                                 c74::max::t_int32 max_x,
+                                    c74::max::t_int32 max_y) {
     /* this is not optimized for speed */
-    t_jit_matrix_info minfo;
-    t_jit_err err = JIT_ERR_NONE;
-    uchar *dataptr = nullptr;
-    uchar *p = nullptr;
-    uchar *p1 = nullptr;
-    object_method(jitter_matrix, _jit_sym_getinfo, &minfo);
-    err = (t_jit_err)max::object_method(jitter_matrix,max::_jit_sym_getdata, &dataptr);
+    c74::max::t_jit_matrix_info minfo;
+    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+    c74::max::uchar *dataptr = nullptr;
+    c74::max::uchar *p = nullptr;
+    c74::max::uchar *p1 = nullptr;
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
     
-    if(minfo.type != max::_jit_sym_long) {
+    if(minfo.type != c74::max::_jit_sym_long) {
         //ERROR FOR NOW
         return arma_col;
     }
@@ -729,16 +709,16 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
     switch(mode) {
         case 0:
             if(minfo.planecount == 1) {
-                t_int32 m = (max_x * max_y)-1;
+                c74::max::t_int32 m = (max_x * max_y)-1;
                 for(auto jcol=0;jcol<minfo.dim[0];jcol++) {
                     p = dataptr + (jcol*minfo.dimstride[0]);
                     for(auto jrow=0;jrow<minfo.dim[1];jrow++) {
                         p1 = p + (jrow*minfo.dimstride[1]);
                         for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                            t_int32 d = *(t_int32*)p1;
+                            c74::max::t_int32 d = *(c74::max::t_int32*)p1;
                             d = MIN_CLAMP(d, 0, m);
                             arma_col(alem++) = d;
-                            p1 += sizeof(t_int32);
+                            p1 += sizeof(c74::max::t_int32);
                         }
                     }
                 }
@@ -747,13 +727,13 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
                     p = dataptr + (jcol*minfo.dimstride[1]);
                     for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
                         
-                        t_int32 xpos = *(t_int32*)p;
+                        c74::max::t_int32 xpos = *(c74::max::t_int32*)p;
                         xpos = MIN_CLAMP(xpos, 0, max_x-1);
                         
-                        p += sizeof(t_int32);
-                        t_int32 ypos = *(t_int32*)p;
+                        p += sizeof(c74::max::t_int32);
+                        c74::max::t_int32 ypos = *(c74::max::t_int32*)p;
                         ypos = MIN_CLAMP(ypos, 0, max_y-1);
-                        p += sizeof(t_int32);
+                        p += sizeof(c74::max::t_int32);
                         
                         ypos *= max_x;//
                         arma_col(acol++) =  xpos + ypos;
@@ -768,9 +748,9 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    t_int32 tmp = *(t_int32*)p; //added to stop VS from complaining
+                    c74::max::t_int32 tmp = *(c74::max::t_int32*)p; //added to stop VS from complaining
                     arma_col(acol++) = MIN_CLAMP(tmp, 0, (max_y)-1);;
-                    p += sizeof(t_int32);
+                    p += sizeof(c74::max::t_int32);
                 }
             }
             break;
@@ -782,9 +762,9 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    t_int32 tmp = *(t_int32*)p; //added to stop VS from complaining
+                    c74::max::t_int32 tmp = *(c74::max::t_int32*)p; //added to stop VS from complaining
                     arma_col(acol++) = MIN_CLAMP(tmp,0, (max_x)-1);
-                    p += sizeof(t_int32);
+                    p += sizeof(c74::max::t_int32);
                 }
             }
         default:

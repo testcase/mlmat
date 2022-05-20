@@ -5,13 +5,14 @@
 /// TODO: Validate optimizer settings. Don't seem to be working well. Could be because not scaling?
 
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
 #include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
 #include <mlpack/methods/ann/loss_functions/kl_divergence.hpp>
 #include <ensmallen.hpp>
 #include <string>
-#include "mlmat_object.hpp"
+
 
 using namespace c74::min;
 using namespace c74::max;

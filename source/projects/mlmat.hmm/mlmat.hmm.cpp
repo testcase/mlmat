@@ -7,11 +7,12 @@
 /// TODO: integrate scaling
 
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/hmm/hmm.hpp>
 #include <mlpack/methods/hmm/hmm_model.hpp>
 #include <mlpack/methods/gmm/gmm.hpp>
 #include <mlpack/methods/gmm/diagonal_gmm.hpp>
-#include "mlmat_object.hpp"
+
 
 using namespace c74::min;
 using namespace c74::max;

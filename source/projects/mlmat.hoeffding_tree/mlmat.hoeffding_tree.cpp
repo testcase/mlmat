@@ -5,12 +5,12 @@
 /// TODO: is capable of using categorical data - this is not implemented here
 
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/hoeffding_trees/hoeffding_tree.hpp>
 #include <mlpack/methods/hoeffding_trees/binary_numeric_split.hpp>
 #include <mlpack/methods/hoeffding_trees/information_gain.hpp>
 #include <mlpack/methods/hoeffding_trees/hoeffding_tree_model.hpp>
 #include <mlpack/methods/preprocess/scaling_model.hpp>
-#include "mlmat_object.hpp"
 #include <queue>
 
 using namespace c74;

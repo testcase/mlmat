@@ -9,6 +9,7 @@
 /// TODO: Testing
 
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/kmeans/kmeans.hpp>
 #include <mlpack/methods/kmeans/kmeans.hpp>
 #include <mlpack/methods/kmeans/allow_empty_clusters.hpp>
@@ -18,7 +19,7 @@
 #include <mlpack/methods/kmeans/hamerly_kmeans.hpp>
 #include <mlpack/methods/kmeans/pelleg_moore_kmeans.hpp>
 #include <mlpack/methods/kmeans/dual_tree_kmeans.hpp>
-#include "mlmat_object.hpp"
+
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;

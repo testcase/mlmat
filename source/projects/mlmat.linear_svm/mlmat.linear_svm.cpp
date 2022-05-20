@@ -4,11 +4,10 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
-
+#include "mlmat_object.hpp"
 #include <mlpack/core.hpp>
 #include <mlpack/methods/linear_svm/linear_svm.hpp>
 #include <ensmallen.hpp>
-#include "mlmat_object.hpp"
 
 #include <string>
 

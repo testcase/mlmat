@@ -43,15 +43,21 @@ find_library(
 )
 
 
-target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/libarmadillo.a")
-target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/lib/Debug/libmlpack.a")
-
-
-target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
-target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
-
-if (APPLE)
+if(APPLE)
+	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/libarmadillo.a")
+	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/lib/Debug/libmlpack.a")
+	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
+	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
 	target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
+endif ()
+
+
+
+if (WIN32)
+	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/armadillo.lib")
+	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/Debug/mlpack.lib")
+	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/armadillo.lib")
+	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/Release/mlpack.lib")
 endif ()
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)

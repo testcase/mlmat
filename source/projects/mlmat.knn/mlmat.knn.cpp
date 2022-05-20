@@ -4,13 +4,20 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Other distance Metrics?
 
-#include "c74_min.h"
+
+
+
+#include "mlmat.hpp"
+
+
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include <mlpack/methods/neighbor_search/unmap.hpp>
 #include <mlpack/core/util/timers.hpp>
 #include <mlpack/methods/neighbor_search/ns_model.hpp>
-#include <mlpack/methods/preprocess/scaling_model.hpp>
-#include "mlmat_object.hpp"
+
+
+
+
 #include <string>
 
 using namespace c74;
@@ -387,11 +394,11 @@ private:
 
 MIN_EXTERNAL(mlmat_knn);
 
-void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv)
+void max_mlmat_jit_matrix(c74::min::max_jit_wrapper *x, c74::max::t_symbol *s, short argc, c74::max::t_atom *argv)
 {
     //found need to call this first or the
     // info for the incoming matrix is incorrect
-    max_jit_mop_jit_matrix(x,s,argc,argv);
+    c74::max::max_jit_mop_jit_matrix(x,s,argc,argv);
     //only want second inlet
     if (max_jit_obex_inletnumber_get(x) == 1)
     {

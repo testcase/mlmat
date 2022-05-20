@@ -9,8 +9,9 @@
 //
 
 #include "c74_min.h"
-#include <mlpack/methods/decision_tree/decision_tree.hpp>
 #include "mlmat_object.hpp"
+#include <mlpack/methods/decision_tree/decision_tree.hpp>
+
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;

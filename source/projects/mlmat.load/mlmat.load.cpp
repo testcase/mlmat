@@ -4,8 +4,9 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
-#include <mlpack/core.hpp>
 #include "mlmat_object.hpp"
+#include <mlpack/core.hpp>
+
 using namespace c74;
 using namespace c74::min;
 using namespace c74::max;

@@ -8,11 +8,11 @@
 
 
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include <mlpack/methods/neighbor_search/unmap.hpp>
 #include <mlpack/core/util/timers.hpp>
 #include <mlpack/methods/neighbor_search/ns_model.hpp>
-#include "mlmat_object.hpp"
 #include <string>
 using namespace c74;
 using namespace c74::min;

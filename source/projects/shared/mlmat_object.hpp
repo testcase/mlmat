@@ -1,19 +1,84 @@
 #pragma once
 
 #include "c74_min.h"
-#include "mlmat.hpp"
+
+#include <mlpack/prereqs.hpp>
+#include <mlpack/core/util/io.hpp>
+#include <mlpack/methods/preprocess/scaling_model.hpp>
+
+template<typename ModelType>
+inline void save_model_file(const c74::min::atoms& args,
+    const ModelType& model,
+    const std::string& model_description) {
+    if (model.model) {
+        short path = 0;
+        char filename[max::MAX_FILENAME_CHARS] = { 0 };
+        char fullpath[max::MAX_PATH_CHARS] = { 0 };
+        char native_path[max::MAX_PATH_CHARS] = { 0 };
+
+        if (!args.empty()) {
+            string name = string(args[0]);
+            path = max::path_getdefault();
+            strncpy_zero(filename, name.c_str(), max::MAX_FILENAME_CHARS);
+            max::path_toabsolutesystempath(path, filename, fullpath);
+            max::path_nameconform(fullpath, native_path, max::PATH_STYLE_NATIVE, max::PATH_TYPE_PATH);
+            try {
+                mlpack::data::Save(string(fullpath), model_description, model, true);
+            }
+            catch (const std::runtime_error& s) {
+                std::throw_with_nested(std::runtime_error("Error writing model file to disk."));
+            }
+        }
+        else {
+            if (!saveas_dialog(filename, &path, NULL)) {
+                path_toabsolutesystempath(path, filename, fullpath);
+                path_nameconform(fullpath, native_path, max::PATH_STYLE_NATIVE, max::PATH_TYPE_PATH);
+                try {
+                    mlpack::data::Save(string(fullpath), model_description, model, true);
+                }
+                catch (const std::runtime_error& s) {
+                    std::throw_with_nested(std::runtime_error("Error writing model file to disk."));
+                }
+            }
+        }
+    }
+    else {
+        throw std::runtime_error("No trained model to save!");
+    }
+}
+
+
 #include "matrix_conversions.hpp"
-using namespace c74;
-using namespace c74::min;
-using namespace c74::max;
-using mlpack::data::ScalingModel;
 
-
-
-template<class min_class_type, threadsafe threadsafety = threadsafe::no>
-class mlmat_object :  public c74::min::object<min_class_type>, public matrix_operator<> {
+template<class class_type>
+class mlmat_serializable_model
+{
 public:
-    attribute<int, threadsafe::no, limit::clamp, allow_repetitions::no> mode { this, "mode", 0,
+    std::unique_ptr<class_type> model{ nullptr };
+    //bool model_trained = false;
+    std::unique_ptr<mlpack::data::ScalingModel> scaler{ nullptr };
+    bool scaler_changed = false;
+    long dim0 = 0;//this is lame but cant see how else to do this. only needed for mode 0 with 2d reference matrix
+    long dimcount = 1; //the horror
+    bool autoscale = false;
+    template<typename Archive>
+
+    void serialize(Archive& ar, const uint32_t /* version */)
+    {
+        ar(CEREAL_NVP(model));
+        ar(CEREAL_NVP(autoscale));
+        ar(CEREAL_NVP(scaler));
+        ar(CEREAL_NVP(scaler));
+        ar(CEREAL_NVP(scaler_changed));
+        ar(CEREAL_NVP(dim0));
+        ar(CEREAL_NVP(dimcount));
+    }
+};
+
+template<class min_class_type, c74::min::threadsafe threadsafety = c74::min::threadsafe::no>
+class mlmat_object :  public c74::min::object<min_class_type>, public c74::min::matrix_operator<> {
+public:
+    c74::min::attribute<int, c74::min::threadsafe::no, c74::min::limit::clamp, c74::min::allow_repetitions::no> mode { this, "mode", 0,
         range {0,2},
         description {
             "Input mode for matrices. "
@@ -24,7 +89,7 @@ public:
         }}
     };
     
-    message<> maxob_setup {this, "maxob_setup",
+    c74::min::message<> maxob_setup {this, "maxob_setup",
         MIN_FUNCTION {
             c74::max::t_object* mob = maxob_from_jitob(c74::min::object_base::maxobj());
             m_dumpoutlet = max_jit_obex_dumpout_get(mob);
@@ -32,7 +97,7 @@ public:
         }};
     
     template<typename matrix_type>
-    matrix_type calc_cell(matrix_type input, const matrix_info& info, matrix_coord& position) {
+    matrix_type calc_cell(matrix_type input, const c74::min::matrix_info& info, c74::min::matrix_coord& position) {
         matrix_type output;
         return output;
     }
@@ -47,13 +112,13 @@ private:
     friend min_class_type;
 };
 
-template<class min_class_type, class model_type, threadsafe threadsafety = threadsafe::no>
-class mlmat_object_autoscale :  public c74::min::object<min_class_type>, public matrix_operator<> {
+template<class min_class_type, class model_type, c74::min::threadsafe threadsafety = c74::min::threadsafe::no>
+class mlmat_object_autoscale :  public c74::min::object<min_class_type>, public c74::min::matrix_operator<> {
 public:
     using c74::min::object_base::classname;
     using c74::min::object<min_class_type>::cerr;
     
-    attribute<int, threadsafe::no, limit::clamp, allow_repetitions::no> mode { this, "mode", 0,
+    c74::min::attribute<int, c74::min::threadsafe::no, c74::min::limit::clamp, c74::min::allow_repetitions::no> mode { this, "mode", 0,
         range {0,2},
         description {
             "Input mode for matrices. "
@@ -65,13 +130,13 @@ public:
     };
     
     //this will likely be moved to mlmat_operator
-    attribute<bool> autoscale { this, "autoscale", false,
+    c74::min::attribute<bool> autoscale { this, "autoscale", false,
         description {
             "Automatically scale data based on scaling_type."
         }
     };
     
-    attribute<min::symbol> scaler { this, "scaler", "normalization",
+    c74::min::attribute<c74::min::symbol> scaler { this, "scaler", "normalization",
         description {
             "The scaler type."
         },
@@ -82,28 +147,28 @@ public:
         range {"standard","min_max", "normalization", "abs", "pca_whitening", "zca_whitening"}
     };
     
-    attribute<int> scaler_min { this, "scaler_min", 0,
+    c74::min::attribute<int> scaler_min { this, "scaler_min", 0,
         description {
             "Minimum value. "
             "Minimum value. "
         }
     };
     
-    attribute<int> scaler_max { this, "scaler_max", 1,
+    c74::min::attribute<int> scaler_max { this, "scaler_max", 1,
         description {
             "Maximum value. "
             "Maximum value. "
         }
     };
     
-    attribute<double> scaler_epsilon { this, "scaler_epsilon", .00005,
+    c74::min::attribute<double> scaler_epsilon { this, "scaler_epsilon", .00005,
         description {
             "Epsilon value. "
             "Epsilon value. "
         }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
+    c74::min::attribute<c74::min::symbol> file {this, "file", k_sym__empty,
         description {
             "File"
         },
@@ -118,7 +183,7 @@ public:
         }}
     };
     
-    message<> write {this, "write",
+    c74::min::message<> write {this, "write",
         MIN_FUNCTION {
             try {
                 m_model.autoscale = autoscale;
@@ -130,7 +195,7 @@ public:
         }
     };
     
-    message<> read {this, "read",
+    c74::min::message<> read {this, "read",
         MIN_FUNCTION {
             try {
                 load_model_file(args);
@@ -145,7 +210,7 @@ public:
     
     
     
-    void load_model_file(const atoms& args) {
+    void load_model_file(const c74::min::atoms& args) {
         atoms f{};
         
         if(!args.empty()) {
@@ -166,7 +231,7 @@ public:
     
     
     template<typename matrix_type>
-    matrix_type calc_cell(matrix_type input, const matrix_info& info, matrix_coord& position) {
+    matrix_type calc_cell(matrix_type input, const c74::min::matrix_info& info, c74::min::matrix_coord& position) {
         matrix_type output;
         return output;
     }
@@ -229,13 +294,13 @@ protected:
 };
 
 
-template<class min_class_type, class model_type, threadsafe threadsafety = threadsafe::no>
-class mlmat_object_writable :  public c74::min::object<min_class_type>, public matrix_operator<> {
+template<class min_class_type, class model_type, c74::min::threadsafe threadsafety = c74::min::threadsafe::no>
+class mlmat_object_writable :  public c74::min::object<min_class_type>, public c74::min::matrix_operator<> {
 public:
     using c74::min::object_base::classname;
     using c74::min::object<min_class_type>::cerr;
     
-    attribute<int, threadsafe::no, limit::clamp, allow_repetitions::no> mode { this, "mode", 0,
+    c74::min::attribute<int, c74::min::threadsafe::no, c74::min::limit::clamp, c74::min::allow_repetitions::no> mode { this, "mode", 0,
         range {0,2},
         description {
             "Input mode for matrices. "
@@ -247,13 +312,13 @@ public:
     };
     
     //this will likely be moved to mlmat_operator
-    attribute<bool> autoscale { this, "autoscale", false,
+    c74::min::attribute<bool> autoscale { this, "autoscale", false,
         description {
             "Automatically scale data based on scaling_type."
         }
     };
     
-    attribute<min::symbol> scaler { this, "scaler", "normalization",
+    c74::min::attribute<c74::min::symbol> scaler { this, "scaler", "normalization",
         description {
             "The scaler type."
         },
@@ -264,28 +329,28 @@ public:
         range {"standard","min_max", "normalization", "abs", "pca_whitening", "zca_whitening"}
     };
     
-    attribute<int> scaler_min { this, "scaler_min", 0,
+    c74::min::attribute<int> scaler_min { this, "scaler_min", 0,
         description {
             "Minimum value. "
             "Minimum value. "
         }
     };
     
-    attribute<int> scaler_max { this, "scaler_max", 1,
+    c74::min::attribute<int> scaler_max { this, "scaler_max", 1,
         description {
             "Maximum value. "
             "Maximum value. "
         }
     };
     
-    attribute<double> scaler_epsilon { this, "scaler_epsilon", .00005,
+    c74::min::attribute<double> scaler_epsilon { this, "scaler_epsilon", .00005,
         description {
             "Epsilon value. "
             "Epsilon value. "
         }
     };
     
-    attribute<min::symbol> file {this, "file", k_sym__empty,
+    c74::min::attribute<c74::min::symbol> file {this, "file", k_sym__empty,
         description {
             "File"
         },
@@ -300,11 +365,14 @@ public:
         }}
     };
     
-    message<> write {this, "write",
+    c74::min::message<> write {this, "write",
         MIN_FUNCTION {
             try {
                 m_model.autoscale = autoscale;
-                save_model_file(args, m_model, std::string(classname()));
+                c74::min::symbol c = classname();
+                const char* buf = (const char*)c;
+                const std::string s = std::string(buf);
+                save_model_file(args, m_model, s);
             } catch (const std::runtime_error& s) {
                 cerr << s.what() << endl;
             }
@@ -312,7 +380,7 @@ public:
         }
     };
     
-    message<> read {this, "read",
+    c74::min::message<> read {this, "read",
         MIN_FUNCTION {
             try {
                 load_model_file(args);
@@ -327,8 +395,8 @@ public:
     
     
     
-    void load_model_file(const atoms& args) {
-        atoms f{};
+    void load_model_file(const c74::min::atoms& args) {
+        c74::min::atoms f{};
         
         if(!args.empty()) {
             f.push_back(args[0]);
@@ -348,7 +416,7 @@ public:
     
     
     template<typename matrix_type>
-    matrix_type calc_cell(matrix_type input, const matrix_info& info, matrix_coord& position) {
+    matrix_type calc_cell(matrix_type input, const c74::min::matrix_info& info, c74::min::matrix_coord& position) {
         matrix_type output;
         return output;
     }

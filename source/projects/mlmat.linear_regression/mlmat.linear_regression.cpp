@@ -4,8 +4,8 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #include "c74_min.h"
-#include <mlpack/methods/linear_regression/linear_regression.hpp>
 #include "mlmat_object.hpp"
+#include <mlpack/methods/linear_regression/linear_regression.hpp>
 
 using namespace c74::min;
 using namespace c74::max;

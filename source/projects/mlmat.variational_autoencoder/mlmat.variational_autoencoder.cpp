@@ -9,7 +9,7 @@
 
 
 #include "c74_min.h"
-
+#include "mlmat_object.hpp"
 #include <mlpack/core/data/split_data.hpp>
 #include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
@@ -19,7 +19,6 @@
 #include <mlpack/methods/ann/dists/bernoulli_distribution.hpp>
 #include <ensmallen.hpp>
 
-#include "mlmat_object.hpp"
 
 using namespace c74::min;
 using namespace c74::max;

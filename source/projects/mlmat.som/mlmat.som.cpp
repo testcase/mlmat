@@ -5,10 +5,11 @@
 /// http://www.ai-junkie.com/ann/som/som4.html
 /// TODO: in mode 1 and 2 needs to output 3d matrix
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include <mlpack/methods/neighbor_search/unmap.hpp>
 #include <mlpack/methods/neighbor_search/ns_model.hpp>
-#include "mlmat_object.hpp"
+
 
 using namespace c74::min;
 using namespace c74::max;

@@ -5,12 +5,12 @@
 
 
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/gmm/gmm.hpp>
 #include <mlpack/methods/gmm/diagonal_gmm.hpp>
 #include <mlpack/methods/gmm/no_constraint.hpp>
 #include <mlpack/methods/gmm/diagonal_constraint.hpp>
 #include <mlpack/methods/kmeans/refined_start.hpp>
-#include "mlmat_object.hpp"
 
 using namespace c74::min;
 using namespace c74::max;

@@ -6,13 +6,13 @@
 
 
 #include "c74_min.h"
+#include "mlmat_object.hpp"
 #include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
 #include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
 #include <mlpack/methods/ann/loss_functions/kl_divergence.hpp>
 #include <mlpack/methods/ann/layer_names.hpp>
 #include <string>
-#include "mlmat_object.hpp"
 
 
 
