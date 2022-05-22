@@ -140,6 +140,9 @@ if wanting to debug also do
 
 ## Building on Windows
 
+Been trying to get this to work and running into issues with how vcpkg works or doesn't work.
+
+<!-- 
 I am using vcpkg to get dependencies. i am building against static libs 
 
 First use vcpkg 
@@ -171,7 +174,7 @@ Replace `[path to vcpkg]` with the correct path for your system
 `cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:/Users/toddingalls/source/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64 -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF  -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF  -G "Visual Studio 16 2019" ..`
  
  
-open mlpack.sln and change the runtime library to /MTd for debug and  /MT for release. Tried to get this working with cmake but could not
+open mlpack.sln and change the runtime library for the mlpack solution to /MTd for debug and  /MT for release. Tried to get this working with cmake but could not. 
 
 
 You can now use 
@@ -193,8 +196,7 @@ run
 `cd build`
 
 
-
-`cmake -DCMAKE_TOOLCHAIN_FILE="C:\Users\toddingalls\source\vcpkg\scripts\buildsystems\vcpkg.cmake" -G "Visual Studio 16 2019" ..`
+`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static  -DCMAKE_TOOLCHAIN_FILE="C:\Users\toddingalls\source\vcpkg\scripts\buildsystems\vcpkg.cmake" -G "Visual Studio 16 2019" ..`
 
 You should now be able to do the following 
 
@@ -204,19 +206,10 @@ if wanting to debug also do
 
 `cmake --build . --config Debug`
 
+have to manually set property Configuration properties in vcpkg section  Use Vcpkg to Yes and Use Static Libraries to Yes
 
-if (MSVC)
-  add_definitions(/bigobj)
-  
-  
-  
-  https://www.nitrc.org/tracker/?func=detail&group_id=435&aid=5589&atid=1644
-
-errors related to max or min using namespace names prepend arma:: in headers
-
-
--- Configuring x64-windows
--- Building x64-windows-dbg
+however after all this still not succeeding. 
+ -->
 
 	
 ## Objects
