@@ -41,3 +41,6 @@
 build/
 docs/
 externals/
+source/cereal/
+source/ensmallen/
+source/min-api
