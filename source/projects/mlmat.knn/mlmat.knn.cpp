@@ -222,10 +222,17 @@ public:
                     out_distances_info.dim[1] = 1;
                     break;
                 case 2:
-                    out_neighbors_info.dim[0] = in_query_info.dim[0];
-                    out_neighbors_info.dim[1] = neighbors;
-                    out_distances_info.dim[0] = in_query_info.dim[0];
-                    out_distances_info.dim[1] = neighbors;
+                    if(neighbors > 1) { //this could be cleaned up. need to know if output is 2d because input 2d and 1 neighbor or input 1d and more than 1 neighbor
+                        out_neighbors_info.dim[0] = in_query_info.dim[0];
+                        out_neighbors_info.dim[1] = neighbors;
+                        out_distances_info.dim[0] = in_query_info.dim[0];
+                        out_distances_info.dim[1] = neighbors;
+                    } else {
+                        out_neighbors_info.dim[0] = in_query_info.dim[0];
+                        out_neighbors_info.dim[1] = in_query_info.dim[1];
+                        out_distances_info.dim[0] = in_query_info.dim[0];
+                        out_distances_info.dim[1] = in_query_info.dim[1];
+                    }
                     break;
                 case 3:
                     out_neighbors_info.dim[0] = in_query_info.dim[0];
