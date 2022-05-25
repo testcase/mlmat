@@ -5,10 +5,12 @@ cmake_minimum_required(VERSION 3.0)
 
 set(C74_MIN_API_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../min-api)
 include(${C74_MIN_API_DIR}/script/min-pretarget.cmake)
-
 # Set directory for support folder
 set(ARMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../armadillo)
 set(MLPACK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../mlpack)
+set(ENSMALLEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ensmallen)
+set(CEREAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../cereal)
+set(BOOST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../boost_1_79_0)
 
 #############################################################
 # MAX EXTERNAL
@@ -20,10 +22,12 @@ include_directories(
     "${MLMAT_SUPPORT_DIR}/mlpack/build/include"
     "${ARMA_DIR}/include"
     "${MLPACK_DIR}/build/include"
+    "${ENSMALLEN_DIR}/include"
+ 	"${CEREAL_DIR}/include"
+ 	"${BOOST_DIR}"
     "/usr/local/include"
     "../shared"
 )
-
 
 set( SOURCE_FILES
 	${PROJECT_NAME}.cpp

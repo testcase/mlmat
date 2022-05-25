@@ -77,9 +77,7 @@ run `mkdir build` to create build directory
 
 This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
 
-(you can replace -DCMAKE_OSX_DEPLOYMENT_TARGET=12.2 with your correct target)
-
-`cmake  -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11  -G Xcode ..`
+`cmake  -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -G Xcode ..`
 
 You can now use 
 
@@ -91,17 +89,6 @@ if wanting to debug also do
 
 You should now have static library at build/Release/libarmadillo.a
 
-
-
-## Ensmallen
-
-mkdir build
-➜  ensmallen git:(master) cd build 
-➜  build git:(master) cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include"
-
-Cereal
-
-https://github.com/USCiLab/cereal.git
 ### Build mlpack static lib 
 
 mlpack has a number of prerequisites
@@ -119,7 +106,7 @@ From the source/mlpack directory run
 
 These are the cmake options I use. mlpack has a number of potential bindings but these are not of use for this project
 
-`cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" CEREAL_INCLUDE_DIR="../../cereal/include" -G Xcode ..`
+`cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -G Xcode ..`
 
 
 You can now use 
