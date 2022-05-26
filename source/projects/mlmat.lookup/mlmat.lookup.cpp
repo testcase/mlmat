@@ -122,7 +122,7 @@ public:
         }
 
         out_results = arma_to_jit(mode, resulting, static_cast<t_object*>(out_results), out_info);
-
+        
 
     out:
         
