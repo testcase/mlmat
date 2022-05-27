@@ -52,13 +52,16 @@ c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, i
     c74::max::uchar *p1 = nullptr;
     long aelem = 0;
     
+    
+    //std::cout << arma << std::endl;
+    
     err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo,&minfo);
     err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
     
     switch (mode) {
         case 0:
             //if 2 planes and is suppose to contain 2d coords, do the conversion
-            if(is_coords && (minfo.planecount == 2)) {
+            if(is_coords && (minfo.dimcount == 2)) {
                 M pos = 0;
                 for(auto jslice=0;jslice<minfo.dim[2];jslice++) {
                     p = dataptr + (jslice*minfo.dimstride[2]);
@@ -67,6 +70,26 @@ c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, i
                         for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
                             p1 = p2 + (jrow*minfo.dimstride[0]);
                             pos = arma(aelem++);
+                            *(M*)p1 = (M)((long)pos % x);
+                            p1 += stepsize;
+                            *(M*)p1 = (M)((long)pos / x);
+                        }
+                    }
+                }
+                
+            } else if(is_coords && (minfo.dimcount == 3)) {
+                M pos = 0;
+               // std::cout << "is_coords && (minfo.dimcount == 2)" << std::endl;
+                for(auto jslice=0;jslice<minfo.dim[2];jslice++) {
+                    aelem = 0;
+                    p = dataptr + (jslice*minfo.dimstride[2]);
+                    for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
+                        p2 = p + (jcol*minfo.dimstride[1]);
+                        for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
+                            p1 = p2 + (jrow*minfo.dimstride[0]);
+                           //00 std::cout << "jslice " << jslice << "aelem " << aelem << std::endl;
+                            pos = arma(jslice, aelem++);
+                            //std::cout << pos << std::endl;
                             *(M*)p1 = (M)((long)pos % x);
                             p1 += stepsize;
                             *(M*)p1 = (M)((long)pos / x);
