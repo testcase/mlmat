@@ -178,14 +178,66 @@ Been trying to get this to work and running into issues with how vcpkg works or 
 I am using vcpkg to get dependencies. i am building against static libs 
 
 First use vcpkg 
+vcpkg install lapack:x64-windows-static
+vcpkg install openblas:x64-windows-static   -- this also install openblas and lapack. 
 
-vcpkg install ensmallen:x64-windows-static   -- this also install openblas and lapack. 
-vcpkg install cereal:x64-windows-static
-vcpkg install boost:x64-windows-static
+
 
 ### Build armadillo static lib
 
-This step is not needed as armadillo static lib has already been installed by vcpkg in above step.
+
+
+`cd source/armadillo` to go to armadillo directory
+
+run `mkdir build` to create build directory
+
+`cd build`
+
+This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
+
+(you can replace -DCMAKE_OSX_DEPLOYMENT_TARGET=12.2 with your correct target)
+
+`cmake  -DBUILD_SHARED_LIBS=OFF -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
+
+You can now use 
+
+`cmake --build . --config Release` to build release version of library
+
+if wanting to debug also do
+
+`cmake --build . --config Debug`
+
+You should now have static library at build/Release/libarmadillo.a
+
+### Install Ensmallen
+
+in source directory:
+
+`git clone https://github.com/mlpack/ensmallen.git`
+
+`cd ensmallen`
+
+`mkdir build`
+
+`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
+
+this just copies headers into ./include
+
+### Install Cereal
+
+in source directory:
+
+`git clone https://github.com/USCiLab/cereal.git`
+
+
+these are header only
+
+
+### Install Boost
+
+dowload  https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
+
+unzip in source dir
 
 
 ### Build mlpack static lib 
@@ -203,7 +255,10 @@ These are the cmake options I use. mlpack has a number of potential bindings but
 
 Replace `[path to vcpkg]` with the correct path for your system
 
-`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:/Users/toddingalls/source/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64 -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF  -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF  -G "Visual Studio 16 2019" ..`
+cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.lib" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0" -G "Visual Studio 17 2022" ..`
+
+
+`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE="C:/Users/toddingalls/source/vcpkg/scripts/buildsystems/vcpkg.cmake" -A x64 -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF  -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF  -G "Visual Studio 16 2019" ..`
  
  
 open mlpack.sln and change the runtime library for the mlpack solution to /MTd for debug and  /MT for release. Tried to get this working with cmake but could not. 
@@ -227,8 +282,8 @@ run
 
 `cd build`
 
+ cmake -G "Visual Studio 17 2022" ..
 
-`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static  -DCMAKE_TOOLCHAIN_FILE="C:\Users\toddingalls\source\vcpkg\scripts\buildsystems\vcpkg.cmake" -G "Visual Studio 16 2019" ..`
 
 You should now be able to do the following 
 
