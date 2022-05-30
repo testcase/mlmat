@@ -655,10 +655,10 @@ arma::Col<arma::uword>& jit_to_arma(const int mode,
     switch(mode) {
         case 0:
             
-            for(auto jcol=0;jcol<minfo.dim[0];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[0]);
-                for(auto jrow=0;jrow<minfo.dim[1];jrow++) {
-                    p1 = p + (jrow*minfo.dimstride[1]);
+            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
+                p = dataptr + (jcol*minfo.dimstride[1]);
+                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
+                    p1 = p + (jrow*minfo.dimstride[0]);
                     for(auto jplane=0;jplane<minfo.planecount;jplane++) {
                         arma_col(alem++) = *(c74::max::t_int32*)p1;
                         p1 += sizeof(c74::max::t_int32);
@@ -729,10 +729,10 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
         case 0:
             if(minfo.planecount == 1) {
                 c74::max::t_int32 m = (max_x * max_y)-1;
-                for(auto jcol=0;jcol<minfo.dim[0];jcol++) {
-                    p = dataptr + (jcol*minfo.dimstride[0]);
-                    for(auto jrow=0;jrow<minfo.dim[1];jrow++) {
-                        p1 = p + (jrow*minfo.dimstride[1]);
+                for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
+                    p = dataptr + (jcol*minfo.dimstride[1]);
+                    for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
+                        p1 = p + (jrow*minfo.dimstride[0]);
                         for(auto jplane=0;jplane<minfo.planecount;jplane++) {
                             c74::max::t_int32 d = *(c74::max::t_int32*)p1;
                             d = std::clamp(d, 0, m);
