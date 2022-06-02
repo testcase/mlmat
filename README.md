@@ -77,9 +77,7 @@ run `mkdir build` to create build directory
 
 This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
 
-(you can replace -DCMAKE_OSX_DEPLOYMENT_TARGET=12.2 with your correct target)
-
-`cmake  -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11  -G Xcode ..`
+`cmake  -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..`
 
 You can now use 
 
@@ -93,41 +91,26 @@ You should now have static library at build/Release/libarmadillo.a
 
 
 
-### Install Ensmallen
+### Ensmallen
 
 in source directory:
 
-`git clone https://github.com/mlpack/ensmallen.git`
-
-`cd ensmallen`
+`cd source/ensmallen`
 
 `mkdir build`
 
-`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include"`
+`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" ..`
 
-this just copies headers into ./include
+this just copies headers into ./include so nothing more to do here.
 
-### Install Cereal
+### Cereal
 
-in source directory:
-
-`git clone https://github.com/USCiLab/cereal.git`
-
-`cd cereal`
-
-`mkdir build` 
-
-these are header only
+only headers being used so not cmake needed
 
 
 ### Install Boost
 
-in source directory :
-
-`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
-
-unzip 
-
+only headers being used so not cmake needed
 
 ### Build mlpack static lib 
 
@@ -162,7 +145,7 @@ run
 `cmake -GXcode ..`
 
 
-You should now be able to do the following but I have not figure out how to disable or bypass testing. Or maybe better make suitable tests. You can run builds from individual projects or modify the mlmat project to skip the testing. 
+You should now be able to do the following
 
 `cmake --build . --config Release` to build release version of library
 
@@ -172,7 +155,7 @@ if wanting to debug also do
 
 ## Building on Windows
 
-Been trying to get this to work and running into issues with how vcpkg works or doesn't work.
+Been trying to get this to work - almost done with instructions.....
 
 <!-- 
 I am using vcpkg to get dependencies. i am building against static libs 
