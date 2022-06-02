@@ -7,3 +7,12 @@
 [submodule "source/armadillo"]
 	path = source/armadillo
 	url = https://gitlab.com/conradsnicta/armadillo-code
+[submodule "source/cereal"]
+	path = source/cereal
+	url = https://github.com/USCiLab/cereal.git
+[submodule "source/ensmallen"]
+	path = source/ensmallen
+	url = https://github.com/mlpack/ensmallen.git
+[submodule "source/boost_1_79_0"]
+	path = source/boost_1_79_0
+	url = https://github.com/boostorg/boost.git

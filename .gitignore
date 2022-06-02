@@ -41,8 +41,4 @@
 build/
 docs/
 externals/
-source/cereal/
-source/ensmallen/
 source/min-api/
-source/boost_1_79_0/
-knn4.maxpat
