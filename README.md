@@ -6,11 +6,6 @@ max package for machine learning using jitter matrices
 This package is using the [min-devkit](https://github.com/Cycling74/min-devkit) however there are a couple 
 fixes in the local version related to issue #189 #168 #184 #183
 
-Building the objects requires having both [mlpack 3.4.2](https://www.mlpack.org/getstarted.html) and
-armadillo headers/libraries installed in some typical location. Eventually libraries will go in the package 
-just need to look at how to do @loader_path stuff with cmake. The cmake files for each project should look for these
-in normal system places as well as /usr/local/ - where the default installation is. I built mlpack from source
-and believe grabbed aramadillo from [homebrew] (https://brew.sh)
 
 ## Structure
 
