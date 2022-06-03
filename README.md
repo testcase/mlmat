@@ -111,7 +111,7 @@ From the source/mlpack directory run
 
 These are the cmake options I use. mlpack has a number of potential bindings but these are not of use for this project
 
-`cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0" -G Xcode ..`
+`cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0" -DDISABLE_DOWNLOADS=ON -G Xcode ..`
 
 
 You can now use 
