@@ -54,6 +54,14 @@ git apply ../../better_docs.patch
 
 ## Building on macOS
 
+### Install Boost
+
+`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
+
+unzip in source dir
+
+only headers being used. 
+
 ### Build armadillo static lib
 
 `cd source/armadillo` to go to armadillo directory
@@ -92,16 +100,7 @@ this just copies headers into ./include so nothing more to do here.
 
 ### Cereal
 
-only headers being used so not cmake needed
-
-
-### Install Boost
-
-`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
-
-unzip in source dir
-
-only headers being used. 
+only headers being used so no cmake needed
 
 ### Build mlpack static lib 
 
@@ -155,6 +154,13 @@ First use vcpkg
 vcpkg install lapack:x64-windows-static
 vcpkg install openblas:x64-windows-static   -- this also install openblas and lapack. 
 
+### Install Boost
+
+`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
+
+unzip in source dir
+
+only headers being used. 
 
 ### Build armadillo static lib
 
@@ -196,16 +202,8 @@ this just copies headers into ./include so nothing more to do here.
 
 ### Cereal
 
-only headers being used so not cmake needed
+only headers being used so no cmake needed
 
-
-### Install Boost
-
-`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
-
-unzip in source dir
-
-only headers being used. 
 
 ### Build mlpack static lib 
 
