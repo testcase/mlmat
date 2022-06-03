@@ -7,14 +7,6 @@ This package is using the [min-devkit](https://github.com/Cycling74/min-devkit) 
 fixes in the local version related to issue #189 #168 #184 #183
 
 
-## Structure
-
-In source/shared is a new class, `mlpack_operator`, that inherits from `matrix_operator` and `object`. This has all objects inherit from. This has some 
-standard setup stuff that seems common, a dummy calc_cell so don't need to add that each time, and also 
-methods for converting to/from armadillo matrices and jitter matrices. 
-
-Luckliy mlpack comes with some nice examples which are easy to adapt.
-
 ## Data conversion
 Armadillo matrices are organized in memory using column major order. When used with mlpack classes
 each column in the matrix is a data point or feature vector and each row is elements of vector.
@@ -105,7 +97,11 @@ only headers being used so not cmake needed
 
 ### Install Boost
 
-only headers being used so not cmake needed
+`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
+
+unzip in source dir
+
+only headers being used. 
 
 ### Build mlpack static lib 
 
@@ -150,19 +146,17 @@ if wanting to debug also do
 
 ## Building on Windows
 
-Been trying to get this to work - almost done with instructions.....
+A few more steps here mainly to get armadillo to build.
 
-<!-- 
-I am using vcpkg to get dependencies. i am building against static libs 
+I am using vcpkg to get dependencies. I am building against static libs 
 
 First use vcpkg 
+
 vcpkg install lapack:x64-windows-static
 vcpkg install openblas:x64-windows-static   -- this also install openblas and lapack. 
 
 
-
 ### Build armadillo static lib
-
 
 `cd source/armadillo` to go to armadillo directory
 
@@ -172,7 +166,9 @@ run `mkdir build` to create build directory
 
 This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
 
-`cmake  -DBUILD_SHARED_LIBS=OFF -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
+Replace `[path to vcpkg]` with the correct path for your system
+
+`cmake  -DBUILD_SHARED_LIBS=OFF -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
 
 You can now use 
 
@@ -192,7 +188,9 @@ in source directory:
 
 `mkdir build`
 
-`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
+Replace `[path to vcpkg]` with the correct path for your system
+
+`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
 
 this just copies headers into ./include so nothing more to do here.
 
@@ -201,15 +199,13 @@ this just copies headers into ./include so nothing more to do here.
 only headers being used so not cmake needed
 
 
-### Boost
+### Install Boost
 
-only headers being used so not cmake needed but need to create correct directories
+`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
 
-in source/boost_1_79_0
-mkdir build
-cd build
-cmake ..
-cmake build .
+unzip in source dir
+
+only headers being used. 
 
 ### Build mlpack static lib 
 
@@ -226,7 +222,7 @@ These are the cmake options I use. mlpack has a number of potential bindings but
 
 Replace `[path to vcpkg]` with the correct path for your system
 
-`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.lib" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0/boost" -G "Visual Studio 17 2022" ..`
+`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.lib" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0/boost" -G "Visual Studio 17 2022" ..`
 `cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.lib" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0" -G "Visual Studio 17 2022" ..`
  
 You can now use 
@@ -261,7 +257,7 @@ if wanting to debug also do
 have to manually set property Configuration properties in vcpkg section  Use Vcpkg to Yes and Use Static Libraries to Yes
 
 however after all this still not succeeding. 
- -->
+
 
 	
 ## Objects
