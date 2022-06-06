@@ -2,10 +2,13 @@
 max package for machine learning using jitter matrices
 
 
+The package is most reliant on the [mlpack](https://www.mlpack.org) and [armadillo](http://arma.sourceforge.net). Copyright info for both are below. 
+
+Many of the description of classes and their use comes from the main source code or the many wonderful examples included with mlpack. 
+
 ## Building:
 This package is using the [min-devkit](https://github.com/Cycling74/min-devkit) however there are a couple 
 fixes in the local version related to issue #189 #168 #184 #183
-
 
 ## Data conversion
 Armadillo matrices are organized in memory using column major order. When used with mlpack classes
@@ -14,10 +17,8 @@ each column in the matrix is a data point or feature vector and each row is elem
 mlpack really uses two data types for matrices - double or long. Objects are 
 currently setup to convert to one of these types depending on what is needed.
 
-
 To deal with converting matrices to/from armadillo, objects have 3 possible modes that are set 
 using the @mode attribute. 
-
 
 
 ### mode 0: 
@@ -70,7 +71,7 @@ run `mkdir build` to create build directory
 
 `cd build`
 
-This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
+This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment.
 
 `cmake  -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..`
 
@@ -83,7 +84,6 @@ if wanting to debug also do
 `cmake --build . --config Debug`
 
 You should now have static library at build/Release/libarmadillo.a
-
 
 
 ### Ensmallen
@@ -170,7 +170,7 @@ run `mkdir build` to create build directory
 
 `cd build`
 
-This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment. These may speed things up but at the moment want to keep things simple
+This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment.
 
 Replace `[path to vcpkg]` with the correct path for your system
 
