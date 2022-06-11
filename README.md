@@ -298,7 +298,37 @@ to have objects that create a bank of objects and can dynamically add to the ban
 Have been working on examples and helpfiles. Will be going back and adding more descriptions so auto-generated ref files are better. 
 	
 
-	
+<!-- 	
+
+[X]mlmat.convert.maxhelp
+[X]mlmat.gmm.maxhelp
+[ ]mlmat.hoeffding_tree.maxhelp
+[ ]mlmat.id3_tree.maxhelp
+[X]mlmat.kfn.maxhelp
+[X]mlmat.kmeans.maxhelp
+[X]mlmat.knn.maxhelp
+[ ]mlmat.linear_regression.maxhelp
+[ ]mlmat.linear_svm.maxhelp
+[ ]mlmat.load.maxhelp
+[ ]mlmat.lookup.maxhelp
+[ ]mlmat.mean_shift.maxhelp
+[ ]mlmat.mlp_classifier.maxhelp
+[ ]mlmat.mlp_regressor.maxhelp
+[ ]mlmat.pca.maxhelp
+[ ]mlmat.scaling.maxhelp
+[ ]mlmat.som.maxhelp
+[ ]mlmat.sparse_autoencoder.maxhelp
+[ ]mlmat.split.maxhelp
+[ ]mlmat.starter.maxhelp
+
+
+
+
+
+
+
+
+ -->
 	
 
 

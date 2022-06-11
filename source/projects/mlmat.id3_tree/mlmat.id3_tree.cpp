@@ -288,11 +288,12 @@ public:
             case 0:
                 out_predictions_info.dimcount = in_matrix_info.dimcount;
                 out_predictions_info.dim[0] = in_matrix_info.dim[0];
-                out_predictions_info.dim[1] = (out_predictions_info.dimcount == 1 ? 1 : in_matrix_info.dim[2]);
+                out_predictions_info.dim[1] = (out_predictions_info.dimcount == 1 ? 1 : in_matrix_info.dim[1]);
                 out_predictions_info.planecount = predictions.n_rows;
+                
                 out_probabilities_info.dimcount = in_matrix_info.dimcount;
                 out_probabilities_info.dim[0] = in_matrix_info.dim[0];
-                out_probabilities_info.dim[1] = (out_probabilities_info.dimcount == 1 ? 1 : in_matrix_info.dim[2]);
+                out_probabilities_info.dim[1] = (out_probabilities_info.dimcount == 1 ? 1 : in_matrix_info.dim[1]);
                 out_probabilities_info.planecount = probabilities.n_rows;
                 break;
             case 1:

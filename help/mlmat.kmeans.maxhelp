@@ -4,13 +4,13 @@
 		"appversion" : 		{
 			"major" : 8,
 			"minor" : 3,
-			"revision" : 0,
+			"revision" : 1,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 411.0, 128.0, 586.0, 714.0 ],
+		"rect" : [ 1062.0, 201.0, 586.0, 714.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 13.0,
@@ -72,13 +72,13 @@
 						"appversion" : 						{
 							"major" : 8,
 							"minor" : 3,
-							"revision" : 0,
+							"revision" : 1,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 411.0, 154.0, 586.0, 688.0 ],
+						"rect" : [ 1062.0, 227.0, 586.0, 688.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 13.0,
@@ -118,7 +118,6 @@
 									"numinlets" : 1,
 									"numoutlets" : 0,
 									"patching_rect" : [ 163.0, 333.0, 201.0, 40.0 ],
-									"presentation_linecount" : 3,
 									"text" : "used to map clusternumber to color"
 								}
 
@@ -216,7 +215,7 @@
 									"numinlets" : 9,
 									"numoutlets" : 2,
 									"outlettype" : [ "", "" ],
-									"patching_rect" : [ 32.0, 382.0, 389.0, 23.0 ],
+									"patching_rect" : [ 24.509814739227295, 382.0, 389.0, 23.0 ],
 									"text" : "jit.gl.mesh @draw_mode points @point_size 8 @gl_color 0 1 0.51"
 								}
 
@@ -230,7 +229,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 32.0, 412.0, 220.0, 220.0 ],
+									"patching_rect" : [ 24.509814739227295, 420.0, 220.0, 220.0 ],
 									"sync" : 1
 								}
 
@@ -332,13 +331,6 @@
 							}
 , 							{
 								"patchline" : 								{
-									"destination" : [ "obj-43", 0 ],
-									"source" : [ "obj-44", 0 ]
-								}
-
-							}
-, 							{
-								"patchline" : 								{
 									"destination" : [ "obj-1", 0 ],
 									"midpoints" : [ 34.009814739227295, 264.0, 84.009814739227295, 264.0 ],
 									"order" : 0,
@@ -434,7 +426,7 @@
 						"appversion" : 						{
 							"major" : 8,
 							"minor" : 3,
-							"revision" : 0,
+							"revision" : 1,
 							"architecture" : "x64",
 							"modernui" : 1
 						}

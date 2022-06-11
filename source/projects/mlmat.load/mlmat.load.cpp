@@ -18,7 +18,7 @@ void mlmat_outputmatrix(max_jit_wrapper *x);
 
 class mlmat_load : public mlmat_object<mlmat_load> {
 public:
-    MIN_DESCRIPTION	{"Load data from file."};
+    MIN_DESCRIPTION	{"Load data from file. Can load a number of file formats including CSV , TSV, PGM, and ARFF."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Cycling '74"};
     MIN_RELATED		{"jit.matrix"};

@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 420.0, 111.0, 1317.0, 1040.0 ],
+		"rect" : [ 762.0, 132.0, 1743.0, 1040.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 13.0,
@@ -78,7 +78,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 420.0, 137.0, 1317.0, 1014.0 ],
+						"rect" : [ 762.0, 158.0, 1743.0, 1014.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 13.0,
@@ -109,13 +109,25 @@
 						"assistshowspatchername" : 0,
 						"boxes" : [ 							{
 								"box" : 								{
+									"id" : "obj-4",
+									"maxclass" : "newobj",
+									"numinlets" : 1,
+									"numoutlets" : 2,
+									"outlettype" : [ "jit_matrix", "" ],
+									"patching_rect" : [ 992.0, 342.0, 131.0, 23.0 ],
+									"text" : "jit.noise 3 float64 100"
+								}
+
+							}
+, 							{
+								"box" : 								{
 									"id" : "obj-19",
 									"maxclass" : "message",
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 86.0, 595.0, 187.0, 23.0 ],
-									"text" : "0.321464 0.511364 0."
+									"text" : "0.170455 1. 0.476317"
 								}
 
 							}
@@ -139,7 +151,6 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 314.0, 461.0, 37.0, 23.0 ],
-									"presentation_linecount" : 2,
 									"text" : "clear"
 								}
 
@@ -368,7 +379,7 @@
 													"numoutlets" : 1,
 													"outlettype" : [ "" ],
 													"patching_rect" : [ 84.0, 463.0, 50.0, 62.0 ],
-													"text" : "0.499228 0.499546 1."
+													"text" : "0.496527 0.495362 1."
 												}
 
 											}
@@ -381,7 +392,7 @@
 													"numoutlets" : 1,
 													"outlettype" : [ "" ],
 													"patching_rect" : [ 15.0, 492.0, 50.0, 89.0 ],
-													"text" : "0.00073 0.014542 0.703798"
+													"text" : "0.005061 0.003217 0.700454"
 												}
 
 											}
@@ -1653,7 +1664,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 0.0, 26.0, 1317.0, 1014.0 ],
+						"rect" : [ 0.0, 26.0, 1743.0, 1014.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 12.0,

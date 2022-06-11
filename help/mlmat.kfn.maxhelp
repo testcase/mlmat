@@ -3,8 +3,8 @@
 		"fileversion" : 1,
 		"appversion" : 		{
 			"major" : 8,
-			"minor" : 2,
-			"revision" : 2,
+			"minor" : 3,
+			"revision" : 1,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
@@ -71,8 +71,8 @@
 						"fileversion" : 1,
 						"appversion" : 						{
 							"major" : 8,
-							"minor" : 2,
-							"revision" : 2,
+							"minor" : 3,
+							"revision" : 1,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
@@ -321,22 +321,6 @@
 							}
 , 							{
 								"box" : 								{
-									"border" : 0,
-									"filename" : "helpargs.js",
-									"id" : "obj-4",
-									"ignoreclick" : 1,
-									"jsarguments" : [ "mlmat.kfn" ],
-									"maxclass" : "jsui",
-									"numinlets" : 1,
-									"numoutlets" : 1,
-									"outlettype" : [ "" ],
-									"parameter_enable" : 0,
-									"patching_rect" : [ 644.0, 106.0, 100.0, 24.0 ]
-								}
-
-							}
-, 							{
-								"box" : 								{
 									"background" : 1,
 									"bgcolor" : [ 1.0, 0.788235, 0.470588, 1.0 ],
 									"bgoncolor" : [ 0.55, 0.55, 0.55, 1.0 ],
@@ -513,8 +497,8 @@
 						"fileversion" : 1,
 						"appversion" : 						{
 							"major" : 8,
-							"minor" : 2,
-							"revision" : 2,
+							"minor" : 3,
+							"revision" : 1,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
@@ -569,12 +553,6 @@
  ],
 		"lines" : [  ],
 		"dependency_cache" : [ 			{
-				"name" : "helpargs.js",
-				"bootpath" : "C74:/help/resources",
-				"type" : "TEXT",
-				"implicit" : 1
-			}
-, 			{
 				"name" : "helpdetails.js",
 				"bootpath" : "C74:/help/resources",
 				"type" : "TEXT",

@@ -3,14 +3,14 @@
 		"fileversion" : 1,
 		"appversion" : 		{
 			"major" : 8,
-			"minor" : 2,
-			"revision" : 0,
+			"minor" : 3,
+			"revision" : 1,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 100.0, 100.0, 700.0, 655.0 ],
+		"rect" : [ 846.0, 264.0, 700.0, 655.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 13.0,
@@ -71,14 +71,14 @@
 						"fileversion" : 1,
 						"appversion" : 						{
 							"major" : 8,
-							"minor" : 2,
-							"revision" : 0,
+							"minor" : 3,
+							"revision" : 1,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 100.0, 126.0, 700.0, 629.0 ],
+						"rect" : [ 846.0, 290.0, 700.0, 629.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 13.0,
@@ -298,7 +298,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 3,
 									"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-									"patching_rect" : [ 198.509814739227295, 316.725494146347046, 219.0, 23.0 ],
+									"patching_rect" : [ 198.509814739227295, 316.725494146347046, 213.0, 23.0 ],
 									"text" : "mlmat.knn @mode 0 @neighbors 1"
 								}
 
@@ -316,78 +316,6 @@
 									"outlettype" : [ "" ],
 									"parameter_enable" : 0,
 									"patching_rect" : [ 10.0, 10.0, 620.0, 125.0 ]
-								}
-
-							}
-, 							{
-								"box" : 								{
-									"border" : 0,
-									"filename" : "helpargs.js",
-									"id" : "obj-4",
-									"ignoreclick" : 1,
-									"jsarguments" : [ "mlmat.knn" ],
-									"maxclass" : "jsui",
-									"numinlets" : 1,
-									"numoutlets" : 1,
-									"outlettype" : [ "" ],
-									"parameter_enable" : 0,
-									"patching_rect" : [ 528.0, 274.0, 100.0, 24.0 ]
-								}
-
-							}
-, 							{
-								"box" : 								{
-									"background" : 1,
-									"bgcolor" : [ 1.0, 0.788235, 0.470588, 1.0 ],
-									"bgoncolor" : [ 0.55, 0.55, 0.55, 1.0 ],
-									"fontface" : 1,
-									"fontname" : "Arial",
-									"fontsize" : 13.0,
-									"hint" : "",
-									"id" : "obj-38",
-									"ignoreclick" : 1,
-									"legacytextcolor" : 1,
-									"maxclass" : "textbutton",
-									"numinlets" : 1,
-									"numoutlets" : 3,
-									"outlettype" : [ "", "", "int" ],
-									"parameter_enable" : 0,
-									"patching_rect" : [ 105.0, 182.607844352722168, 20.0, 20.0 ],
-									"rounded" : 60.0,
-									"text" : "2",
-									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
-									"textoncolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"textovercolor" : [ 0.2, 0.2, 0.2, 1.0 ],
-									"usebgoncolor" : 1,
-									"usetextovercolor" : 1
-								}
-
-							}
-, 							{
-								"box" : 								{
-									"background" : 1,
-									"bgcolor" : [ 1.0, 0.788235, 0.470588, 1.0 ],
-									"bgoncolor" : [ 0.55, 0.55, 0.55, 1.0 ],
-									"fontface" : 1,
-									"fontname" : "Arial",
-									"fontsize" : 13.0,
-									"hint" : "",
-									"id" : "obj-37",
-									"ignoreclick" : 1,
-									"legacytextcolor" : 1,
-									"maxclass" : "textbutton",
-									"numinlets" : 1,
-									"numoutlets" : 3,
-									"outlettype" : [ "", "", "int" ],
-									"parameter_enable" : 0,
-									"patching_rect" : [ 377.0, 146.411775827407837, 20.0, 20.0 ],
-									"rounded" : 60.0,
-									"text" : "1",
-									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
-									"textoncolor" : [ 1.0, 1.0, 1.0, 1.0 ],
-									"textovercolor" : [ 0.2, 0.2, 0.2, 1.0 ],
-									"usebgoncolor" : 1,
-									"usetextovercolor" : 1
 								}
 
 							}
@@ -617,37 +545,57 @@
 							}
 , 							{
 								"box" : 								{
-									"attr" : "neighbors",
-									"id" : "obj-6",
-									"maxclass" : "attrui",
+									"background" : 1,
+									"bgcolor" : [ 1.0, 0.788235, 0.470588, 1.0 ],
+									"bgoncolor" : [ 0.55, 0.55, 0.55, 1.0 ],
+									"fontface" : 1,
+									"fontname" : "Arial",
+									"fontsize" : 13.0,
+									"hint" : "",
+									"id" : "obj-38",
+									"ignoreclick" : 1,
+									"legacytextcolor" : 1,
+									"maxclass" : "textbutton",
 									"numinlets" : 1,
-									"numoutlets" : 1,
-									"outlettype" : [ "" ],
-									"patching_rect" : [ 198.509815000000003, 286.725494000000026, 150.0, 23.0 ]
+									"numoutlets" : 3,
+									"outlettype" : [ "", "", "int" ],
+									"parameter_enable" : 0,
+									"patching_rect" : [ 105.0, 182.607844352722168, 20.0, 20.0 ],
+									"rounded" : 60.0,
+									"text" : "2",
+									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
+									"textoncolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+									"textovercolor" : [ 0.2, 0.2, 0.2, 1.0 ],
+									"usebgoncolor" : 1,
+									"usetextovercolor" : 1
 								}
 
 							}
 , 							{
 								"box" : 								{
-									"attr" : "auto_scale",
-									"id" : "obj-13",
-									"maxclass" : "attrui",
+									"background" : 1,
+									"bgcolor" : [ 1.0, 0.788235, 0.470588, 1.0 ],
+									"bgoncolor" : [ 0.55, 0.55, 0.55, 1.0 ],
+									"fontface" : 1,
+									"fontname" : "Arial",
+									"fontsize" : 13.0,
+									"hint" : "",
+									"id" : "obj-37",
+									"ignoreclick" : 1,
+									"legacytextcolor" : 1,
+									"maxclass" : "textbutton",
 									"numinlets" : 1,
-									"numoutlets" : 1,
-									"outlettype" : [ "" ],
-									"patching_rect" : [ 351.509815000000003, 286.725494000000026, 150.0, 23.0 ]
-								}
-
-							}
-, 							{
-								"box" : 								{
-									"attr" : "scaler",
-									"id" : "obj-17",
-									"maxclass" : "attrui",
-									"numinlets" : 1,
-									"numoutlets" : 1,
-									"outlettype" : [ "" ],
-									"patching_rect" : [ 377.0, 245.215704202651978, 150.0, 23.0 ]
+									"numoutlets" : 3,
+									"outlettype" : [ "", "", "int" ],
+									"parameter_enable" : 0,
+									"patching_rect" : [ 377.0, 146.411775827407837, 20.0, 20.0 ],
+									"rounded" : 60.0,
+									"text" : "1",
+									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
+									"textoncolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+									"textovercolor" : [ 0.2, 0.2, 0.2, 1.0 ],
+									"usebgoncolor" : 1,
+									"usetextovercolor" : 1
 								}
 
 							}
@@ -655,7 +603,7 @@
 						"lines" : [ 							{
 								"patchline" : 								{
 									"destination" : [ "obj-11", 0 ],
-									"midpoints" : [ 308.009814739227295, 356.058831095695496, 235.647059917449951, 356.058831095695496 ],
+									"midpoints" : [ 305.009814739227295, 356.058831095695496, 235.647059917449951, 356.058831095695496 ],
 									"source" : [ "obj-1", 1 ]
 								}
 
@@ -678,13 +626,6 @@
 							}
 , 							{
 								"patchline" : 								{
-									"destination" : [ "obj-1", 0 ],
-									"source" : [ "obj-13", 0 ]
-								}
-
-							}
-, 							{
-								"patchline" : 								{
 									"destination" : [ "obj-15", 0 ],
 									"source" : [ "obj-14", 0 ]
 								}
@@ -700,15 +641,8 @@
 							}
 , 							{
 								"patchline" : 								{
-									"destination" : [ "obj-1", 0 ],
-									"source" : [ "obj-17", 0 ]
-								}
-
-							}
-, 							{
-								"patchline" : 								{
 									"destination" : [ "obj-1", 1 ],
-									"midpoints" : [ 360.735308885574341, 298.401965737342834, 408.009814739227295, 298.401965737342834 ],
+									"midpoints" : [ 360.735308885574341, 298.401965737342834, 402.009814739227295, 298.401965737342834 ],
 									"order" : 0,
 									"source" : [ "obj-3", 0 ]
 								}
@@ -719,13 +653,6 @@
 									"destination" : [ "obj-8", 0 ],
 									"order" : 1,
 									"source" : [ "obj-3", 0 ]
-								}
-
-							}
-, 							{
-								"patchline" : 								{
-									"destination" : [ "obj-1", 0 ],
-									"source" : [ "obj-6", 0 ]
 								}
 
 							}
@@ -794,8 +721,8 @@
 						"fileversion" : 1,
 						"appversion" : 						{
 							"major" : 8,
-							"minor" : 2,
-							"revision" : 0,
+							"minor" : 3,
+							"revision" : 1,
 							"architecture" : "x64",
 							"modernui" : 1
 						}
@@ -850,19 +777,13 @@
  ],
 		"lines" : [  ],
 		"dependency_cache" : [ 			{
-				"name" : "helpname.js",
-				"bootpath" : "C74:/help/resources",
-				"type" : "TEXT",
-				"implicit" : 1
-			}
-, 			{
-				"name" : "helpargs.js",
-				"bootpath" : "C74:/help/resources",
-				"type" : "TEXT",
-				"implicit" : 1
-			}
-, 			{
 				"name" : "helpdetails.js",
+				"bootpath" : "C74:/help/resources",
+				"type" : "TEXT",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "helpname.js",
 				"bootpath" : "C74:/help/resources",
 				"type" : "TEXT",
 				"implicit" : 1
