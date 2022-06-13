@@ -20,7 +20,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 class mlmat_lookup : public mlmat_object<mlmat_lookup> {
 public:
-    MIN_DESCRIPTION	{"Utility for getting indexed data from a matrix."};
+    MIN_DESCRIPTION	{"Utility for getting indexed data from a matrix. Indices should be a 1 or 2 plane long or char matrix depending on number of indices and dimension of data being looked up."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.scaling"};

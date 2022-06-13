@@ -219,12 +219,12 @@ c74::max::t_object* arma_to_jit(const int mode,
 
 
 c74::max::t_object* arma_to_jit(const int mode,
-                      const arma::Row<size_t>& arma,
-                         c74::max::t_object *jitter_matrix,
-                        c74::max::t_jit_matrix_info& target_info,
-                      const bool is_coords = false,
-                      const long x = 0) {
-    //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
+                                const arma::Row<size_t>& arma,
+                                c74::max::t_object *jitter_matrix,
+                                c74::max::t_jit_matrix_info& target_info,
+                                const bool is_coords = false,
+                                const long x = 0) {
+
     c74::max::t_jit_matrix_info minfo;
     c74::max::t_object* tmp_matrix = nullptr;
     

@@ -82,8 +82,20 @@ public:
     
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
+            if(!m_labels) {
+                (cerr << "unable to run training. no valid labels." << endl);
+                return {};
+            }
+            if(!m_training) {
+                (cerr << "unable to run training. no valid training data." << endl);
+                return {};
+            }
+            
+            
             arma::Mat<double> labels(*m_labels);
             arma::mat out_data;
+            
+            
             
             m_model.model = std::make_unique<FFN<>>();
                 
@@ -97,12 +109,15 @@ public:
                 
             m_model.model->Add<Linear<>>(hidden_neurons.get(), output_neurons.get());
             m_model.model->Add<LogSoftMax<>>();
-            double diff = m_labels_min - 1.0;
-            labels = labels - diff;
-            //ens::Adam opt(0.01,trainData.n_cols, 0.9, 0.999, 1e-8, 0, 1e-8,false,true); //////https://ensmallen.org/docs.html#rmsprop.
+            //removing will test when labels inpput
+            //double diff = m_labels_min - 1.0;
+            //labels = labels - diff;
             
             scaler_fit(m_model, *m_training);
             out_data = scaler_transform(m_model, *m_training, out_data);
+            
+            
+            std::cout << labels << std::endl;
             
             if(optimizer.get() == "rmsprop") {
                 // this is default
@@ -122,7 +137,6 @@ public:
             } else {
                 ///ERROR?
             }
-                
             return {};
         }
     };
@@ -224,8 +238,8 @@ public:
             predictions(i) = arma::index_max(likelihoods.col(i));
         }
         
-        labels = arma::conv_to<arma::Row<size_t>>::from(predictions) - (size_t)m_labels_min;
-        
+        //labels = arma::conv_to<arma::Row<size_t>>::from(predictions) - (size_t)m_labels_min;
+        labels = arma::conv_to<arma::Row<size_t>>::from(predictions);
         out_info = in_matrix_info;
         out_info.planecount = 1;
         
@@ -302,6 +316,9 @@ public:
         t_jit_matrix_info minfo;
         t_jit_err err = JIT_ERR_NONE;
         arma::mat dat;
+        double labels_min = 0.;
+        double labels_max = 0.;
+        arma::Col<double> flat;
         
         long savelock = (long) object_method((t_object*)matrix, _jit_sym_lock, 1);
         object_method((t_object*)matrix, _jit_sym_getinfo, &minfo);
@@ -322,10 +339,30 @@ public:
         dat = jit_to_arma(mode, matrix, dat);
         
         m_labels = std::make_unique<arma::Mat<double>>(dat);
-        
-        m_labels_min = m_labels->min();
-        m_labels_max = m_labels->max();
 
+        labels_min = m_labels->min();
+        labels_max = m_labels->max();
+
+        if(labels_min != 0.0) {
+            (cerr << "labels must start at 0" << endl);
+            m_labels.reset(nullptr);
+            goto out;
+        }
+        
+        flat = arma::vectorise(*m_labels);
+        
+        for(auto i=0;i<labels_max;i++) {
+            if(arma::any(flat == i )) {
+                continue;
+            } else {
+                (cerr << "labels must be continuous from 0 to " << labels_max << "." << endl);
+                m_labels.reset(nullptr);
+                goto out;
+            }
+            
+        }
+        
+        
     out:
         object_method((t_object*)matrix, _jit_sym_lock, savelock);
         
@@ -372,8 +409,8 @@ private:
     
     std::unique_ptr<arma::Mat<double>> m_training;
     std::unique_ptr<arma::Mat<double>> m_labels;
-    double m_labels_min = 0.;
-    double m_labels_max = 0.;
+//    double m_labels_min = 0.;
+//    double m_labels_max = 0.;
     
 };
 

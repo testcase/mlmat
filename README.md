@@ -309,9 +309,9 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 [X]mlmat.knn.maxhelp
 [ ]mlmat.linear_regression.maxhelp
 [ ]mlmat.linear_svm.maxhelp
-[ ]mlmat.load.maxhelp
-[ ]mlmat.lookup.maxhelp
-[ ]mlmat.mean_shift.maxhelp
+[X]mlmat.load.maxhelp
+[X]mlmat.lookup.maxhelp
+[X]mlmat.mean_shift.maxhelp
 [ ]mlmat.mlp_classifier.maxhelp
 [ ]mlmat.mlp_regressor.maxhelp
 [ ]mlmat.pca.maxhelp

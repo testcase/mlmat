@@ -59,6 +59,7 @@ public:
         auto out_centroids_savelock = object_method(out_centroids, _jit_sym_lock, 1);
         
         object_method(in_matrix, _jit_sym_getinfo, &in_query_info);
+        
         t_object *in_matrix64 = convert_to_float64(in_matrix, in_query_info);
         
         try {

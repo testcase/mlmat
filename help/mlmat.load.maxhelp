@@ -115,7 +115,6 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"patching_rect" : [ 347.0, 152.411775827407837, 111.0, 23.0 ],
-									"presentation_linecount" : 4,
 									"text" : "read fakedata.csv"
 								}
 
