@@ -251,34 +251,13 @@ if wanting to debug also do
 
 `cmake --build . --config Debug`
 
-have to manually set property Configuration properties in vcpkg section  Use Vcpkg to Yes and Use Static Libraries to Yes
-
-however after all this still not succeeding. 
 
 
-	
-## Objects
-The following 7 objects have been started and have working code. All need to have the ability to use built in serialization capabilities to save models to a file. Can be text file, xml or binary. I guess xml would be best at this point.
 
-*	mlpack.id3_tree - straightforward decision tree_
-*	mlpack.kfn - highly configurable k-farthest neighbor search. 
-*	mlpack.knn - highly configurable k-nearest neighbor search. 
-*	mlpack.kmeans - kmeans clustering given labels and cluster centroids. centroids can be fed back into object to speed up clustering
-*   mlpack.mean_shift - another clustering algorithm. 
-*	mlpack.linear_svm - linear state vector machine. supervised learning for classification.
-*	mlpack.som - self-organizing map - unsupervised clustering. not really part of mlpack but useful.
-*	mlpack.gmm - gaussian mixture model for identification and generative uses. 
-*	mlpack.data - reading and writing data files. csv, arff. handle bag or words encoding. also has ability to split into training testing. various preprocessing scaling. will likely be multiple objects.
-*	mlpack.linear_regression - simple linear regression.
-*	mlpack.sparse_autoencoder -  does do dimensionality reduction and generation
-*	mlpack.pca - dimensionality reduction
-*	mlpack.mlp - multi-layer perceptron. vanilla ann for learning/mapping. should have one-hot-encoding option. allow for various activiation functions - ReLU, tanh, etc.
-*	mlpack.hmm - hidden markov model
-*	mlpack.hoeffding_tree - is a decision tree that does incremental learning so useful for dealing with realtime developement of decision tree.
-*   mlpack.sparse_autoencoder
 
 potential future objects
 
+* 	mlpack.variational_autoencoder - have one working but unclear if useful given constraints. _
 *	mlpack.naive_bayes - probabilistic clustering. 
 *	mlpack.random_forest - ensemble of trees.
 *	mlpack.gan - generative adversarial network. not really suitable for doing typical image stuff but could be interesting particularly on 3d objects. can also do DCGAN, WGAN, WGANP variants. not sure those are useful.
@@ -322,12 +301,6 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 [ ]mlmat.starter.maxhelp
 
 
-
-
-
-
-
-
  -->
 	
 
@@ -348,17 +321,6 @@ This product includes software developed at Data61 / CSIRO
 ---
 
 Attribution Notice.
-As per UN General Assembly Resolution A/RES/ES-11/1
-adopted on 2 March 2022 with 141 votes in favour and 5 votes against,
-we attribute the violation of the sovereignty and territorial integrity of Ukraine,
-and subsequent destruction of many Ukrainian cities and civilian infrastructure,
-to large-scale military aggression by the Russian Federation (aided by Belarus).
-Further details:
-https://undocs.org/A/RES/ES-11/1
-https://digitallibrary.un.org/record/3965290/files/A_RES_ES-11_1-EN.pdf
-https://digitallibrary.un.org/record/3965290/files/A_RES_ES-11_1-RU.pdf
-
-
 
 mlpack is provided without any warranty of fitness for any purpose.  You
 can redistribute the library and/or modify it under the terms of the 3-clause

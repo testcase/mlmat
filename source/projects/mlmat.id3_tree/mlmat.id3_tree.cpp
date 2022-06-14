@@ -205,8 +205,13 @@ public:
     
     t_jit_err set_labels(t_object *matrix) {
         t_jit_err err = JIT_ERR_NONE;
+        t_jit_matrix_info in_matrix_info;
+        object_method(matrix, _jit_sym_getinfo, &in_matrix_info);
+        
+        t_object* in_matrix_long = convert_to_long(static_cast<t_object*>(matrix), in_matrix_info);
         m_labels = std::make_unique<arma::Row<size_t>>();
-        *m_labels = jit_to_arma(mode, matrix, *m_labels);
+        *m_labels = jit_to_arma(mode, in_matrix_long, *m_labels);
+        if(matrix != in_matrix_long) { jit_object_free(in_matrix_long); }
         return err;
     }
     
