@@ -207,7 +207,7 @@ public:
     	description {"The number of columns in map."}
     };
     
-    attribute<int> epochs { this, "epochs", 10,
+    attribute<int> epochs { this, "epochs", 1,
     	description {"The number of passes over training set."}
     
     };

@@ -104,7 +104,7 @@ public:
             for(auto i = 0;i<hidden_layers;i++) {
                 add_layer(activation.get());
                 m_model.model->Add<Linear<>>(hidden_neurons.get(), hidden_neurons.get());
-                (std::cout << "hidden layer: " << hidden_neurons.get() << " inputs " << hidden_neurons.get() << " outputs" << std::endl);
+                //(std::cout << "hidden layer: " << hidden_neurons.get() << " inputs " << hidden_neurons.get() << " outputs" << std::endl);
             }
                 
             m_model.model->Add<Linear<>>(hidden_neurons.get(), output_neurons.get());
@@ -117,7 +117,7 @@ public:
             out_data = scaler_transform(m_model, *m_training, out_data);
             
             
-            std::cout << labels << std::endl;
+            //std::cout << labels << std::endl;
             
             if(optimizer.get() == "rmsprop") {
                 // this is default
@@ -235,7 +235,10 @@ public:
         predictions.zeros(1, likelihoods.n_cols);
         
         for(auto i=0;i<likelihoods.n_cols;i++) {
-            predictions(i) = arma::index_max(likelihoods.col(i));
+            predictions(i) = arma::as_scalar(arma::find(arma::max(likelihoods.col(i)) == likelihoods.col(i), 1));
+            
+            
+            //predictions(i) = arma::index_max(likelihoods.col(i));
         }
         
         //labels = arma::conv_to<arma::Row<size_t>>::from(predictions) - (size_t)m_labels_min;

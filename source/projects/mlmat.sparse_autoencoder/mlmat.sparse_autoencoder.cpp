@@ -72,6 +72,18 @@ public:
             return args;
         }}
     };
+//    //making min_max default since it is best for sae
+//    c74::min::attribute<c74::min::symbol> scaler { this, "scaler", "min_max",
+//        c74::min::description {
+//            "The scaler type."
+//        },
+//        c74::min::setter { MIN_FUNCTION {
+//            m_scaler_changed = true;
+//            return args;
+//        }},
+//        c74::min::range {"standard","min_max", "normalization", "abs", "pca_whitening", "zca_whitening"}
+//    };
+    
     
     message<> write {this, "write",
         MIN_FUNCTION {
@@ -115,11 +127,16 @@ public:
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
             if(m_training) {
-                m_model.model = std::make_unique<SparseAutoencoderExt>(*m_training, m_training->n_rows, hidden_size, lambda, beta, rho);
+                arma::mat out_data;
+                scaler_fit(m_model, *m_training);
+                out_data = scaler_transform(m_model, *m_training, out_data);
+                m_model.model = std::make_unique<SparseAutoencoderExt>(out_data, out_data.n_rows, hidden_size, lambda, beta, rho);
             
+
+                
                 if(autoclear) {
                     m_training.reset();
-                }
+                } 
             } else {
                 (cerr << "no data available for training.");
             }
@@ -161,17 +178,9 @@ public:
             
             jit_class_addadornment(c, mop);
             
-            //unlink dimesions between left and right i/o
-            //keep planecounts same for now.
-            
-            auto output1 = object_method(mop,_jit_sym_getoutput,1);
-            auto output2 = object_method(mop,_jit_sym_getoutput,2);
             auto input2 = object_method(mop,_jit_sym_getinput,2);
             auto input3 = object_method(mop,_jit_sym_getinput,3);
             
-            
-            jit_attr_setlong(output1,_jit_sym_dimlink,0);
-            jit_attr_setlong(output2,_jit_sym_dimlink,0);
             jit_attr_setlong(input2,_jit_sym_dimlink,0);
             jit_attr_setlong(input3,_jit_sym_dimlink,0);
            
@@ -190,7 +199,7 @@ public:
         t_jit_err err = JIT_ERR_NONE;
         arma::mat features;
         arma::mat data;
-        
+        arma::mat scaled_data;
         
         void *o,*p;
         t_atom a;
@@ -234,16 +243,21 @@ public:
             cerr << s.what() << endl;
             goto out;
         }
-        
-        
-        m_model.model->Predict(features, data);
+    
+        try {
+            m_model.model->Predict(features, data);
+            scaled_data = scaler_inverse_transform(m_model,data, scaled_data);
+        } catch (const std::invalid_argument& s) {
+            cerr << s.what() << endl;
+            goto out;
+        }
         
         minfo = in_info;
         minfo.type = _jit_sym_float64;
         minfo.flags = 0;
-        minfo.planecount = data.n_rows;
+        minfo.planecount = scaled_data.n_rows;
         
-        genmatrix = arma_to_jit(mode, data, static_cast<t_object*>(genmatrix), minfo);
+        genmatrix = arma_to_jit(mode, scaled_data, static_cast<t_object*>(genmatrix), minfo);
         
         if ((p=object_method(mop,_jit_sym_getoutput,2   )) && (o=max_jit_mop_io_getoutlet(p)))
         {
@@ -326,9 +340,16 @@ public:
             goto out;
         }
         
-        
-        m_model.model->GetNewFeatures(query, features);
-        
+        try {
+            arma::mat scaled_query;
+            scaled_query = scaler_transform(m_model, query, scaled_query);
+            m_model.model->GetNewFeatures(scaled_query, features);
+
+        } catch (const std::invalid_argument& s) {
+            cerr << s.what() << endl;
+            goto out;
+        }
+
         out_features_info = in_query_info;
         out_features_info.type = _jit_sym_float64;
         out_features_info.planecount = features.n_rows;

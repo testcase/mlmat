@@ -33,7 +33,7 @@ public:
 
 
     attribute<int> new_dimensionality { this, "new_dimensionality", 2,
-        description { "Desired dimensionality obf output dataset. If 0, no dimensionality reduction is performed."}
+        description { "Desired dimensionality of output dataset. If 0, no dimensionality reduction is performed."}
     };
     
     attribute<bool> scale { this, "scale", false,
@@ -93,8 +93,9 @@ public:
         t_atom a[1];
         PCA_EXT<DecompositionPolicy> p(scale);
         double variance = 0.;
+        size_t nd = (newDimension == 0) ? dataset.n_rows : newDimension;
 
-        variance = p.Apply(dataset, eigVal, eigvec, new_dimensionality);
+        variance = p.Apply(dataset, eigVal, eigvec, nd);
         atom_setfloat(a,variance);
         outlet_anything(m_dumpoutlet, gensym("variance"), 1, a);
     }

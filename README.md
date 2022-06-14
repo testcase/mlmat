@@ -312,11 +312,11 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 [X]mlmat.load.maxhelp
 [X]mlmat.lookup.maxhelp
 [X]mlmat.mean_shift.maxhelp
-[ ]mlmat.mlp_classifier.maxhelp
-[ ]mlmat.mlp_regressor.maxhelp
-[ ]mlmat.pca.maxhelp
+[X]mlmat.mlp_classifier.maxhelp
+[X]mlmat.mlp_regressor.maxhelp
+[X]mlmat.pca.maxhelp
 [ ]mlmat.scaling.maxhelp
-[ ]mlmat.som.maxhelp
+[X]mlmat.som.maxhelp
 [ ]mlmat.sparse_autoencoder.maxhelp
 [ ]mlmat.split.maxhelp
 [ ]mlmat.starter.maxhelp
