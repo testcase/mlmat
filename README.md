@@ -303,7 +303,7 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 [X]mlmat.convert.maxhelp
 [X]mlmat.gmm.maxhelp
 [ ]mlmat.hoeffding_tree.maxhelp
-[ ]mlmat.id3_tree.maxhelp
+[X]mlmat.id3_tree.maxhelp
 [X]mlmat.kfn.maxhelp
 [X]mlmat.kmeans.maxhelp
 [X]mlmat.knn.maxhelp
@@ -315,9 +315,9 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 [X]mlmat.mlp_classifier.maxhelp
 [X]mlmat.mlp_regressor.maxhelp
 [X]mlmat.pca.maxhelp
-[ ]mlmat.scaling.maxhelp
+[X]mlmat.scaling.maxhelp
 [X]mlmat.som.maxhelp
-[ ]mlmat.sparse_autoencoder.maxhelp
+[X]mlmat.sparse_autoencoder.maxhelp
 [ ]mlmat.split.maxhelp
 [ ]mlmat.starter.maxhelp
 
