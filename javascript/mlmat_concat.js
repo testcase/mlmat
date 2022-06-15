@@ -1,13 +1,13 @@
 // this needs to be used in conjunction with a jit.submatrix in parent patch.
 // jit.submatrix will not work properly when called from js
-autowatch = 1;
-outlets = 2;
+//autowatch = 1;
+
 var maximum_size = 10000;
 declareattribute("maximum_size");
 var mode = 0;
 declareattribute("mode", "get_mode", "set_mode", 1);
 var index = 0;
-
+outlets = 2;
 var outmatrix;
 				
 var currentinfo = {};

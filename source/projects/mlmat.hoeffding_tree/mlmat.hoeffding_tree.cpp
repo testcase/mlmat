@@ -30,7 +30,7 @@ void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *ar
 
 class mlmat_hoeffding_tree : public mlmat_object_writable<mlmat_hoeffding_tree, HoeffdingTreeModel> {
 public:
-    MIN_DESCRIPTION	{"Hoeffding Decision Tree. An implementation of Hoeffding trees, a form of streaming decision tree for classification. Given labeled data, a Hoeffding tree can be trained and saved for later use, or a pre-trained Hoeffding tree can be used for predicting the classifications of new points."};
+    MIN_DESCRIPTION	{"Hoeffding Decision Tree. An implementation of Hoeffding trees, a form of streaming decision tree for classification. Given labeled data, a Hoeffding tree can be trained and saved for later use, or a pre-trained Hoeffding tree can be used for predicting the classifications of new points. The Hoeffding tree is well suited for incremental learning meaning that rather than provide all the data at once it will refine the decision tree as it receives more data."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
     MIN_RELATED		{"mlmat.id3_tree"};
