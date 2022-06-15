@@ -1,10 +1,7 @@
 /// @file mlmat.split.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved. Also based on examples provided with the mlpack library. Please see source/mlpack for license details
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
-/// TODO: Use scaling_model.hpp for serialization
-/// TODO: Need to fix up error messagesß
-
 
 
 #include "mlmat.hpp"

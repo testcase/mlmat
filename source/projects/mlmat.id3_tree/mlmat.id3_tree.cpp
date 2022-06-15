@@ -1,12 +1,7 @@
 /// @file mlmat.id3_tree.cpp
 /// @ingroup mlmat
-/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2021 Todd Ingalls. All rights reserved. Also based on examples provided with the mlpack library. Please see source/mlpack for license details
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
-//
-// TODO: use mop to filter more that 2d
-//
-//
-//
 
 #include "mlmat.hpp"
 #include <mlpack/methods/decision_tree/decision_tree.hpp>
@@ -49,6 +44,11 @@ public:
     MIN_TAGS		{"ML"};
     MIN_AUTHOR      {"Todd Ingalls"};
     MIN_RELATED		{"mlmat.hoeffding_tree"};
+    
+    attribute<bool> autoclear { this, "autoclear", false,
+        description {"Clear training data from memory after the model has been trained."}
+    };
+    
     
     attribute<int> minimum_leaf_size { this, "minimum_leaf_size", 10,
         description {
@@ -128,7 +128,14 @@ public:
             scaler_fit(m_model, *m_data);
             out_data = scaler_transform(m_model, *m_data, out_data);
             
-            m_model.model->tree = DecisionTree<>(out_data, *m_labels, numClasses, minimum_leaf_size, minimum_gain_split, maximum_depth);
+            try {
+                m_model.model->tree = DecisionTree<>(out_data, *m_labels, numClasses, minimum_leaf_size, minimum_gain_split, maximum_depth);
+            } catch (std::invalid_argument& s) {
+                (cerr << s.what() << endl);
+                goto out;
+            }
+            
+           
             
             m_model.model->tree.Classify(out_data, predictions, probabilities);
             
@@ -138,9 +145,14 @@ public:
                 }
             }
            
-            
+
             atom_setfloat(a,double(correct) / double(m_data->n_cols));
             outlet_anything(m_dumpoutlet, gensym("accuracy"), 1, a);
+            
+            if(autoclear) {
+                m_data.reset();
+                m_labels.reset();
+            }
         out:
             return {};
         },
