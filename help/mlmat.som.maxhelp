@@ -140,7 +140,6 @@
 									"numinlets" : 1,
 									"numoutlets" : 0,
 									"patching_rect" : [ 204.0, 195.0, 371.0, 40.0 ],
-									"presentation_linecount" : 4,
 									"text" : "(will take a minute) without argument will run @epochs number of epochs"
 								}
 
@@ -202,8 +201,8 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 24.0, 332.0, 434.0, 23.0 ],
-									"text" : "mlmat.som @rows 32 @cols 32 @batch_process 1 @initialization sample"
+									"patching_rect" : [ 24.0, 332.0, 504.0, 23.0 ],
+									"text" : "mlmat.som @rows 32 @cols 32 @batch_process 1 @initialization sample @epochs 5"
 								}
 
 							}

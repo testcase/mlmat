@@ -114,7 +114,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 333.0, 166.0, 261.0, 50.0 ],
+									"patching_rect" : [ 327.0, 166.0, 261.0, 50.0 ],
 									"text" : "inverse will do the inverse transform with the assumption that the input data in first inlet has already been scaled"
 								}
 
@@ -127,7 +127,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 2.5, 171.0, 153.0, 40.0 ],
+									"patching_rect" : [ 4.0, 171.0, 153.0, 40.0 ],
 									"text" : "this data will be scaled "
 								}
 
@@ -139,7 +139,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 72.0, 445.0, 224.271844660194176, 154.0 ],
+									"patching_rect" : [ 66.0, 445.0, 224.271844660194176, 154.0 ],
 									"sync" : 1
 								}
 
@@ -152,7 +152,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "bang" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 69.0, 237.0, 24.0, 24.0 ]
+									"patching_rect" : [ 63.0, 237.0, 24.0, 24.0 ]
 								}
 
 							}
@@ -163,7 +163,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 3,
 									"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-									"patching_rect" : [ 69.0, 349.0, 211.0, 23.0 ],
+									"patching_rect" : [ 63.0, 349.0, 211.0, 23.0 ],
 									"text" : "jit.unpack 2 @jump 1 3 @offset 0 1"
 								}
 
@@ -177,7 +177,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 1,
 									"outlettype" : [ "jit_matrix" ],
-									"patching_rect" : [ 69.0, 266.0, 100.0, 75.0 ],
+									"patching_rect" : [ 63.0, 266.0, 100.0, 75.0 ],
 									"pic" : "colorwheel.jpg"
 								}
 
@@ -189,7 +189,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 597.5, 400.0, 223.0, 23.0 ],
+									"patching_rect" : [ 591.5, 400.0, 223.0, 23.0 ],
 									"text" : "1.691125 3.72 7.966584"
 								}
 
@@ -201,7 +201,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 597.5, 375.0, 202.0, 23.0 ],
+									"patching_rect" : [ 591.5, 375.0, 202.0, 23.0 ],
 									"text" : "-0.987432 -0.795731 -0.861942"
 								}
 
@@ -213,7 +213,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 4,
 									"outlettype" : [ "", "", "", "" ],
-									"patching_rect" : [ 780.5, 342.0, 50.5, 23.0 ],
+									"patching_rect" : [ 774.5, 342.0, 50.5, 23.0 ],
 									"text" : "jit.3m"
 								}
 
@@ -225,7 +225,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 518.0, 408.0, 55.0, 23.0 ],
+									"patching_rect" : [ 512.0, 408.0, 55.0, 23.0 ],
 									"text" : "plane -1"
 								}
 
@@ -237,7 +237,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "bang", "" ],
-									"patching_rect" : [ 554.0, 371.0, 29.5, 23.0 ],
+									"patching_rect" : [ 548.0, 371.0, 29.5, 23.0 ],
 									"text" : "t b l"
 								}
 
@@ -254,7 +254,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 4,
 									"outlettype" : [ "list", "", "", "" ],
-									"patching_rect" : [ 564.5, 441.0, 243.0, 203.0 ],
+									"patching_rect" : [ 558.5, 441.0, 243.0, 203.0 ],
 									"rows" : 240
 								}
 
@@ -266,7 +266,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 3,
 									"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-									"patching_rect" : [ 331.0, 349.0, 211.0, 23.0 ],
+									"patching_rect" : [ 325.0, 349.0, 211.0, 23.0 ],
 									"text" : "jit.unpack 2 @jump 1 3 @offset 0 1"
 								}
 
@@ -279,7 +279,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "bang" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 331.0, 238.0, 24.0, 24.0 ]
+									"patching_rect" : [ 325.0, 238.0, 24.0, 24.0 ]
 								}
 
 							}
@@ -290,7 +290,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 297.86407766990294, 445.0, 224.27184466019412, 154.0 ],
+									"patching_rect" : [ 291.86407766990294, 445.0, 224.27184466019412, 154.0 ],
 									"sync" : 1
 								}
 
@@ -304,7 +304,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 1,
 									"outlettype" : [ "jit_matrix" ],
-									"patching_rect" : [ 331.0, 266.0, 100.0, 75.0 ],
+									"patching_rect" : [ 325.0, 266.0, 100.0, 75.0 ],
 									"pic" : "chilis.jpg"
 								}
 
@@ -317,7 +317,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 379.0, 224.0, 344.0, 40.0 ],
+									"patching_rect" : [ 373.0, 224.0, 344.0, 40.0 ],
 									"text" : "input reference data. scaling determined by this data. output out second inlet is the scaled values."
 								}
 
@@ -329,7 +329,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 3,
 									"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-									"patching_rect" : [ 170.0, 398.0, 94.0, 23.0 ],
+									"patching_rect" : [ 164.0, 398.0, 94.0, 23.0 ],
 									"text" : "mlmat.scaling"
 								}
 
@@ -359,7 +359,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 170.0, 163.0, 150.0, 23.0 ]
+									"patching_rect" : [ 164.0, 163.0, 150.0, 23.0 ]
 								}
 
 							}
@@ -372,7 +372,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 170.0, 188.0, 150.0, 23.0 ]
+									"patching_rect" : [ 164.0, 188.0, 150.0, 23.0 ]
 								}
 
 							}
@@ -385,7 +385,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 170.0, 238.0, 150.0, 23.0 ]
+									"patching_rect" : [ 164.0, 238.0, 150.0, 23.0 ]
 								}
 
 							}
@@ -398,7 +398,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 170.0, 213.0, 150.0, 23.0 ]
+									"patching_rect" : [ 164.0, 213.0, 150.0, 23.0 ]
 								}
 
 							}
@@ -419,7 +419,7 @@
 									"numoutlets" : 3,
 									"outlettype" : [ "", "", "int" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 69.0, 213.0, 20.0, 20.0 ],
+									"patching_rect" : [ 63.0, 213.0, 20.0, 20.0 ],
 									"rounded" : 60.0,
 									"text" : "2",
 									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
@@ -447,7 +447,7 @@
 									"numoutlets" : 3,
 									"outlettype" : [ "", "", "int" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 355.0, 240.5, 20.0, 20.0 ],
+									"patching_rect" : [ 349.0, 240.5, 20.0, 20.0 ],
 									"rounded" : 60.0,
 									"text" : "1",
 									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
@@ -462,7 +462,7 @@
 						"lines" : [ 							{
 								"patchline" : 								{
 									"destination" : [ "obj-11", 0 ],
-									"midpoints" : [ 217.0, 434.5, 307.36407766990294, 434.5 ],
+									"midpoints" : [ 211.0, 434.5, 301.36407766990294, 434.5 ],
 									"order" : 2,
 									"source" : [ "obj-1", 1 ]
 								}
@@ -471,7 +471,7 @@
 , 							{
 								"patchline" : 								{
 									"destination" : [ "obj-17", 0 ],
-									"midpoints" : [ 217.0, 431.0, 390.25, 431.0, 390.25, 360.0, 563.5, 360.0 ],
+									"midpoints" : [ 211.0, 431.0, 384.25, 431.0, 384.25, 360.0, 557.5, 360.0 ],
 									"order" : 1,
 									"source" : [ "obj-1", 1 ]
 								}
@@ -480,7 +480,7 @@
 , 							{
 								"patchline" : 								{
 									"destination" : [ "obj-21", 0 ],
-									"midpoints" : [ 217.0, 431.0, 503.5, 431.0, 503.5, 331.0, 790.0, 331.0 ],
+									"midpoints" : [ 211.0, 431.0, 497.5, 431.0, 497.5, 331.0, 784.0, 331.0 ],
 									"order" : 0,
 									"source" : [ "obj-1", 1 ]
 								}
@@ -489,7 +489,7 @@
 , 							{
 								"patchline" : 								{
 									"destination" : [ "obj-22", 0 ],
-									"midpoints" : [ 179.5, 432.5, 81.5, 432.5 ],
+									"midpoints" : [ 173.5, 432.5, 75.5, 432.5 ],
 									"source" : [ "obj-1", 0 ]
 								}
 
@@ -518,7 +518,7 @@
 , 							{
 								"patchline" : 								{
 									"destination" : [ "obj-1", 1 ],
-									"midpoints" : [ 436.5, 384.5, 254.5, 384.5 ],
+									"midpoints" : [ 430.5, 384.5, 248.5, 384.5 ],
 									"source" : [ "obj-14", 1 ]
 								}
 

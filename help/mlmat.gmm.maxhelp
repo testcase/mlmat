@@ -240,7 +240,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 229.5, 503.0, 198.0, 148.0 ],
+									"patching_rect" : [ 233.5, 498.0, 198.0, 148.0 ],
 									"sync" : 1
 								}
 

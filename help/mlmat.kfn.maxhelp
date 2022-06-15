@@ -126,7 +126,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 401.0, 146.411775827407837, 150.0, 25.0 ],
+									"patching_rect" : [ 401.0, 156.0, 150.0, 25.0 ],
 									"text" : "load dataset"
 								}
 
@@ -257,7 +257,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "bang" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 351.235308885574341, 144.411775827407837, 24.0, 24.0 ]
+									"patching_rect" : [ 351.235308885574341, 154.0, 24.0, 24.0 ]
 								}
 
 							}
@@ -364,7 +364,7 @@
 									"numoutlets" : 3,
 									"outlettype" : [ "", "", "int" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 377.0, 146.411775827407837, 20.0, 20.0 ],
+									"patching_rect" : [ 377.0, 156.0, 20.0, 20.0 ],
 									"rounded" : 60.0,
 									"text" : "1",
 									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],

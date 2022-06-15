@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 168.0, 214.0, 1274.0, 906.0 ],
+		"rect" : [ 100.0, 100.0, 635.0, 721.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 13.0,
@@ -78,7 +78,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 168.0, 240.0, 1274.0, 880.0 ],
+						"rect" : [ 100.0, 126.0, 635.0, 695.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 13.0,
@@ -109,13 +109,25 @@
 						"assistshowspatchername" : 0,
 						"boxes" : [ 							{
 								"box" : 								{
+									"id" : "obj-4",
+									"linecount" : 6,
+									"maxclass" : "comment",
+									"numinlets" : 1,
+									"numoutlets" : 0,
+									"patching_rect" : [ 368.5, 380.0, 195.0, 94.0 ],
+									"text" : "this is similar to the mlmat.id3_tree object but you can keep iterating the training with new data. so after initial training run steps 1-3, train again and keep repeating."
+								}
+
+							}
+, 							{
+								"box" : 								{
 									"bubble" : 1,
 									"bubbleside" : 3,
 									"id" : "obj-19",
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 23.0, 442.0, 150.0, 25.0 ],
+									"patching_rect" : [ 23.0, 466.0, 150.0, 25.0 ],
 									"text" : "train decision tree"
 								}
 
@@ -129,7 +141,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 71.0, 149.0, 150.0, 55.0 ],
+									"patching_rect" : [ 71.0, 173.0, 150.0, 55.0 ],
 									"text" : "test how colors are classified"
 								}
 
@@ -140,7 +152,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 446.0, 209.5, 180.0, 21.0 ],
+									"patching_rect" : [ 446.0, 233.5, 180.0, 21.0 ],
 									"text" : "class label (must start at 0)"
 								}
 
@@ -153,7 +165,7 @@
 									"numoutlets" : 2,
 									"outlettype" : [ "", "float" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 28.490184999999997, 200.5, 192.509815000000003, 88.0 ],
+									"patching_rect" : [ 28.490184999999997, 224.5, 192.509815000000003, 88.0 ],
 									"saturation" : 1.0
 								}
 
@@ -165,7 +177,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 28.490184999999997, 301.0, 121.0, 23.0 ],
+									"patching_rect" : [ 28.490184999999997, 325.0, 121.0, 23.0 ],
 									"text" : "jit.matrix 3 float64 1"
 								}
 
@@ -177,7 +189,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 197.0, 332.5, 37.0, 23.0 ],
+									"patching_rect" : [ 197.0, 356.5, 37.0, 23.0 ],
 									"text" : "clear"
 								}
 
@@ -190,7 +202,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "bang" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 197.0, 366.0, 24.0, 24.0 ]
+									"patching_rect" : [ 197.0, 390.0, 24.0, 24.0 ]
 								}
 
 							}
@@ -201,7 +213,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 3,
 									"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-									"patching_rect" : [ 246.0, 454.0, 211.0, 23.0 ],
+									"patching_rect" : [ 246.0, 478.0, 211.0, 23.0 ],
 									"text" : "jit.unpack 2 @jump 3 1 @offset 0 3"
 								}
 
@@ -213,7 +225,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 246.0, 400.0, 107.0, 23.0 ],
+									"patching_rect" : [ 246.0, 424.0, 107.0, 23.0 ],
 									"text" : "jit.matrix @thru 0"
 								}
 
@@ -225,7 +237,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 1,
 									"outlettype" : [ "jit_matrix" ],
-									"patching_rect" : [ 246.0, 366.0, 86.0, 23.0 ],
+									"patching_rect" : [ 246.0, 390.0, 86.0, 23.0 ],
 									"text" : "mlmat.concat"
 								}
 
@@ -237,7 +249,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 414.5, 301.0, 75.0, 23.0 ],
+									"patching_rect" : [ 414.5, 325.0, 75.0, 23.0 ],
 									"text" : "loadmess 0"
 								}
 
@@ -249,7 +261,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "bang", "int" ],
-									"patching_rect" : [ 383.0, 301.0, 29.5, 23.0 ],
+									"patching_rect" : [ 383.0, 325.0, 29.5, 23.0 ],
 									"text" : "t b i"
 								}
 
@@ -262,7 +274,7 @@
 									"numoutlets" : 2,
 									"outlettype" : [ "", "bang" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 439.5, 232.5, 50.0, 23.0 ]
+									"patching_rect" : [ 439.5, 256.5, 50.0, 23.0 ]
 								}
 
 							}
@@ -274,7 +286,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "float" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 496.0, 232.5, 20.0, 24.0 ]
+									"patching_rect" : [ 496.0, 256.5, 20.0, 24.0 ]
 								}
 
 							}
@@ -285,7 +297,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 246.0, 326.0, 126.0, 23.0 ],
+									"patching_rect" : [ 246.0, 350.0, 126.0, 23.0 ],
 									"text" : "jit.pack 2 @jump 3 1"
 								}
 
@@ -297,7 +309,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 383.0, 327.5, 121.0, 23.0 ],
+									"patching_rect" : [ 383.0, 351.5, 121.0, 23.0 ],
 									"text" : "jit.matrix 1 float64 1"
 								}
 
@@ -309,7 +321,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 197.0, 468.0, 37.0, 23.0 ],
+									"patching_rect" : [ 197.0, 492.0, 37.0, 23.0 ],
 									"text" : "clear"
 								}
 
@@ -322,7 +334,7 @@
 									"numoutlets" : 2,
 									"outlettype" : [ "", "float" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 246.0, 200.0, 192.509815000000003, 88.0 ],
+									"patching_rect" : [ 246.0, 224.0, 192.509815000000003, 88.0 ],
 									"saturation" : 1.0
 								}
 
@@ -338,7 +350,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 4,
 									"outlettype" : [ "list", "", "", "" ],
-									"patching_rect" : [ 208.5, 537.0, 245.0, 94.0 ],
+									"patching_rect" : [ 208.5, 561.0, 245.0, 94.0 ],
 									"rows" : 1
 								}
 
@@ -350,7 +362,7 @@
 									"numinlets" : 1,
 									"numoutlets" : 2,
 									"outlettype" : [ "jit_matrix", "" ],
-									"patching_rect" : [ 246.0, 291.0, 121.0, 23.0 ],
+									"patching_rect" : [ 246.0, 315.0, 121.0, 23.0 ],
 									"text" : "jit.matrix 3 float64 1"
 								}
 
@@ -362,7 +374,7 @@
 									"numinlets" : 2,
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
-									"patching_rect" : [ 197.0, 443.0, 34.0, 23.0 ],
+									"patching_rect" : [ 197.0, 467.0, 34.0, 23.0 ],
 									"text" : "train"
 								}
 
@@ -374,7 +386,7 @@
 									"numinlets" : 3,
 									"numoutlets" : 3,
 									"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-									"patching_rect" : [ 208.5, 501.0, 130.0, 23.0 ],
+									"patching_rect" : [ 208.5, 525.0, 130.0, 23.0 ],
 									"text" : "mlmat.hoeffding_tree"
 								}
 
@@ -388,7 +400,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 13.0, 356.0, 150.0, 40.0 ],
+									"patching_rect" : [ 13.0, 380.0, 150.0, 40.0 ],
 									"text" : "when finished bang through matrix"
 								}
 
@@ -401,7 +413,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 273.0, 156.0, 238.0, 40.0 ],
+									"patching_rect" : [ 273.0, 180.0, 238.0, 40.0 ],
 									"text" : "input data with corresponding labels for different classes of colors"
 								}
 
@@ -418,7 +430,7 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 10.0, 10.0, 620.0, 141.0 ]
+									"patching_rect" : [ 10.0, 10.0, 620.0, 159.0 ]
 								}
 
 							}
@@ -663,7 +675,7 @@
 									"numoutlets" : 3,
 									"outlettype" : [ "", "", "int" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 165.0, 366.0, 20.0, 20.0 ],
+									"patching_rect" : [ 165.0, 390.0, 20.0, 20.0 ],
 									"rounded" : 60.0,
 									"text" : "2",
 									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
@@ -691,7 +703,7 @@
 									"numoutlets" : 3,
 									"outlettype" : [ "", "", "int" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 175.0, 444.5, 20.0, 20.0 ],
+									"patching_rect" : [ 175.0, 468.5, 20.0, 20.0 ],
 									"rounded" : 60.0,
 									"text" : "3",
 									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
@@ -719,7 +731,7 @@
 									"numoutlets" : 3,
 									"outlettype" : [ "", "", "int" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 49.0, 149.0, 20.0, 20.0 ],
+									"patching_rect" : [ 49.0, 173.0, 20.0, 20.0 ],
 									"rounded" : 60.0,
 									"text" : "4",
 									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
@@ -747,7 +759,7 @@
 									"numoutlets" : 3,
 									"outlettype" : [ "", "", "int" ],
 									"parameter_enable" : 0,
-									"patching_rect" : [ 257.0, 165.5, 20.0, 20.0 ],
+									"patching_rect" : [ 257.0, 189.5, 20.0, 20.0 ],
 									"rounded" : 60.0,
 									"text" : "1",
 									"textcolor" : [ 0.34902, 0.34902, 0.34902, 1.0 ],
@@ -848,7 +860,7 @@
 , 							{
 								"patchline" : 								{
 									"destination" : [ "obj-14", 1 ],
-									"midpoints" : [ 392.5, 360.5, 377.5, 360.5, 377.5, 315.0, 362.5, 315.0 ],
+									"midpoints" : [ 392.5, 384.5, 377.5, 384.5, 377.5, 339.0, 362.5, 339.0 ],
 									"source" : [ "obj-3", 0 ]
 								}
 
@@ -907,7 +919,7 @@
 , 							{
 								"patchline" : 								{
 									"destination" : [ "obj-5", 0 ],
-									"midpoints" : [ 37.990184999999997, 412.0, 218.0, 412.0 ],
+									"midpoints" : [ 37.990184999999997, 436.0, 218.0, 436.0 ],
 									"source" : [ "obj-7", 0 ]
 								}
 
@@ -969,7 +981,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 0.0, 26.0, 1274.0, 880.0 ],
+						"rect" : [ 0.0, 26.0, 635.0, 695.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 12.0,
@@ -1048,8 +1060,8 @@
 			}
 , 			{
 				"name" : "mlmat_concat.js",
-				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/jsextensions",
-				"patcherrelativepath" : "../jsextensions",
+				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/javascript",
+				"patcherrelativepath" : "../javascript",
 				"type" : "TEXT",
 				"implicit" : 1
 			}

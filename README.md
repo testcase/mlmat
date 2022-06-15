@@ -281,7 +281,7 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 
 [X]mlmat.convert.maxhelp
 [X]mlmat.gmm.maxhelp
-[ ]mlmat.hoeffding_tree.maxhelp
+[X]mlmat.hoeffding_tree.maxhelp
 [X]mlmat.id3_tree.maxhelp
 [X]mlmat.kfn.maxhelp
 [X]mlmat.kmeans.maxhelp
