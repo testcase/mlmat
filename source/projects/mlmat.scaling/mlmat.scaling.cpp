@@ -25,7 +25,7 @@ public:
     MIN_DESCRIPTION	{"Apply various scaling strategies. This will apply different type of scaling to datasets. Further data can be scaled using the fitting of original dataset. Inverse transform can also be applied."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
-    MIN_RELATED		{"mlmat.lookup"};
+    MIN_RELATED		{"mlmat.split"};
 
     attribute<min::symbol> scaler { this, "scaler", "standard",
         description {

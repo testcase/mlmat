@@ -32,8 +32,8 @@ public:
     };
     
     attribute<bool> use_labels { this, "use_labels", false,
-           description {
-               "If 1 labels are expected. "
+            description {
+               "If labels are expected. "
         }
     };
     
@@ -49,9 +49,12 @@ public:
                "If true, the sample order is shuffled; otherwise, each sample is visited in linear order.  "
         }
     };
+    
+    void set_labels_received(bool t) {
+        m_labels_received = t;
+    }
 
-    //should make private and have setter i guess
-    bool m_received_labels = false;
+    
     
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
@@ -74,15 +77,12 @@ public:
         auto out_train_matrix_savelock = object_method(out_train_matrix, _jit_sym_lock, 1);
         auto out_test_matrix_savelock = object_method(out_test_matrix, _jit_sym_lock, 1);
 
-
-        
         object_method(in_matrix, _jit_sym_getinfo, &in_matrix_info);
         t_object* in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_matrix_info);
         
         input_data = jit_to_arma(mode, in_matrix64, input_data);
         
-        
-        if(use_labels && !m_received_labels) {
+        if(use_labels && !m_labels_received) {
             (cerr << "Have not received labels matrix." << endl);
             goto out;
         }
@@ -173,34 +173,20 @@ private:
     // override jitclass_setup so we can have our own matrix_calc. jitclass_setup is called first (and only once when the object is loaded for the first time) during the intitialization of the object.
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
-
-        t_atom exact_types[1];
-            
-        atom_setsym(exact_types, _jit_sym_long);
+        t_atom long_type[1];
         
-
+        atom_setsym(long_type, _jit_sym_long);
         // add mop
         t_object* mop = static_cast<t_object*>(jit_object_new(_jit_sym_jit_mop, 2, 4));
         
         jit_mop_single_type(mop, _jit_sym_float64);
-        
-
+        jit_mop_input_nolink(mop, 2);
         auto in2 = object_method(mop,_jit_sym_getinput,2);
-        auto out3 = object_method(mop,_jit_sym_getoutput,3);
-        auto out4 = object_method(mop,_jit_sym_getoutput,4);
         
-        
-        object_method_typed(in2, _jit_sym_types, 1, exact_types, NULL);
-        object_method_typed(out3, _jit_sym_types, 1, exact_types, NULL);
-        object_method_typed(out4, _jit_sym_types, 1, exact_types, NULL);
-        
-        
-        jit_attr_setlong(in2,_jit_sym_dimlink,0);
-        jit_attr_setlong(in2,_jit_sym_typelink,0);
-
-
-        
-        //always adapt
+//        jit_attr_setlong(in2,_jit_sym_dimlink,0);
+//        jit_attr_setlong(in2,_jit_sym_typelink,0);
+        object_method_typed(in2, _jit_sym_types, 1, long_type, NULL);
+//
         jit_object_method(in2,_jit_sym_ioproc,jit_mop_ioproc_copy_adapt);
                
         jit_class_addadornment(c, mop);
@@ -211,24 +197,19 @@ private:
         return {};
     }};
     
-    message<> maxob_setup {this, "maxob_setup",
-        MIN_FUNCTION {
-            t_object* mob = maxob_from_jitob(maxobj());
-            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
-            return {};
-    }};
-
     message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         
         max_jit_class_mop_wrap(c, this_jit_class, 0);
         max_jit_class_wrap_standard(c, this_jit_class, 0);
-        class_addmethod(c, (method)mlmat_assist, "assist", A_CANT, 0);
         max_jit_classex_mop_mproc(c,this_jit_class,(void*)max_jit_mlmat_mproc);
+        class_addmethod(c, (method)mlmat_assist, "assist", A_CANT, 0);
         class_addmethod(c, (method)max_mlmat_jit_matrix, "jit_matrix", A_GIMME, 0);
         return {};
     }};
-
+    
+    bool m_labels_received = false;
+    
 };
 
 
@@ -317,10 +298,10 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
     return err;
 }
 
-void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv) {
+void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv)
+{
     //found need to call this first or the
     // info for the incoming matrix is incorrect
-    // this does not seem right
     max_jit_mop_jit_matrix(x,s,argc,argv);
     //only want second inlet
     if (max_jit_obex_inletnumber_get(x) == 1)
@@ -329,22 +310,21 @@ void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *ar
         void *j = nullptr;
         
         void *p, *mop;
-        
+
+
         if (!(mop=max_jit_obex_adornment_get(x,_jit_sym_jit_mop)))
             jit_error_code(x,err);
-        
-        p = object_method((t_object*)mop,_jit_sym_getinput,2);
+
+        p = object_method(mop,_jit_sym_getinput,2);
+
         j = max_jit_obex_jitob_get(x);
-        
-        minwrap<mlmat_split>* job = (minwrap<mlmat_split>*)(j);
-        job->m_min_object.m_received_labels = true;
-        
-       
-    }
     
+        minwrap<mlmat_split>* job = (minwrap<mlmat_split>*)(j);
+        job->m_min_object.set_labels_received(true);
+
+        jit_error_code(x,err);
+    }
 }
-
-
 
 void mlmat_assist(void* x, void* b, long io, long index, char* s) {
     switch(io) {

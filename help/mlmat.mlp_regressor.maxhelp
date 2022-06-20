@@ -929,8 +929,8 @@
 			}
 , 			{
 				"name" : "mlmat_concat.js",
-				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/jsextensions",
-				"patcherrelativepath" : "../jsextensions",
+				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/javascript",
+				"patcherrelativepath" : "../javascript",
 				"type" : "TEXT",
 				"implicit" : 1
 			}

@@ -296,6 +296,12 @@ public:
     }
     
     
+    c74::min::message<> maxob_setup {this, "maxob_setup",
+        MIN_FUNCTION {
+            c74::max::t_object* mob = maxob_from_jitob(c74::min::object_base::maxobj());
+            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
+            return {};
+    }};
     
 protected:
     bool m_mode_changed = true;
@@ -482,6 +488,12 @@ public:
         }
     }
     
+    c74::min::message<> maxob_setup {this, "maxob_setup",
+        MIN_FUNCTION {
+            c74::max::t_object* mob = maxob_from_jitob(c74::min::object_base::maxobj());
+            m_dumpoutlet = max_jit_obex_dumpout_get(mob);
+            return {};
+    }};
     
     
 protected:

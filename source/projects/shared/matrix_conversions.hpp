@@ -570,6 +570,7 @@ arma::Row<size_t>& jit_to_arma(const int mode,
     //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::uchar *dataptr = nullptr;
     c74::max::uchar *p = nullptr;
+    c74::max::uchar *p1 = nullptr;
     c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
     c74::max::object_method(jitter_matrix, c74::max:: _jit_sym_getdata, &dataptr);
     
@@ -591,9 +592,10 @@ arma::Row<size_t>& jit_to_arma(const int mode,
             for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
                 p = dataptr + (jcol*minfo.dimstride[1]);
                 for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
+                    p1 = p + (jrow*minfo.dimstride[0]);
                     for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        arma_row(arow++) = *(c74::max::t_int32*)p;
-                        p += sizeof(c74::max::t_int32);
+                        arma_row(arow++) = *(c74::max::t_int32*)p1;
+                        p1 += sizeof(c74::max::t_int32);
                     }
                 }
             }

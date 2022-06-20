@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 121.0, 87.0, 692.0, 754.0 ],
+		"rect" : [ 45.0, 87.0, 692.0, 754.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 13.0,
@@ -78,7 +78,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 121.0, 113.0, 692.0, 728.0 ],
+						"rect" : [ 45.0, 113.0, 692.0, 728.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 13.0,
@@ -152,7 +152,6 @@
 									"numinlets" : 1,
 									"numoutlets" : 0,
 									"patching_rect" : [ 365.0, 284.0, 190.0, 54.0 ],
-									"presentation_linecount" : 3,
 									"text" : "bang to replace cluster labels with centroids and view"
 								}
 

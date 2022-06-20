@@ -130,7 +130,6 @@
 									"numinlets" : 1,
 									"numoutlets" : 0,
 									"patching_rect" : [ 71.0, 149.0, 150.0, 55.0 ],
-									"presentation_linecount" : 2,
 									"text" : "test how colors are classified"
 								}
 
@@ -402,7 +401,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 273.0, 156.0, 235.0, 40.0 ],
+									"patching_rect" : [ 273.0, 156.0, 237.0, 40.0 ],
 									"text" : "input data with corresponding labels for different classes of colors"
 								}
 
@@ -832,8 +831,8 @@
 			}
 , 			{
 				"name" : "mlmat_concat.js",
-				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/jsextensions",
-				"patcherrelativepath" : "../jsextensions",
+				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/javascript",
+				"patcherrelativepath" : "../javascript",
 				"type" : "TEXT",
 				"implicit" : 1
 			}
