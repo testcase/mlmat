@@ -3,14 +3,14 @@
 		"fileversion" : 1,
 		"appversion" : 		{
 			"major" : 8,
-			"minor" : 2,
-			"revision" : 2,
+			"minor" : 3,
+			"revision" : 1,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 34.0, 87.0, 1212.0, 713.0 ],
+		"rect" : [ 34.0, 87.0, 1141.0, 993.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -40,442 +40,245 @@
 		"assistshowspatchername" : 0,
 		"boxes" : [ 			{
 				"box" : 				{
-					"bgcolor" : [ 0.682352941176471, 0.796078431372549, 0.513725490196078, 1.0 ],
+					"bgcolor" : [ 0.962713, 0.938393, 0.952793, 0.0 ],
+					"button" : 1,
+					"fontface" : 1,
+					"fontname" : "Lato Regular",
+					"fontsize" : 16.0,
+					"htabcolor" : [ 0.952941, 0.564706, 0.098039, 1.0 ],
+					"id" : "obj-1",
+					"margin" : 5,
+					"maxclass" : "tab",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "int", "", "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 9.0, 465.0, 223.0, 75.0 ],
+					"presentation" : 1,
+					"presentation_rect" : [ 37.0, 476.0, 192.0, 101.0 ],
+					"rounded" : 9.0,
+					"spacing_x" : 12.0,
+					"spacing_y" : 14.0,
+					"tabcolor" : [ 0.664532, 0.706344, 0.714923, 1.0 ],
+					"tabs" : [ "mlmat data modes", "mlmat utilities" ],
+					"textcolor" : [ 0.29971, 0.332965, 0.409308, 1.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"hidden" : 1,
+					"id" : "obj-37",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 260.0, 471.5, 57.0, 22.0 ],
+					"text" : "tosymbol"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"hidden" : 1,
+					"id" : "obj-34",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 260.0, 566.989745999999968, 53.0, 22.0 ],
+					"text" : "pcontrol"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontsize" : 24.0,
+					"id" : "obj-33",
+					"maxclass" : "comment",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 13.0, 425.0, 183.0, 33.0 ],
+					"presentation" : 1,
+					"presentation_rect" : [ 12.0, 425.0, 189.0, 33.0 ],
+					"text" : "getting started"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"hidden" : 1,
+					"id" : "obj-5",
+					"maxclass" : "newobj",
+					"numinlets" : 2,
+					"numoutlets" : 2,
+					"outlettype" : [ "", "" ],
+					"patching_rect" : [ 260.0, 495.5, 175.0, 22.0 ],
+					"text" : "combine s .maxpat @triggers 0"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"hidden" : 1,
+					"id" : "obj-31",
+					"maxclass" : "message",
+					"numinlets" : 2,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 260.0, 519.5, 84.0, 22.0 ],
+					"text" : "loadunique $1"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"hidden" : 1,
+					"id" : "obj-30",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 391.5, 356.0, 79.0, 22.0 ],
+					"text" : "prepend help"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"hidden" : 1,
+					"id" : "obj-29",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 391.5, 385.989745999999968, 53.0, 22.0 ],
+					"text" : "pcontrol"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"bgcolor" : [ 0.962713, 0.938393, 0.952793, 0.0 ],
+					"button" : 1,
+					"fontface" : 1,
+					"fontname" : "Lato Regular",
+					"fontsize" : 16.0,
+					"htabcolor" : [ 0.952941, 0.564706, 0.098039, 1.0 ],
+					"id" : "obj-7",
+					"margin" : 5,
+					"maxclass" : "tab",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "int", "", "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 13.0, 124.0, 776.0, 206.0 ],
+					"presentation" : 1,
+					"presentation_rect" : [ 437.5, 144.0, 192.0, 101.0 ],
+					"rounded" : 9.0,
+					"spacing_x" : 12.0,
+					"spacing_y" : 14.0,
+					"tabcolor" : [ 0.664532, 0.706344, 0.714923, 1.0 ],
+					"tabs" : [ "mlmat.convert", "mlmat.split", "mlmat.scaling", "mlmat.concat", "mlmat.lookup", "mlmat.load", "mlmat.kmeans", "mlmat.mean_shift", "mlmat.knn", "mlmat.kfn", "mlmat.id3_tree", "mlmat.hoeffding_tree", "mlmat.som", "mlmat.pca", "mlmat.linear_regression", "mlmat.linear_svm", "mlmat.mlp_regressor", "mlmat.mlp_classifier", "mlmat.gmm", "mlmat.hmm", "mlmat.sparse_autoencoder" ],
+					"textcolor" : [ 0.29971, 0.332965, 0.409308, 1.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"fontface" : 1,
+					"fontsize" : 48.0,
 					"id" : "obj-6",
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 370.0, 525.0, 150.0, 20.0 ],
-					"text" : "mlmat.lstm"
+					"patching_rect" : [ 13.0, 14.0, 163.0, 60.0 ],
+					"presentation" : 1,
+					"presentation_linecount" : 2,
+					"presentation_rect" : [ 17.5, 13.0, 102.0, 114.0 ],
+					"text" : "mlmat"
 				}
 
 			}
 , 			{
 				"box" : 				{
-					"bgcolor" : [ 0.682352941176471, 0.796078431372549, 0.513725490196078, 1.0 ],
-					"id" : "obj-5",
+					"fontsize" : 24.0,
+					"id" : "obj-9",
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 370.0, 497.0, 150.0, 20.0 ],
-					"text" : "mlmat.rnn"
+					"patching_rect" : [ 9.0, 85.0, 183.0, 33.0 ],
+					"presentation" : 1,
+					"presentation_rect" : [ 1037.0, 410.0, 189.0, 33.0 ],
+					"text" : "current objects :"
 				}
 
 			}
 , 			{
 				"box" : 				{
-					"id" : "obj-31",
-					"linecount" : 2,
-					"maxclass" : "comment",
-					"numinlets" : 1,
-					"numoutlets" : 0,
-					"patching_rect" : [ 29.0, 883.0, 150.0, 33.0 ],
-					"text" : "GAN - DCGAN, WGAN, etc"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"bgcolor" : [ 0.682352941176471, 0.796078431372549, 0.513725490196078, 1.0 ],
-					"id" : "obj-28",
-					"maxclass" : "comment",
-					"numinlets" : 1,
-					"numoutlets" : 0,
-					"patching_rect" : [ 29.0, 835.0, 150.0, 20.0 ],
-					"text" : "mlmat.rbm"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"bgcolor" : [ 0.682352941176471, 0.796078431372549, 0.513725490196078, 1.0 ],
-					"id" : "obj-27",
-					"maxclass" : "comment",
-					"numinlets" : 1,
-					"numoutlets" : 0,
-					"patching_rect" : [ 29.0, 799.0, 150.0, 20.0 ],
-					"text" : "mlmat.rnn"
-				}
-
-			}
-, 			{
-				"box" : 				{
+					"fontsize" : 24.0,
 					"id" : "obj-10",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 733.0, 173.0, 22.0 ],
-					"text" : "mlmat.variational_autoencoder"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"bgcolor" : [ 0.682352941176471, 0.796078431372549, 0.513725490196078, 1.0 ],
-					"id" : "obj-7",
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 188.0, 355.0, 150.0, 20.0 ],
-					"text" : "mlmat.logistic_regression"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-4",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 130.0, 122.0, 103.0, 22.0 ],
-					"text" : "mlmat.mean_shift"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-3",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 5,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 130.0, 56.0, 66.0, 22.0 ],
-					"text" : "mlmat.split"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-2",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 1,
-					"outlettype" : [ "jit_matrix" ],
-					"patching_rect" : [ 307.0, 56.0, 80.0, 22.0 ],
-					"text" : "mlmat.concat",
-					"varname" : "mlmat.concat"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-1",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 2,
-					"outlettype" : [ "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 56.0, 84.0, 22.0 ],
-					"text" : "mlmat.convert"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-26",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 673.0, 154.0, 22.0 ],
-					"text" : "mlmat.sparse_autoencoder"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-25",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 2,
-					"outlettype" : [ "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 274.0, 67.0, 22.0 ],
-					"text" : "mlmat.som"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-24",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 213.0, 56.0, 82.0, 22.0 ],
-					"text" : "mlmat.scaling"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-23",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 4,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 130.0, 274.0, 64.0, 22.0 ],
-					"text" : "mlmat.pca"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-22",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 2,
-					"outlettype" : [ "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 497.0, 121.0, 22.0 ],
-					"text" : "mlmat.mlp_regressor"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-21",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 178.0, 497.0, 117.0, 22.0 ],
-					"text" : "mlmat.mlp_classifier"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-20",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 2,
-					"outlettype" : [ "jit_matrix", "" ],
-					"patching_rect" : [ 418.0, 56.0, 80.0, 22.0 ],
-					"text" : "mlmat.lookup"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-19",
-					"maxclass" : "newobj",
-					"numinlets" : 1,
-					"numoutlets" : 2,
-					"outlettype" : [ "jit_matrix", "" ],
-					"patching_rect" : [ 524.0, 56.0, 67.0, 22.0 ],
-					"text" : "mlmat.load"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-18",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 418.0, 103.0, 22.0 ],
-					"text" : "mlmat.linear_svm"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-17",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 2,
-					"outlettype" : [ "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 351.0, 137.0, 22.0 ],
-					"text" : "mlmat.linear_regression"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-16",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 166.0, 64.0, 22.0 ],
-					"text" : "mlmat.knn"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-15",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 122.0, 87.0, 22.0 ],
-					"text" : "mlmat.kmeans"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-14",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 130.0, 166.0, 61.0, 22.0 ],
-					"text" : "mlmat.kfn"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-13",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 221.0, 88.0, 22.0 ],
-					"text" : "mlmat.id3_tree"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-12",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 130.0, 221.0, 121.0, 22.0 ],
-					"text" : "mlmat.hoeffding_tree"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-11",
-					"maxclass" : "newobj",
-					"numinlets" : 3,
-					"numoutlets" : 3,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 617.0, 71.0, 22.0 ],
-					"text" : "mlmat.hmm"
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-8",
-					"maxclass" : "newobj",
-					"numinlets" : 2,
-					"numoutlets" : 5,
-					"outlettype" : [ "jit_matrix", "jit_matrix", "jit_matrix", "jit_matrix", "" ],
-					"patching_rect" : [ 29.0, 560.0, 71.0, 22.0 ],
-					"text" : "mlmat.gmm"
+					"patching_rect" : [ 1206.0, 57.0, 285.0, 33.0 ],
+					"presentation" : 1,
+					"presentation_rect" : [ 442.0, 76.0, 152.0, 33.0 ],
+					"text" : "EXAMPLES:"
 				}
 
 			}
  ],
-		"lines" : [  ],
-		"dependency_cache" : [ 			{
-				"name" : "mlmat.concat.maxpat",
-				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/patchers",
-				"patcherrelativepath" : "../patchers",
-				"type" : "JSON",
-				"implicit" : 1
+		"lines" : [ 			{
+				"patchline" : 				{
+					"destination" : [ "obj-37", 0 ],
+					"hidden" : 1,
+					"source" : [ "obj-1", 1 ]
+				}
+
 			}
 , 			{
-				"name" : "mlmat.convert.mxo",
-				"type" : "iLaX"
+				"patchline" : 				{
+					"destination" : [ "obj-29", 0 ],
+					"hidden" : 1,
+					"source" : [ "obj-30", 0 ]
+				}
+
 			}
 , 			{
-				"name" : "mlmat.gmm.mxo",
-				"type" : "iLaX"
+				"patchline" : 				{
+					"destination" : [ "obj-34", 0 ],
+					"hidden" : 1,
+					"source" : [ "obj-31", 0 ]
+				}
+
 			}
 , 			{
-				"name" : "mlmat.hmm.mxo",
-				"type" : "iLaX"
+				"patchline" : 				{
+					"destination" : [ "obj-5", 0 ],
+					"hidden" : 1,
+					"source" : [ "obj-37", 0 ]
+				}
+
 			}
 , 			{
-				"name" : "mlmat.hoeffding_tree.mxo",
-				"type" : "iLaX"
+				"patchline" : 				{
+					"destination" : [ "obj-31", 0 ],
+					"hidden" : 1,
+					"source" : [ "obj-5", 0 ]
+				}
+
 			}
 , 			{
-				"name" : "mlmat.id3_tree.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.kfn.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.kmeans.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.knn.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.linear_regression.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.linear_svm.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.load.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.lookup.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.mean_shift.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.mlp_classifier.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.mlp_regressor.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.pca.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.scaling.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.som.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.sparse_autoencoder.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.split.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat.variational_autoencoder.mxo",
-				"type" : "iLaX"
-			}
-, 			{
-				"name" : "mlmat_concat.js",
-				"bootpath" : "~/Dropbox/Documents/Max 8/Packages/mlmat/jsextensions",
-				"patcherrelativepath" : "../jsextensions",
-				"type" : "TEXT",
-				"implicit" : 1
+				"patchline" : 				{
+					"destination" : [ "obj-30", 0 ],
+					"hidden" : 1,
+					"source" : [ "obj-7", 1 ]
+				}
+
 			}
  ],
+		"dependency_cache" : [  ],
 		"autosave" : 0
 	}
 

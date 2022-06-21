@@ -184,6 +184,7 @@ public:
         
         query = jit_to_arma(mode, static_cast<t_object*>(in_matrix64), query);
         
+
         try {
             CheckSameDimensionality(query, m_model.model->Dataset(), "knn");
         } catch (const std::invalid_argument& s) {
@@ -247,6 +248,7 @@ public:
             }
         }
         
+
         out_neighbors = arma_to_jit(mode, resulting_neighbors, static_cast<t_object*>(out_neighbors), out_neighbors_info, true, m_model.dim0);
         out_distances = arma_to_jit(mode, resulting_distances, static_cast<t_object*>(out_distances), out_distances_info);
 
@@ -294,7 +296,7 @@ public:
         }
                 
         dat = jit_to_arma(mode, matrix, dat);
-        
+
         m_model.model = std::make_unique<KNNModel>();
         
         if (algorithm_string == "naive")

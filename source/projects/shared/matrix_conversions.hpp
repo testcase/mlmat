@@ -61,7 +61,7 @@ c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, i
     switch (mode) {
         case 0:
             //if 2 planes and is suppose to contain 2d coords, do the conversion
-            if(is_coords && (minfo.dimcount == 2)) {
+            if(is_coords && ((minfo.dimcount == 2) || (minfo.dimcount == 1))) {
                 M pos = 0;
                 for(auto jslice=0;jslice<minfo.dim[2];jslice++) {
                     p = dataptr + (jslice*minfo.dimstride[2]);
@@ -99,6 +99,7 @@ c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, i
                 
             } else {
                 for(auto jslice=0;jslice<minfo.dim[2];jslice++) {
+                    aelem = 0;
                     p = dataptr + (jslice*minfo.dimstride[2]);
                     // std::cout << "slice " << jslice << " " << (p - dataptr) << std::endl;
                     for(auto jcol=0;jcol<minfo.dim[1];jcol++) {

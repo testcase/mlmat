@@ -131,9 +131,7 @@ public:
                 scaler_fit(m_model, *m_training);
                 out_data = scaler_transform(m_model, *m_training, out_data);
                 m_model.model = std::make_unique<SparseAutoencoderExt>(out_data, out_data.n_rows, hidden_size, lambda, beta, rho);
-            
-
-                
+        
                 if(autoclear) {
                     m_training.reset();
                 } 
@@ -325,6 +323,11 @@ public:
             goto out;
         }
         
+        if(!m_model.model) {
+            (cerr << "no Autoencoder model has been trained" << endl);
+            goto out;
+        }
+        
         query = jit_to_arma(mode, static_cast<t_object*>(query_matrix), query);
         
         try {
@@ -335,10 +338,7 @@ public:
         }
     
         
-        if(!m_model.model) {
-            (cerr << "no Autoencoder model has been trained" << endl);
-            goto out;
-        }
+
         
         try {
             arma::mat scaled_query;

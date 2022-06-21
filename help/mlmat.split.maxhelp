@@ -183,7 +183,7 @@
 									"maxclass" : "comment",
 									"numinlets" : 1,
 									"numoutlets" : 0,
-									"patching_rect" : [ 246.0, 220.5, 247.0, 36.0 ],
+									"patching_rect" : [ 246.0, 220.5, 251.0, 36.0 ],
 									"text" : "include label input. labels will be split with corresponding data"
 								}
 
