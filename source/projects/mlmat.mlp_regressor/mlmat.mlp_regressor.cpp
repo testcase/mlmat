@@ -102,22 +102,43 @@ public:
             
             if(optimizer.get() == "rmsprop") {
                 // this is default
-                m_model.model->Train(out_data, *m_target);
+                try {
+                    m_model.model->Train(out_data, *m_target);
+                } catch (std::exception& s)  {
+                    cerr << s.what() << endl;
+                    goto out;
+                }
             } else if(optimizer.get() == "sgd") {
                 ens::StandardSGD opt(step_size, batch_size, max_iterations, tolerance);
-                m_model.model->Train(out_data, *m_target, opt);
+                try {
+                    m_model.model->Train(out_data, *m_target, opt);
+                } catch (std::exception& s)  {
+                    cerr << s.what() << endl;
+                    goto out;
+                }
             } else if(optimizer.get() == "lbfgs") {
                 ens::L_BFGS opt;
                 opt.MaxIterations() = max_iterations;
                 opt.MinGradientNorm() = tolerance;
-                m_model.model->Train(out_data, *m_target, opt);
+                try {
+                    m_model.model->Train(out_data, *m_target, opt);
+                } catch (std::exception& s)  {
+                    cerr << s.what() << endl;
+                    goto out;
+                }
             } else if(optimizer.get() == "adam") {
                 ens::Adam opt(step_size, batch_size, 0.9, 0.999, 1e-8, max_iterations,
                 tolerance);
-                m_model.model->Train(out_data, *m_target, opt);
+                try {
+                    m_model.model->Train(out_data, *m_target, opt);
+                } catch (std::exception& s)  {
+                    cerr << s.what() << endl;
+                    goto out;
+                }
             } else {
                 ///ERROR?
             }
+        out:
             return {};
         }
     };
