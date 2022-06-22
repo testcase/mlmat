@@ -238,7 +238,8 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "jit_matrix" ],
 									"patching_rect" : [ 246.0, 390.0, 86.0, 23.0 ],
-									"text" : "mlmat.concat"
+									"text" : "mlmat.concat",
+									"varname" : "mlmat.concat"
 								}
 
 							}

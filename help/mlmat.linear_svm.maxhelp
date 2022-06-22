@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 64.0, 101.0, 694.0, 714.0 ],
+		"rect" : [ 64.0, 100.0, 694.0, 714.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 13.0,
@@ -78,7 +78,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 64.0, 127.0, 694.0, 688.0 ],
+						"rect" : [ 64.0, 126.0, 694.0, 688.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 13.0,
@@ -226,7 +226,8 @@
 									"numoutlets" : 1,
 									"outlettype" : [ "jit_matrix" ],
 									"patching_rect" : [ 235.0, 368.0, 86.0, 23.0 ],
-									"text" : "mlmat.concat"
+									"text" : "mlmat.concat",
+									"varname" : "mlmat.concat"
 								}
 
 							}

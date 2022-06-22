@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "box",
-		"rect" : [ 34.0, 87.0, 835.0, 674.0 ],
+		"rect" : [ 508.0, 188.0, 808.0, 674.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -68,7 +68,7 @@
 					"numoutlets" : 3,
 					"outlettype" : [ "int", "", "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 315.0, 392.0, 277.0, 180.0 ],
+					"patching_rect" : [ 320.5, 392.0, 263.0, 159.0 ],
 					"presentation" : 1,
 					"presentation_rect" : [ 501.0, 391.0, 192.0, 101.0 ],
 					"rounded" : 9.0,
@@ -113,7 +113,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 319.0, 352.0, 183.0, 33.0 ],
+					"patching_rect" : [ 324.5, 352.0, 183.0, 33.0 ],
 					"presentation" : 1,
 					"presentation_rect" : [ 505.0, 351.0, 189.0, 33.0 ],
 					"text" : "examples:"
@@ -247,7 +247,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 391.5, 356.0, 79.0, 22.0 ],
+					"patching_rect" : [ 391.5, 342.0, 79.0, 22.0 ],
 					"text" : "prepend help"
 				}
 
@@ -260,7 +260,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 391.5, 385.989745999999968, 53.0, 22.0 ],
+					"patching_rect" : [ 391.5, 369.5, 53.0, 22.0 ],
 					"text" : "pcontrol"
 				}
 
