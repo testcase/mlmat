@@ -222,7 +222,7 @@ public:
                 outlet_anything(o,_jit_sym_jit_matrix,1,&a);
             }
             
-            std::cout << states << std::endl;
+            //std::cout << states << std::endl;
             
         out:
             object_method(genmatrix,_jit_sym_lock,genmatrix_savelock);
@@ -326,8 +326,8 @@ public:
             }
             loglik = hmm->LogLikelihood(query);
             
-            const double p = hmm->Predict(query, state_seq);
-            (cout << "predict " << p << endl);
+//            k
+            //(cout << "predict " << p << endl);
         }  else if (typeId == HMMType::GaussianHMM) {
             HMM<distribution::GaussianDistribution>* hmm = m_model.model->GaussianHMM();
             if(hmm != nullptr) {
@@ -339,8 +339,8 @@ public:
                 }
             }
             loglik = hmm->LogLikelihood(query);
-            const double p = hmm->Predict(query, state_seq);
-            (cout << "predict " << p << endl);
+
+            //(cout << "predict " << p << endl);
         } else if (typeId == HMMType::GaussianMixtureModelHMM) {
             HMM<gmm::GMM>* hmm = m_model.model->GMMHMM();
             if(hmm != nullptr) {
@@ -352,8 +352,8 @@ public:
                 }
             }
             loglik = hmm->LogLikelihood(query);
-            const double p = hmm->Predict(query, state_seq);
-            (cout << "predict " << p << endl);
+
+            //(cout << "predict " << p << endl);
         } else if(typeId == HMMType::DiagonalGaussianMixtureModelHMM) {
             HMM<gmm::DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
             if(hmm != nullptr) {
@@ -365,8 +365,8 @@ public:
                 }
             }
             loglik = hmm->LogLikelihood(query);
-            const double p = hmm->Predict(query, state_seq);
-            (cout << "predict " << p << endl);
+
+            //(cout << "predict " << p << endl);
         }
         
         out_info = in_query_info;

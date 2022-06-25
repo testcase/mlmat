@@ -459,6 +459,7 @@ arma::mat& jit_to_arma(const int mode,
                     p1 = p + (jrow*minfo.dimstride[0]);
                     for(auto jplane=0;jplane<minfo.planecount;jplane++) {
                         arma_matrix(alem++) = *(double*)p1;
+                        
                         p1 += sizeof(double);
                     }
                 }

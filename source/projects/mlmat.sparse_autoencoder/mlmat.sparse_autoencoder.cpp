@@ -72,18 +72,6 @@ public:
             return args;
         }}
     };
-//    //making min_max default since it is best for sae
-//    c74::min::attribute<c74::min::symbol> scaler { this, "scaler", "min_max",
-//        c74::min::description {
-//            "The scaler type."
-//        },
-//        c74::min::setter { MIN_FUNCTION {
-//            m_scaler_changed = true;
-//            return args;
-//        }},
-//        c74::min::range {"standard","min_max", "normalization", "abs", "pca_whitening", "zca_whitening"}
-//    };
-    
     
     message<> write {this, "write",
         MIN_FUNCTION {
@@ -292,8 +280,7 @@ public:
         dat = jit_to_arma(mode, matrix, dat);
         
         m_training = std::make_unique<arma::Mat<double>>(dat);
-       
-        
+
     out:
         object_method((t_object*)matrix, _jit_sym_lock, savelock);
         return err;
@@ -307,13 +294,12 @@ public:
         
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
         auto out_features = object_method(outputs, _jit_sym_getindex, 0);
-
         
         auto in_matrix_savelock = object_method(in_matrix, _jit_sym_lock, 1);
         auto out_features_savelock = object_method(out_features, _jit_sym_lock, 1);
         
         object_method(in_matrix, _jit_sym_getinfo, &in_query_info);
-        
+        //std::cout << "query_matrix" << std::endl;
         t_object* query_matrix = convert_to_float64(static_cast<t_object*>(in_matrix), in_query_info);
 
         try {
@@ -336,9 +322,6 @@ public:
             cerr << s.what() << endl;
             goto out;
         }
-    
-        
-
         
         try {
             arma::mat scaled_query;
@@ -349,11 +332,10 @@ public:
             cerr << s.what() << endl;
             goto out;
         }
-
+        
         out_features_info = in_query_info;
         out_features_info.type = _jit_sym_float64;
         out_features_info.planecount = features.n_rows;
-        
         out_features = arma_to_jit(mode, features, static_cast<t_object*>(out_features), out_features_info);
         
     out:
