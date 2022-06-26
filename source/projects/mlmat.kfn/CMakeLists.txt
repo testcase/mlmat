@@ -61,6 +61,7 @@ endif ()
 
 
 if (WIN32)
+	add_compile_options(/bigobj)
 	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/armadillo.lib")
 	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/Debug/mlpack.lib")
 	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/armadillo.lib")
