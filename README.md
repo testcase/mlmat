@@ -35,7 +35,7 @@ In this mode jitter matrices are going to be 1 or 2d with a single plane. Each c
 Over view
 0. Clone repo 
 1. Build armadillo static lib
-2. Install prereqs for buildng mlpack (I am using homebrew)
+2. Install prereqs for buildng mlpack
 3. Build mlpack static lib
 4. Generate projects and build objects
 
@@ -149,6 +149,10 @@ A few more steps here mainly to get armadillo to build.
 
 I am using vcpkg to get dependencies. I am building against static libs 
 
+Would like to perhaps switch to Conan as I have found the vcpkg integration with VS to not always work as expected. 
+
+Sometimes I need to go into the solutions being build and make sure that the use of vcpkg is enable. 
+
 First use vcpkg 
 
 vcpkg install lapack:x64-windows-static
@@ -240,7 +244,10 @@ run
 
 `cd build`
 
-`cmake -G "Visual Studio 17 2022" ..`
+
+Replace `[path to vcpkg]` with the correct path for your system
+
+`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -G "Visual Studio 17 2022" ..`
 
 
 You should now be able to do the following 
