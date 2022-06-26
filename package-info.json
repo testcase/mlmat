@@ -1,8 +1,8 @@
 {
-	"author" : "Cycling '74",
-	"description" : "Lightweight reference implementation of a package built using the Min-API.",
-	"homepatcher" : "C++ Object Development Kit.maxpat",
-	"max_version_min" : "8.0", "max_version_max" : "none",
+	"author" : "Todd Ingalls",
+	"description" : "Machine learning using jitter matrices as data structures",
+	"homepatcher" : "mlmat overview.maxpat",
+	"max_version_min" : "8.3", "max_version_max" : "none",
 	"name" : "mlmat",
 	"os" : {
 		"macintosh" : {
@@ -15,10 +15,10 @@
 		}
 	},
 	"package_extra" : {
-		"reverse_domain" : "com.cycling74",
-		"copyright" : "Copyright (c) 2018 Cycling '74"
+		"reverse_domain" : "org.tenuous",
+		"copyright" : "Copyright (c) 2021 Todd Ingalls"
 	},
 	"tags" : [ ],
 	"version" : "1.0.0",
-	"website" : "http://www.github.com/Cycling74/min-devkit"
+	"website" : "http://www.github.com/testcase/mlmat"
 }
