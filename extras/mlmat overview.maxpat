@@ -161,14 +161,14 @@
 					"numoutlets" : 3,
 					"outlettype" : [ "int", "", "" ],
 					"parameter_enable" : 0,
-					"patching_rect" : [ 13.0, 392.0, 223.0, 75.0 ],
+					"patching_rect" : [ 13.0, 392.0, 225.0, 100.0 ],
 					"presentation" : 1,
 					"presentation_rect" : [ 37.0, 476.0, 192.0, 101.0 ],
 					"rounded" : 9.0,
 					"spacing_x" : 12.0,
 					"spacing_y" : 14.0,
 					"tabcolor" : [ 0.664532, 0.706344, 0.714923, 1.0 ],
-					"tabs" : [ "mlmat data modes", "mlmat utilities" ],
+					"tabs" : [ "mlmat data modes", "mlmat utilities", "mlmat serialization" ],
 					"textcolor" : [ 0.29971, 0.332965, 0.409308, 1.0 ]
 				}
 
@@ -181,7 +181,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 115.0, 473.5, 57.0, 22.0 ],
+					"patching_rect" : [ 116.0, 512.5, 57.0, 22.0 ],
 					"text" : "tosymbol"
 				}
 
@@ -194,7 +194,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 115.0, 546.989745999999968, 53.0, 22.0 ],
+					"patching_rect" : [ 116.0, 585.989745999999968, 53.0, 22.0 ],
 					"text" : "pcontrol"
 				}
 
@@ -221,7 +221,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 2,
 					"outlettype" : [ "", "" ],
-					"patching_rect" : [ 115.0, 497.5, 175.0, 22.0 ],
+					"patching_rect" : [ 116.0, 536.5, 175.0, 22.0 ],
 					"text" : "combine s .maxpat @triggers 0"
 				}
 
@@ -234,7 +234,7 @@
 					"numinlets" : 2,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 115.0, 521.5, 84.0, 22.0 ],
+					"patching_rect" : [ 116.0, 560.5, 84.0, 22.0 ],
 					"text" : "loadunique $1"
 				}
 
