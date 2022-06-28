@@ -143,6 +143,12 @@ if wanting to debug also do
 
 `cmake --build . --config Debug`
 
+
+
+### Removed windows instructions until working better
+
+<!-- 
+
 ## Building on Windows
 
 A few more steps here mainly to get armadillo to build.
@@ -277,7 +283,7 @@ to have objects that create a bank of objects and can dynamically add to the ban
 Have been working on examples and helpfiles. Will be going back and adding more descriptions so auto-generated ref files are better. 
 	
 
-<!-- 	
+	
 
 [X]mlmat.convert.maxhelp
 [X]mlmat.gmm.maxhelp
