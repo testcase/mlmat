@@ -41,4 +41,9 @@
 build/
 docs/
 externals/
-source/
+source/armadillo/
+source/boost_1_79_0
+source/cereal/
+source/ensmallen/
+source/min-api/
+source/mlpack/
