@@ -63,7 +63,7 @@ endif ()
 if (MSVC)
 	add_compile_options(/bigobj)
 	find_package(Armadillo CONFIG REQUIRED)
-    target_link_libraries(main PRIVATE ${ARMADILLO_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${ARMADILLO_LIBRARIES})
 endif ()
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
