@@ -65,7 +65,7 @@ if (MSVC)
 	find_package(Armadillo CONFIG REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${ARMADILLO_LIBRARIES})
     target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/Debug/mlpack.lib")
-    target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/Release/mlpack.lib")
+    target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/Release/mlpack.lib")
 
 endif ()
 
