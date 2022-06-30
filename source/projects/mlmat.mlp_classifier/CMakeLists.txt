@@ -64,7 +64,7 @@ if (MSVC)
    	 target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/Debug/mlpack.lib")
    	 target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/armadillo.lib")
 	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/Release/mlpack.lib")
-	 target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Release/armadillo.lib")
+	 target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/armadillo.lib")
 endif ()
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
