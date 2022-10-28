@@ -5,8 +5,7 @@
 
 
 #include "mlmat.hpp"
-#include <mlpack/methods/kmeans/kmeans.hpp>
-#include <mlpack/methods/kmeans/kmeans.hpp>
+#include <mlpack/methods/kmeans.hpp>
 #include <mlpack/methods/kmeans/allow_empty_clusters.hpp>
 #include <mlpack/methods/kmeans/kill_empty_clusters.hpp>
 #include <mlpack/methods/kmeans/refined_start.hpp>
@@ -18,7 +17,6 @@
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack::kmeans;
 
 // C function declarations
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
@@ -149,16 +147,16 @@ public:
         
         
         if (seed != 0) {
-           math::RandomSeed((size_t) seed);
+           mlpack::RandomSeed((size_t) seed);
         } else {
-           math::RandomSeed((size_t) std::time(NULL));
+            mlpack::RandomSeed((size_t) std::time(NULL));
         }
 
         
-        KMeans<metric::EuclideanDistance,
+        KMeans<EuclideanDistance,
             InitialPartitionPolicy,
             EmptyClusterPolicy,
-            LloydStepType> kmeans(max_iterations, metric::EuclideanDistance(), ipp);
+            LloydStepType> kmeans(max_iterations, EuclideanDistance(), ipp);
 
         
         kmeans.Cluster(dataset, clusters, assignments, centroids, initialAssignmentGuess, initialCentroidGuess);

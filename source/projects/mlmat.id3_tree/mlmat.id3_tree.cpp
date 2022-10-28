@@ -9,7 +9,6 @@
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack::tree;
 using namespace mlpack::data;
 using namespace mlpack::util;
 

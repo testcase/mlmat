@@ -5,21 +5,17 @@
 
 
 #include "mlmat.hpp"
-#include <mlpack/methods/hmm/hmm.hpp>
+#include <mlpack/methods/hmm.hpp>
 #include <mlpack/methods/hmm/hmm_model.hpp>
-#include <mlpack/methods/gmm/gmm.hpp>
+#include <mlpack/methods/gmm.hpp>
 #include <mlpack/methods/gmm/diagonal_gmm.hpp>
 
 
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack::hmm;
-using namespace mlpack::distribution;
+using namespace mlpack;
 using namespace mlpack::util;
-using namespace mlpack::gmm;
-using namespace mlpack::math;
-
 
 
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
@@ -113,18 +109,18 @@ public:
             
             
             if(typeId == HMMType::DiscreteHMM) {
-                HMM<distribution::DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
+                HMM<DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
                 init_hmm(hmm);
             }
             else if (typeId == HMMType::GaussianHMM) {
-                HMM<distribution::GaussianDistribution>* hmm = m_model.model->GaussianHMM();
+                HMM<GaussianDistribution>* hmm = m_model.model->GaussianHMM();
                 init_hmm(hmm);
                 
             } else if (typeId == HMMType::GaussianMixtureModelHMM) {
-                HMM<gmm::GMM>* hmm = m_model.model->GMMHMM();
+                HMM<GMM>* hmm = m_model.model->GMMHMM();
                 init_hmm(hmm);
             } else if(typeId == HMMType::DiagonalGaussianMixtureModelHMM) {
-                HMM<gmm::DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
+                HMM<DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
                 init_hmm(hmm);
             }
             
@@ -183,25 +179,25 @@ public:
             }
             
             if (seed == 0) {
-                mlpack::math::RandomSeed(time(NULL));
+                mlpack::RandomSeed(time(NULL));
             } else {
-                mlpack::math::RandomSeed((size_t) seed);
+                mlpack::RandomSeed((size_t) seed);
             }
             
             
             if(typeId == HMMType::DiscreteHMM) {
-                HMM<distribution::DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
+                HMM<DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
                 hmm->Generate(num, samples, states, start);
             }
             else if (typeId == HMMType::GaussianHMM) {
-                HMM<distribution::GaussianDistribution>* hmm = m_model.model->GaussianHMM();
+                HMM<GaussianDistribution>* hmm = m_model.model->GaussianHMM();
                 hmm->Generate(num, samples, states, start);
                 
             } else if (typeId == HMMType::GaussianMixtureModelHMM) {
-                HMM<gmm::GMM>* hmm = m_model.model->GMMHMM();
+                HMM<GMM>* hmm = m_model.model->GMMHMM();
                 hmm->Generate(num, samples, states, start);
             } else if(typeId == HMMType::DiagonalGaussianMixtureModelHMM) {
-                HMM<gmm::DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
+                HMM<DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
                 hmm->Generate(num, samples, states, start);
             }
             
@@ -315,7 +311,7 @@ public:
         typeId = m_model.model->Type();
         
         if(typeId == HMMType::DiscreteHMM) {
-            HMM<distribution::DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
+            HMM<DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
             if(hmm != nullptr) {
                 try {
                     CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
@@ -329,7 +325,7 @@ public:
 //            k
             //(cout << "predict " << p << endl);
         }  else if (typeId == HMMType::GaussianHMM) {
-            HMM<distribution::GaussianDistribution>* hmm = m_model.model->GaussianHMM();
+            HMM<GaussianDistribution>* hmm = m_model.model->GaussianHMM();
             if(hmm != nullptr) {
                 try {
                     CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
@@ -342,7 +338,7 @@ public:
 
             //(cout << "predict " << p << endl);
         } else if (typeId == HMMType::GaussianMixtureModelHMM) {
-            HMM<gmm::GMM>* hmm = m_model.model->GMMHMM();
+            HMM<GMM>* hmm = m_model.model->GMMHMM();
             if(hmm != nullptr) {
                 try {
                     CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
@@ -355,7 +351,7 @@ public:
 
             //(cout << "predict " << p << endl);
         } else if(typeId == HMMType::DiagonalGaussianMixtureModelHMM) {
-            HMM<gmm::DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
+            HMM<DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
             if(hmm != nullptr) {
                 try {
                     CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");

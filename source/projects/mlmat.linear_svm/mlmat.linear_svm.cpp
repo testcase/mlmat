@@ -6,7 +6,7 @@
 
 #include "mlmat.hpp"
 #include <mlpack/core.hpp>
-#include <mlpack/methods/linear_svm/linear_svm.hpp>
+#include <mlpack/methods/linear_svm.hpp>
 #include <ensmallen.hpp>
 
 #include <string>
@@ -14,7 +14,6 @@
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack::svm;
 using namespace mlpack::util;
 using namespace ens;
 
@@ -116,9 +115,9 @@ public:
             }
             
             if (seed == 0) {
-              mlpack::math::RandomSeed(time(NULL));
+              mlpack::RandomSeed(time(NULL));
             } else {
-              mlpack::math::RandomSeed((size_t) seed);
+              mlpack::RandomSeed((size_t) seed);
             }
             
             m_model.model = std::make_unique<LinearSVMModel>();

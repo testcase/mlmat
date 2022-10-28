@@ -21,7 +21,7 @@ find_path(MLPACK_HEADERS mlpack)
 
 include_directories( 
 	"${C74_INCLUDES}"
-    "${MLMAT_SUPPORT_DIR}/mlpack/build/include"
+    "${MLPACK_DIR}/src"
     "${ARMA_DIR}/include"
     "${MLPACK_DIR}/build/include"
     "${ENSMALLEN_DIR}/include"
@@ -52,9 +52,7 @@ find_library(
 
 if(APPLE)
 	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/libarmadillo.a")
-	target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/lib/Debug/libmlpack.a")
 	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/libarmadillo.a")
-	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/lib/Release/libmlpack.a")
 	target_link_libraries(${PROJECT_NAME} PRIVATE general "${ACCELERATE_LIB}")
 endif ()
 
@@ -62,9 +60,7 @@ endif ()
 
 if (MSVC)
 	add_compile_options(/bigobj)
-   	 target_link_libraries(${PROJECT_NAME} PRIVATE debug "${MLPACK_DIR}/build/Debug/mlpack.lib")
    	 target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/armadillo.lib")
-	target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${MLPACK_DIR}/build/Release/mlpack.lib")
 	 target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/armadillo.lib")
 endif ()
 

@@ -10,7 +10,6 @@
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack::regression;
 using namespace mlpack::util;
 
 void mlmat_assist(void* x, void* b, long io, long index, char* s);

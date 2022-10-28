@@ -17,10 +17,8 @@ using namespace c74;
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack::tree;
-using namespace mlpack::data;
 using namespace mlpack::util;
-
+using namespace mlpack::data;
 typedef std::tuple<DatasetInfo, arma::mat> TupleType;
 
 void mlmat_assist(void* x, void* b, long io, long index, char* s);

@@ -22,9 +22,7 @@
 using namespace c74;
 using namespace c74::min;
 using namespace c74::max;
-using namespace mlpack::neighbor;
-using namespace mlpack::tree;
-using namespace mlpack::metric;
+using namespace mlpack;
 using namespace mlpack::util;
 using namespace mlpack::data;
 
@@ -346,9 +344,9 @@ public:
         m_model.model->Rho() = rho;
 
         if (seed != 0) {
-          mlpack::math::RandomSeed((size_t) seed);
+          mlpack::RandomSeed((size_t) seed);
         } else {
-          mlpack::math::RandomSeed((size_t) std::time(NULL));
+          mlpack::RandomSeed((size_t) std::time(NULL));
         }
         
         scaler_fit(m_model, dat);

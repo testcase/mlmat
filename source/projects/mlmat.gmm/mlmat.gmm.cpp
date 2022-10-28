@@ -6,7 +6,7 @@
 
 
 #include "mlmat.hpp"
-#include <mlpack/methods/gmm/gmm.hpp>
+#include <mlpack/methods/gmm.hpp>
 #include <mlpack/methods/gmm/diagonal_gmm.hpp>
 #include <mlpack/methods/gmm/no_constraint.hpp>
 #include <mlpack/methods/gmm/diagonal_constraint.hpp>
@@ -14,9 +14,9 @@
 
 using namespace c74::min;
 using namespace c74::max;
-using namespace mlpack::gmm;
-using namespace mlpack::util;
-using namespace mlpack::kmeans;
+using namespace mlpack;
+//using namespace mlpack::util;
+//using namespace mlpack::kmeans;
 using c74::max::t_linklist;
 
 
@@ -248,9 +248,9 @@ public:
             samples.set_size(m_model.model->Dimensionality(), num);
             
             if (seed == 0) {
-              mlpack::math::RandomSeed(time(NULL));
+              mlpack::RandomSeed(time(NULL));
             } else {
-              mlpack::math::RandomSeed((size_t) seed);
+              mlpack::RandomSeed((size_t) seed);
             }
             
             if(!m_weights) {
@@ -315,9 +315,9 @@ public:
             samples.set_size(m_model.model->Dimensionality(), num);
             
             if (seed == 0) {
-              mlpack::math::RandomSeed(time(NULL));
+              mlpack::RandomSeed(time(NULL));
             } else {
-              mlpack::math::RandomSeed((size_t) seed);
+              mlpack::RandomSeed((size_t) seed);
             }
         
             
@@ -399,9 +399,9 @@ public:
             samples.set_size(m_model.model->Dimensionality(), num);
             
             if (seed == 0) {
-              mlpack::math::RandomSeed(time(NULL));
+              mlpack::RandomSeed(time(NULL));
             } else {
-              mlpack::math::RandomSeed((size_t) seed);
+              mlpack::RandomSeed((size_t) seed);
             }
             
             for (size_t i = 0; i < num; i++) {
@@ -506,7 +506,7 @@ public:
         query = jit_to_arma(mode, static_cast<t_object*>(in_matrix64), query);
 
         try {
-            CheckSameDimensionality(query, m_model.model->Dimensionality(), "gmm");
+            mlpack::util::CheckSameDimensionality(query, m_model.model->Dimensionality(), "gmm");
         } catch (std::invalid_argument& s) {
             cerr << s.what() << endl;
             goto out;
@@ -611,7 +611,7 @@ private:
     //adapted from gmm.cpp
     //
     arma::vec WeightedRandom() {
-        double gaussRand = mlpack::math::Random();
+        double gaussRand = mlpack::Random();
         size_t gaussian = 0;
         double sumProb = 0;
         for (size_t g = 0; g < gaussians; g++) {
@@ -645,9 +645,9 @@ private:
         if(refined_start) {
             m_model.model = std::make_unique<GMM>(gaussians,data.n_rows);
                   
-            typedef KMeans<mlpack::metric::SquaredEuclideanDistance, RefinedStart> KMeansType;
+            typedef KMeans<mlpack::SquaredEuclideanDistance, RefinedStart> KMeansType;
 
-            KMeansType k(kmeans_max_iterations, mlpack::metric::SquaredEuclideanDistance(), RefinedStart(samplings, percentage));
+            KMeansType k(kmeans_max_iterations, mlpack::SquaredEuclideanDistance(), RefinedStart(samplings, percentage));
 
             if(diagonal_covariance) {
                 DiagonalGMM dgmm(m_model.model->Gaussians(), m_model.model->Dimensionality());
@@ -658,7 +658,7 @@ private:
             
                 dgmm.Weights() = m_model.model->Weights();
 
-                EMFit<KMeansType, PositiveDefiniteConstraint, mlpack::distribution::DiagonalGaussianDistribution> em(max_iterations, tolerance, k);
+                EMFit<KMeansType, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution> em(max_iterations, tolerance, k);
                 likelihood = dgmm.Train(data, trials, false, em);
                 for (size_t i = 0; i < size_t(gaussians); ++i) {
                     m_model.model->Component(i).Mean() = dgmm.Component(i).Mean();
@@ -676,9 +676,9 @@ private:
             }
         } else {
             m_model.model = std::make_unique<GMM>(gaussians,m_data->n_rows);
-            typedef KMeans<mlpack::metric::SquaredEuclideanDistance, RefinedStart> KMeansType;
+            typedef KMeans<mlpack::SquaredEuclideanDistance, RefinedStart> KMeansType;
 
-            KMeansType k(kmeans_max_iterations, mlpack::metric::SquaredEuclideanDistance(), RefinedStart(samplings, percentage));
+            KMeansType k(kmeans_max_iterations, mlpack::SquaredEuclideanDistance(), RefinedStart(samplings, percentage));
 
             if(diagonal_covariance) {
                 DiagonalGMM dgmm(m_model.model->Gaussians(), m_model.model->Dimensionality());
@@ -689,7 +689,7 @@ private:
             
                 dgmm.Weights() = m_model.model->Weights();
 
-                EMFit<KMeans<>, PositiveDefiniteConstraint, mlpack::distribution::DiagonalGaussianDistribution> em(max_iterations, tolerance, KMeans<>(kmeans_max_iterations));
+                EMFit<KMeans<>, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution> em(max_iterations, tolerance, KMeans<>(kmeans_max_iterations));
                 likelihood = dgmm.Train(data, trials, false, em);
                 for (size_t i = 0; i < size_t(gaussians); ++i) {
                     m_model.model->Component(i).Mean() = dgmm.Component(i).Mean();
