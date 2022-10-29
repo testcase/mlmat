@@ -47,7 +47,7 @@ double PCA_EXT<DecompositionPolicy>::Apply(arma::mat& data,
 
   // Center the data into a temporary matrix.
   arma::mat centeredData;
-  math::Center(data, centeredData);
+  Center(data, centeredData);
 
   // Scale the data if the user ask for.
   ScaleData(centeredData);

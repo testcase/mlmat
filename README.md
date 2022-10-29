@@ -113,6 +113,9 @@ These are the cmake options I use. mlpack has a number of potential bindings but
 
 `cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0" -DDISABLE_DOWNLOADS=ON -G Xcode ..`
 
+`cmake -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DCMAKE_INSTALL_PREFIX=./ -G Xcode ..`
+
+
 
 You can now use 
 
@@ -160,13 +163,7 @@ First use vcpkg
 vcpkg install lapack:x64-windows-static
 vcpkg install openblas:x64-windows-static   -- this also install openblas and lapack. 
 
-### Install Boost
 
-`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
-
-unzip in source dir
-
-only headers being used. 
 
 ### Build armadillo static lib
 
@@ -180,7 +177,7 @@ This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at 
 
 Replace `[path to vcpkg]` with the correct path for your system
 
-`cmake  -DBUILD_SHARED_LIBS=OFF -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
+`cmake  -DBUILD_SHARED_LIBS=OFF  -DARMA_USE_WRAPPER=ON  -DCMAKE_TOOLCHAIN_FILE=C:/Users/Administrator/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" ..`
 
 You can now use 
 
@@ -202,7 +199,7 @@ in source directory:
 
 Replace `[path to vcpkg]` with the correct path for your system
 
-`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 17 2022" ..`
+`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" ..`
 
 this just copies headers into ./include so nothing more to do here.
 
@@ -246,7 +243,7 @@ run
 
 `cd build`
 
-`cmake -G "Visual Studio 17 2022" ..`
+`cmake -DCMAKE_TOOLCHAIN_FILE=C:/Users/Administrator/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake  -G "Visual Studio 16 2019" ..`
 
 
 You should now be able to do the following 

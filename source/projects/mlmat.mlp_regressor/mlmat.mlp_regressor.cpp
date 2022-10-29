@@ -7,26 +7,22 @@
 
 
 #include "mlmat.hpp"
-#include <mlpack/methods/ann/layer/layer.hpp>
 #include <mlpack/methods/ann/ffn.hpp>
-#include <mlpack/methods/ann/loss_functions/mean_squared_error.hpp>
-#include <mlpack/methods/ann/loss_functions/kl_divergence.hpp>
-#include <mlpack/methods/ann/layer_names.hpp>
+#include <ensmallen.hpp>
 #include <string>
-
 
 
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack::ann;
+
 
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) ;
 void mlmat_assist(void* x, void* b, long io, long index, char* s);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
 
-class mlmat_mlp_regressor : public mlmat_object_writable<mlmat_mlp_regressor, FFN<MeanSquaredError<>, RandomInitialization>> {
+class mlmat_mlp_regressor : public mlmat_object_writable<mlmat_mlp_regressor, FFN<MeanSquaredError, RandomInitialization>> {
 public:
     MIN_DESCRIPTION     {"Multi layer perceptron. This mlp can be used as a regressor."};
     MIN_TAGS            {"ML"};
@@ -84,18 +80,18 @@ public:
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
             // range for random initialization
-            m_model.model = std::make_unique<FFN<MeanSquaredError<>,RandomInitialization>>();
+            m_model.model = std::make_unique<FFN<MeanSquaredError,RandomInitialization>>();
             arma::mat out_data;
         
-            m_model.model->Add<Linear<>>(m_training->n_rows, hidden_neurons.get());
+            m_model.model->Add<Linear>(hidden_neurons.get());
             
             for(auto i = 0;i<hidden_layers-1;i++) {
                 add_layer(activation.get());
-                m_model.model->Add<Linear<>>(hidden_neurons.get(), hidden_neurons.get());
+                m_model.model->Add<Linear>(m_training->n_rows);
             }
 
-            m_model.model->Add<Linear<>>(hidden_neurons.get(), m_target->n_rows);
-            m_model.model->Add<IdentityLayer<> >();
+            m_model.model->Add<Linear>( hidden_neurons.get());
+            m_model.model->Add<Identity>();
             
             scaler_fit(m_model, *m_training);
             out_data = scaler_transform(m_model, *m_training, out_data);
@@ -148,22 +144,22 @@ public:
         const string layer_string = layer_type.c_str();
         
         if(layer_string == "sigmoid") {
-            m_model.model->Add<SigmoidLayer<>>();
+            m_model.model->Add<SigmoidType<>>();
 
         } else if(layer_string == "gaussian") {
-            m_model.model->Add<GaussianFunctionLayer<>>();
+            m_model.model->Add<GaussianType<>>();
 
         } else if(layer_string == "relu") {
-            m_model.model->Add<ReLULayer<>>();
+            m_model.model->Add<ReLUType<>>();
 
         } else if(layer_string == "tanh") {
-            m_model.model->Add<TanHLayer<>>();
+            m_model.model->Add<TanHType<>>();
 
         } else if(layer_string == "soft_plus") {
-            m_model.model->Add<SoftPlusLayer<>>();
+            m_model.model->Add<SoftPlusType<>>();
 
         } else if(layer_string == "identity") {
-            m_model.model->Add<IdentityLayer<>>();
+            m_model.model->Add<IdentityType<>>();
         }
 
     }
@@ -202,7 +198,8 @@ public:
         query = jit_to_arma(mode, static_cast<t_object*>(in_matrix64), query);
         
         try {
-            size_t p = m_model.model->Predictors().n_rows;
+            size_t p = m_model.model->InputDimensions()[0];
+            cout << p << endl;
             mlpack::util::CheckSameDimensionality(query, p, "mlp regressor", "query");
         } catch (std::invalid_argument& s) {
             cerr << s.what() << endl;

@@ -13,8 +13,7 @@
 
 using namespace c74::min;
 using namespace c74::max;
-using namespace mlpack::nn;
-using namespace mlpack::util;
+using namespace mlpack;
 using c74::max::t_linklist;
 
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) ;

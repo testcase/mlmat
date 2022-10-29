@@ -13,12 +13,9 @@
 
 using namespace c74::min;
 using namespace c74::max;
-using namespace mlpack::neighbor;
-using namespace mlpack::tree;
-using namespace mlpack::metric;
-using namespace mlpack::util;
+using namespace mlpack;
 
-typedef NeighborSearch<NearestNeighborSort, mlpack::metric::SquaredEuclideanDistance> SomKNN;
+typedef NeighborSearch<NearestNeighborSort, mlpack::SquaredEuclideanDistance> SomKNN;
 
 class SOM {
 public:
@@ -55,7 +52,7 @@ public:
     
         if(m_first_run && (m_initialization == sample)) {
             for(auto i=0;i<m_nodes->n_cols;i++) {
-                int elem = mlpack::math::RandInt(data.n_cols);
+                int elem = mlpack::RandInt(data.n_cols);
                 m_nodes->col(i) = data.col(elem);
             }
             m_first_run = false;
@@ -96,7 +93,7 @@ public:
         
         if(m_first_run && (m_initialization == sample)) {
             for(auto i=0;i<m_nodes->n_cols;i++) {
-                int elem = mlpack::math::RandInt(data.n_cols);
+                int elem = mlpack::RandInt(data.n_cols);
                 m_nodes->col(i) = data.col(elem);
             }
             m_first_run = false;
@@ -344,9 +341,9 @@ public:
                 (cerr << "no data to train on." << endl);
             } else {
                 if (seed == 0) {
-                  mlpack::math::RandomSeed(time(NULL));
+                  mlpack::RandomSeed(time(NULL));
                 } else {
-                  mlpack::math::RandomSeed((size_t) seed);
+                  mlpack::RandomSeed((size_t) seed);
                 }
                 
                 arma::Mat<double> dat(m_data->n_rows, cols*rows );

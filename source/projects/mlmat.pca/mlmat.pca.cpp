@@ -158,9 +158,9 @@ public:
         query = jit_to_arma(mode, static_cast<t_object*>(in_matrix64), query);
         
         if (seed != 0)
-          mlpack::math::RandomSeed((size_t) seed);
+          mlpack::RandomSeed((size_t) seed);
         else
-          mlpack::math::RandomSeed((size_t) std::time(NULL));
+          mlpack::RandomSeed((size_t) std::time(NULL));
     
         // Perform PCA.
         if (decomp == "exact")
@@ -169,7 +169,7 @@ public:
         }
         else if (decomp == "randomized")
         {
-          RunPCA<RandomizedSVDPolicy>(query, eigVal, eigvec, new_dimensionality, scale);
+            RunPCA<RandomizedSVDPCAPolicy>(query, eigVal, eigvec, new_dimensionality, scale);
         }
         else if (decomp == "randomized-block-krylov")
         {

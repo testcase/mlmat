@@ -16,8 +16,6 @@
 #include "sparse_autoencoder_ext.hpp"
 
 namespace mlpack {
-namespace nn {
-
 
 template<typename OptimizerType>
 SparseAutoencoderExt::SparseAutoencoderExt(const arma::mat& data,
@@ -89,7 +87,7 @@ void SparseAutoencoderExt::serialize(Archive& ar, const uint32_t  /* version */)
 }
 
 
-} // namespace nn
+
 } // namespace mlpack
 
 #endif

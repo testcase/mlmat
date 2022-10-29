@@ -12,7 +12,7 @@
 #include "sparse_autoencoder_function.hpp"
 
 using namespace mlpack;
-using namespace mlpack::nn;
+
 using namespace std;
 
 SparseAutoencoderFunction::SparseAutoencoderFunction(const arma::mat& data,

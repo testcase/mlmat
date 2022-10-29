@@ -16,8 +16,6 @@
 #include <mlpack/prereqs.hpp>
 
 namespace mlpack {
-namespace nn {
-
 /**
  * This is a class for the sparse autoencoder objective function. It can be used
  * to create learning models like self-taught learning, stacked autoencoders,
@@ -162,7 +160,6 @@ class SparseAutoencoderFunction
   double rho;
 };
 
-} // namespace nn
 } // namespace mlpack
 
 #endif

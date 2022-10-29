@@ -14,7 +14,7 @@
 
 
 namespace mlpack {
-namespace nn {
+
 
 
 SparseAutoencoderExt::SparseAutoencoderExt() :
@@ -54,5 +54,5 @@ void SparseAutoencoderExt::Predict(arma::mat& features,
 
 
 
-} // namespace nn
+
 } // namespace mlpack
