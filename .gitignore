@@ -47,3 +47,5 @@ source/cereal/
 source/ensmallen/
 source/min-api/
 source/mlpack/
+source/min-api
+source/armadillo
