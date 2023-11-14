@@ -39,7 +39,7 @@ void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *ar
 
 class mlmat_id3_tree : public mlmat_object_writable<mlmat_id3_tree, DecisionTreeModel> {
 public:
-    MIN_DESCRIPTION	{"ID3 Decision Tree Classifier. An implementation of an ID3-style decision tree for classificationGiven labeled data with numeric features, a decision tree can be trained and saved; or, an  dwexisting decision tree can be used for classification on new points."};
+    MIN_DESCRIPTION	{"ID3 Decision Tree Classifier. An implementation of an ID3-style decision tree for classification. Given labeled data with numeric features, a decision tree can be trained and saved or an existing decision tree can be used for classification on new points."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR      {"Todd Ingalls"};
     MIN_RELATED		{"mlmat.hoeffding_tree"};

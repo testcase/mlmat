@@ -3,13 +3,13 @@
 
 cmake_minimum_required(VERSION 3.0)
 set(AUTHOR_DOMAIN "org.tenuous")
-set(COPYRIGHT_STRING "Copyright (c) 2022 Todd Ingalls")
+set(COPYRIGHT_STRING "Copyright (c) 2023 Todd Ingalls")
 
 set(C74_MIN_API_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../min-api)
 include(${C74_MIN_API_DIR}/script/min-pretarget.cmake)
 
 # Set directory for support folder
-set(ARMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../armadillo)
+set(ARMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../armadillo-code)
 set(MLPACK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../mlpack)
 set(ENSMALLEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ensmallen)
 set(CEREAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../cereal)
