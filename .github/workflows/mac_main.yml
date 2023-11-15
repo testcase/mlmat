@@ -37,7 +37,7 @@ jobs:
         cd release
         gh release download  --clobber  --repo testcase/armadillo v1.0.0 --pattern armadillo_macos_universal2.zip
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.SUPERSECRET }}
      
     - name: mkdir and run
       run: |
