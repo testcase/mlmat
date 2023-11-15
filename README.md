@@ -94,6 +94,7 @@ this just copies headers into ./include so nothing more to do here.
 
 only headers being used so no cmake needed
 
+<!-- 
 ### Build mlpack static lib 
 
 From the source/mlpack directory run
@@ -117,7 +118,7 @@ if wanting to debug also do
 
 `cmake --build . --config Debug`
 
-
+-->
 ### Generate projects and build
 
 cd into main mlmat directory
