@@ -23,7 +23,7 @@ include_directories(
 	"${C74_INCLUDES}"
     "${MLPACK_DIR}/src"
     "${ARMA_DIR}/include"
-    "${MLPACK_DIR}/build/include"
+    "${MLPACK_DIR}/src"
     "${ENSMALLEN_DIR}/include"
  	"${CEREAL_DIR}/include"
     "/usr/local/include"
