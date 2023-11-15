@@ -27,19 +27,38 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
-
-
-    - name: Fetch asset
-      
-      run: |
+    - name: build arma
+      run: | 
         cd source/armadillo-code
         mkdir build
         cd build
-        mkdir Release
-        cd release
-        gh release download  --clobber  --repo testcase/armadillo v1.0.0 --pattern armadillo_macos_universal2.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.SUPERSECRET }}
+        cmake -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..
+        cmake --build . --config Release
+    - name: build ensmallen
+      run: | 
+        cd source/ensmallen
+        mkdir build
+        cd build
+        cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" ..
+    - name: build mlpack
+      run: | 
+        cd source/mlpack
+        mkdir build
+        cd build
+        cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DARMADILLO_LIBRARY="../../armadillo-code/build/Release/libarmadillo.a" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DDISABLE_DOWNLOADS=ON -G Xcode ..
+        cmake --build . --config Release
+    
+    # - name: Fetch asset
+    # taking this out a might as well build armadillo. works fine unlike windows for now
+    #   run: |
+    #     cd source/armadillo-code
+    #     mkdir build
+    #     cd build
+    #     mkdir Release
+    #     cd release
+    #     gh release download  --clobber  --repo testcase/armadillo v1.0.0 --pattern armadillo_macos_universal2.zip
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.SUPERSECRET }}
      
     - name: mkdir and run
       run: |
