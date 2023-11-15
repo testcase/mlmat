@@ -10,3 +10,6 @@
 [submodule "source/ensmallen"]
 	path = source/ensmallen
 	url = https://github.com/mlpack/ensmallen.git
+[submodule "source/armadillo-code"]
+	path = source/armadillo-code
+	url = https://gitlab.com/conradsnicta/armadillo-code.git
