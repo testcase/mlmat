@@ -60,32 +60,32 @@ jobs:
     #   env:
     #     GITHUB_TOKEN: ${{ secrets.SUPERSECRET }}
      
-    - name: mkdir and run
-      run: |
-        mkdir build
-        cd build
-        cmake -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..
-        cmake --build . --config Release
-    - name: ranlib
-      run: ranlib build/Release/libarmadillo.a
-    - name: check arch
-      run: echo `lipo -info build/Release/libarmadillo.a`
-    - name: Archive static lib artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: armadillo_macos_universal2
-        path: | 
-          build/Release/libarmadillo.a
+    # - name: mkdir and run
+    #   run: |
+    #     mkdir build
+    #     cd build
+    #     cmake -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..
+    #     cmake --build . --config Release
+    # - name: ranlib
+    #   run: ranlib build/Release/libarmadillo.a
+    # - name: check arch
+    #   run: echo `lipo -info build/Release/libarmadillo.a`
+    # - name: Archive static lib artifacts
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: armadillo_macos_universal2
+    #     path: | 
+    #       build/Release/libarmadillo.a
           
-    - name: make zip file
-      run: |
-        mkdir armadillo
-        mv build/Release/libarmadillo.a armadillo
-        zip -r armadillo_macos_universal2 armadillo
-    - name: Create Release
-      uses: softprops/action-gh-release@v0.1.15
-      with:
-        tag_name: "v1.0.0"
-        files: armadillo_macos_universal2.zip
-        token: ${{ secrets.THIS_REPO }}
+    # - name: make zip file
+    #   run: |
+    #     mkdir armadillo
+    #     mv build/Release/libarmadillo.a armadillo
+    #     zip -r armadillo_macos_universal2 armadillo
+    # - name: Create Release
+    #   uses: softprops/action-gh-release@v0.1.15
+    #   with:
+    #     tag_name: "v1.0.0"
+    #     files: armadillo_macos_universal2.zip
+    #     token: ${{ secrets.THIS_REPO }}
   
