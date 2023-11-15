@@ -1,1 +1,64 @@
+name: build release manually triggered 
+  
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'making mlmat'
+        # Default value if no value is explicitly provided
+        default: 'make'
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: string
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+
+jobs:
+  build_macos:
+    name: build macos lib fat
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+
+    - name: Fetch asset
+      run: gh release download  --clobber  --repo testcase/sndlib v1.0.0 --pattern libsndlib_macos_universal2.zip
+
+      env:
+        GITHUB_TOKEN: ${{ secrets.SUPERSECRET }}
+ 
+    - name: mkdir and run
+      run: |
+        mkdir build
+        cd build
+        cmake -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..
+        cmake --build . --config Release
+    - name: ranlib
+      run: ranlib build/Release/libarmadillo.a
+    - name: check arch
+      run: echo `lipo -info build/Release/libarmadillo.a`
+    - name: Archive static lib artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: armadillo_macos_universal2
+        path: | 
+          build/Release/libarmadillo.a
+          
+    - name: make zip file
+      run: |
+        mkdir armadillo
+        mv build/Release/libarmadillo.a armadillo
+        zip -r armadillo_macos_universal2 armadillo
+    - name: Create Release
+      uses: softprops/action-gh-release@v0.1.15
+      with:
+        tag_name: "v1.0.0"
+        files: armadillo_macos_universal2.zip
+        token: ${{ secrets.THIS_REPO }}
+  
