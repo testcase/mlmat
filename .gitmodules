@@ -4,7 +4,7 @@
 [submodule "source/mlpack"]
 	path = source/mlpack
 	url = https://github.com/mlpack/mlpack
-[submodule "source/armadillo"]
+[submodule "source/armadillo-code"]
 	path = source/armadillo-code
 	url = https://gitlab.com/conradsnicta/armadillo-code
 [submodule "source/cereal"]
