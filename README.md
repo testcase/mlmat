@@ -35,7 +35,7 @@ In this mode jitter matrices are going to be 1 or 2d with a single plane. Each c
 Over view
 0. Clone repo 
 1. Build armadillo static lib
-2. Install prereqs for buildng mlpack (I am using homebrew)
+2. Install prereqs for buildng mlpack
 3. Build mlpack static lib
 4. Generate projects and build objects
 
@@ -54,14 +54,6 @@ git apply ../../better_docs.patch
 
 
 ## Building on macOS
-
-### Install Boost
-
-`wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.zip`
-
-unzip in source dir
-
-only headers being used. 
 
 ### Build armadillo static lib
 
