@@ -39,7 +39,7 @@ jobs:
         cd source/ensmallen
         mkdir build
         cd build
-        cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" ..
+        cmake -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
     - name: build mlpack
       run: | 
         cd source/mlpack
