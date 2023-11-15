@@ -64,7 +64,7 @@ jobs:
         mv ./init ./mlmat
         mv ./javascript ./mlmat
         mv ./misc ./mlmat
-        mv ./patcher ./mlmat
+        mv ./patchers ./mlmat
         mv LICENSE ./mlmat
         mv README.md ./mlmat
         mv package-info.json ./mlmat
