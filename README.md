@@ -116,7 +116,6 @@ if wanting to debug also do
 
 `cmake --build . --config Debug`
 
--->
 ### Generate projects and build
 
 cd into main mlmat directory
@@ -127,7 +126,6 @@ run
 `cd build`
 
 `cmake -GXcode ..`
-
 
 You should now be able to do the following
 
@@ -223,7 +221,6 @@ You can now use
 if wanting to debug also do
 
 `cmake --build . --config Debug`
-
 
 ### Generate projects and build
 
