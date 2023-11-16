@@ -1,0 +1,120 @@
+name: build windows release manually triggered 
+  
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      name:
+        # Friendly description to be shown in the UI instead of 'name'
+        description: 'making mlmat'
+        # Default value if no value is explicitly provided
+        default: 'make'
+        # Input has to be provided for the workflow to run
+        required: true
+        # The data type of the input
+        type: string
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+
+jobs:
+  build_macos:
+    name: build windows
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: build arma
+      run: | 
+        cd source/armadillo-code
+        mkdir build
+        cd build
+        cmake -DBUILD_SHARED_LIBS=OFF -DOPENBLAS_PROVIDES_LAPACK=true -G "Visual Studio 17 2022" -A x64 ..
+        cmake --build . --config Release
+    - name: build ensmallen
+      run: | 
+        cd source/ensmallen
+        mkdir build
+        cd build
+        cmake -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
+    - name: build mlpack
+      run: | 
+        cd source/mlpack
+        mkdir build
+        cd build
+        cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../../armadillo-code/build/Release/armadillo.lib" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -G "Visual Studio 17 2022" -A x64 ..
+        cmake --build . --config Release
+    - name: build mlpack
+      run: | 
+        mkdir build
+        cd build
+        cmake -G "Visual Studio 17 2022" -A x64 ..
+        cmake --build . --config Release
+
+    - name: make zip file
+      run: |
+        mkdir mlmat
+        mv ./examples ./mlmat
+        mv ./extras ./mlmat
+        mv ./externals ./mlmat
+        mv ./help ./mlmat 
+        mv ./init ./mlmat
+        mv ./javascript ./mlmat
+        mv ./misc ./mlmat
+        mv ./patchers ./mlmat
+        mv LICENSE ./mlmat
+        mv README.md ./mlmat
+        mv package-info.json ./mlmat
+        zip -r mlmat mlmat
+    - name: Create Release
+      uses: softprops/action-gh-release@v0.1.15
+      with:
+        tag_name: "v0.5.0"
+        files: mlmat_windows.zip
+        token: ${{ secrets.THIS_REPO }}
+
+    
+    # - name: Fetch asset
+    # taking this out a might as well build armadillo. works fine unlike windows for now
+    #   run: |
+    #     cd source/armadillo-code
+    #     mkdir build
+    #     cd build
+    #     mkdir Release
+    #     cd release
+    #     gh release download  --clobber  --repo testcase/armadillo v1.0.0 --pattern armadillo_macos_universal2.zip
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.SUPERSECRET }}
+     
+    # - name: mkdir and run
+    #   run: |
+    #     mkdir build
+    #     cd build
+    #     cmake -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..
+    #     cmake --build . --config Release
+    # - name: ranlib
+    #   run: ranlib build/Release/libarmadillo.a
+    # - name: check arch
+    #   run: echo `lipo -info build/Release/libarmadillo.a`
+    # - name: Archive static lib artifacts
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: armadillo_macos_universal2
+    #     path: | 
+    #       build/Release/libarmadillo.a
+          
+    # - name: make zip file
+    #   run: |
+    #     mkdir armadillo
+    #     mv build/Release/libarmadillo.a armadillo
+    #     zip -r armadillo_macos_universal2 armadillo
+    # - name: Create Release
+    #   uses: softprops/action-gh-release@v0.1.15
+    #   with:
+    #     tag_name: "v1.0.0"
+    #     files: armadillo_macos_universal2.zip
+    #     token: ${{ secrets.THIS_REPO }}
+  
