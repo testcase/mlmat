@@ -19,7 +19,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 
 jobs:
-  build_macos:
+  build_windows:
     name: build windows
     runs-on: windows-latest
 
@@ -39,7 +39,7 @@ jobs:
         cd source/ensmallen
         mkdir build
         cd build
-        cmake -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
+        cmake -DLAPACK_LIBRARY=../../armadillo-code/examples/lib_win64/libopenblas.lib" -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
     - name: build mlpack
       run: | 
         cd source/mlpack
