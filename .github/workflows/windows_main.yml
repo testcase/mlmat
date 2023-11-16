@@ -54,27 +54,27 @@ jobs:
         cmake -G "Visual Studio 17 2022" -A x64 ..
         cmake --build . --config Release
 
-    - name: make zip file
-      run: |
-        mkdir mlmat
-        mv ./examples ./mlmat
-        mv ./extras ./mlmat
-        mv ./externals ./mlmat
-        mv ./help ./mlmat 
-        mv ./init ./mlmat
-        mv ./javascript ./mlmat
-        mv ./misc ./mlmat
-        mv ./patchers ./mlmat
-        mv LICENSE ./mlmat
-        mv README.md ./mlmat
-        mv package-info.json ./mlmat
-        zip -r mlmat mlmat
-    - name: Create Release
-      uses: softprops/action-gh-release@v0.1.15
-      with:
-        tag_name: "v0.5.0"
-        files: mlmat_windows.zip
-        token: ${{ secrets.THIS_REPO }}
+    # - name: make zip file
+    #   run: |
+    #     mkdir mlmat
+    #     mv ./examples ./mlmat
+    #     mv ./extras ./mlmat
+    #     mv ./externals ./mlmat
+    #     mv ./help ./mlmat 
+    #     mv ./init ./mlmat
+    #     mv ./javascript ./mlmat
+    #     mv ./misc ./mlmat
+    #     mv ./patchers ./mlmat
+    #     mv LICENSE ./mlmat
+    #     mv README.md ./mlmat
+    #     mv package-info.json ./mlmat
+    #     zip -r mlmat mlmat
+    # - name: Create Release
+    #   uses: softprops/action-gh-release@v0.1.15
+    #   with:
+    #     tag_name: "v0.5.0"
+    #     files: mlmat_windows.zip
+    #     token: ${{ secrets.THIS_REPO }}
 
     
     
