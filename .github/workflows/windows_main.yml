@@ -33,14 +33,12 @@ jobs:
         mkdir build
         cd build
         cmake -DBUILD_SHARED_LIBS=OFF -G "Visual Studio 17 2022" -A x64 ..
-      # cmake -DBUILD_SHARED_LIBS=OFF -DOPENBLAS_PROVIDES_LAPACK=true -G "Visual Studio 17 2022" -A x64 ..
         cmake --build . --config Release
     - name: build ensmallen
       run: | 
         cd source/ensmallen
         mkdir build
         cd build
-      # cmake -DLAPACK_LIBRARY="../../armadillo-code/examples/lib_win64/libopenblas.lib" -DBLAS_LIBRARY="../../armadillo-code/examples/lib_win64/libopenblas.lib" -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
         cmake -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
     - name: build mlpack
       run: | 
