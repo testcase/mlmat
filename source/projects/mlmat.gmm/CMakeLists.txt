@@ -23,7 +23,7 @@ include_directories(
 	"${C74_INCLUDES}"
     "${MLPACK_DIR}/src"
     "${ARMA_DIR}/include"
-    "${MLPACK_DIR}/src"
+    "${MLPACK_DIR}/src"w
     "${ENSMALLEN_DIR}/include"
  	"${CEREAL_DIR}/include"
     "/usr/local/include"
@@ -61,6 +61,8 @@ if (MSVC)
 	add_compile_options(/bigobj)
    	 target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/build/Debug/armadillo.lib")
 	 target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/build/Release/armadillo.lib")
+	 target_link_libraries(${PROJECT_NAME} PRIVATE debug "${ARMA_DIR}/examples/lib_win64/libopenblas.lib")
+	 target_link_libraries(${PROJECT_NAME} PRIVATE optimized "${ARMA_DIR}/examples/lib_win64/libopenblas.lib")
 endif ()
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
