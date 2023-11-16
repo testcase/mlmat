@@ -39,7 +39,7 @@ jobs:
         cd source/ensmallen
         mkdir build
         cd build
-        cmake -DLAPACK_LIBRARY=../../armadillo-code/examples/lib_win64/libopenblas.lib" -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
+        cmake -DLAPACK_LIBRARY="../../armadillo-code/examples/lib_win64/libopenblas.lib" -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
     - name: build mlpack
       run: | 
         cd source/mlpack
