@@ -10,6 +10,7 @@ using namespace c74;
 using namespace c74::min;
 using namespace c74::max;
 
+
 void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 

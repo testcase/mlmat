@@ -16,7 +16,7 @@ using namespace c74::max;
 using namespace mlpack;
 using namespace mlpack::util;
 
-void mlmat_pca_assist(void* x, void* b, long m, long a, char* s) ;
+void mlmat_nmf_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 
 class mlmat_nmf : public mlmat_object<mlmat_nmf> {
@@ -62,7 +62,7 @@ public:
         
         max_jit_class_mop_wrap(c, this_jit_class, 0);
         max_jit_class_wrap_standard(c, this_jit_class, 0);
-        class_addmethod(c, (method)mlmat_pca_assist, "assist", A_CANT, 0);
+        class_addmethod(c, (method)mlmat_nmf_assist, "assist", A_CANT, 0);
 
         return {};
     }};
@@ -89,6 +89,7 @@ public:
         arma::mat W, H;
         size_t r = rank;
         double residue = 0.;
+        t_atom a[1];
         
         try {
             check_mode(in_query_info, mode, "nmf");
@@ -149,7 +150,7 @@ public:
                 H_info.type = _jit_sym_float64;
                 H_info.flags = 0;
                 H_info.dimcount = 2;
-                W_info.planecount = 1;
+                H_info.planecount = 1;
                 H_info.dim[0] = H.n_cols;
                 H_info.dim[1] = H.n_rows;
                 break;
@@ -168,7 +169,8 @@ public:
         object_method(in_matrix,_jit_sym_lock,in_savelock);
         object_method(W_matrix,_jit_sym_lock,W_savelock);
         object_method(H_matrix,_jit_sym_lock,H_savelock);
-
+        atom_setfloat(a,residue);
+        outlet_anything(m_dumpoutlet, gensym("residue"), 1, a);
         return err;
     }
 
@@ -191,7 +193,7 @@ t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
 }
 
 
-void mlmat_pca_assist(void* x, void* b, long io, long index, char* s) {
+void mlmat_nmf_assist(void* x, void* b, long io, long index, char* s) {
     switch(io) {
         case 1:
             switch(index) {
