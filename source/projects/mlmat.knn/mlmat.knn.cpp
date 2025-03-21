@@ -205,7 +205,7 @@ public:
             goto out;
         }
         
-        out_neighbors_info.planecount = m_model.dimcount;
+        out_neighbors_info.planecount = mode == 0 ? m_model.dimcount : 1;
         out_distances_info.planecount = 1;
         out_neighbors_info.type = _jit_sym_long;
         out_distances_info.type = _jit_sym_float64;
@@ -246,7 +246,7 @@ public:
             }
         }
         
-
+        // for mode 1 or 2 is coords should be false i think
         out_neighbors = arma_to_jit(mode, resulting_neighbors, static_cast<t_object*>(out_neighbors), out_neighbors_info, true, m_model.dim0);
         out_distances = arma_to_jit(mode, resulting_distances, static_cast<t_object*>(out_distances), out_distances_info);
 
