@@ -23,6 +23,20 @@ max::t_object* maxob_from_jitob(max::t_object* job) {
     return mwrap;
 }
 
+max::t_object* convert_to_float64(max::t_object *matrix, max::t_jit_matrix_info& minfo) {
+    max::t_object *m; // destination matrix
+    if(minfo.type == max::_jit_sym_float64) {
+        return matrix;
+    }
+    max::t_jit_matrix_info dest_info = minfo;
+    
+    dest_info.type = max::_jit_sym_float64;
+    m = static_cast<max::t_object*>(max::jit_object_new(max::_jit_sym_jit_matrix,&dest_info));
+    max::object_method(m, max::_jit_sym_frommatrix,matrix,NULL);
+    return m;
+}
+   
+
 void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 max::t_jit_err mlmat_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs);
 void mlmat_outputmatrix(max_jit_wrapper *x);
@@ -271,10 +285,14 @@ public:
                     ip = ip + out_minfo.dimstride[1];
                 }
             }
-            
+            // not sure. seems easier to do fft in float32 since that is what buffer samples in and then convert to float64 matrix
+            max::t_object* out_matrix64 = convert_to_float64(static_cast<max::t_object*>(tmp_matrix), out_minfo);
+            err = (max::t_jit_err)max::object_method(out_matrix64, max::_jit_sym_getinfo, &out_minfo);
             max::object_method(out_matrix, max::_jit_sym_setinfo,&out_minfo);
-            max::object_method(out_matrix, max::_jit_sym_frommatrix,tmp_matrix,nullptr);
+            max::object_method(out_matrix, max::_jit_sym_frommatrix,out_matrix64,nullptr);
             max::jit_object_free(tmp_matrix);
+            max::jit_object_free(out_matrix64);
+
 
         }
     out:
@@ -316,7 +334,7 @@ private:
         max::t_class* c = args[0];
         // add mop
         max::t_object* mop = static_cast<max::t_object*>(max::jit_object_new(max::_jit_sym_jit_mop, -1, 1));
-        jit_mop_single_type(mop, max::_jit_sym_float32);
+        jit_mop_single_type(mop, max::_jit_sym_float64);
         jit_class_addadornment(c, mop);
         jit_class_addmethod(c, (max::method)mlmat_matrix_calc, "matrix_calc", max::A_CANT, 0);
         jit_class_addmethod(c, (max::method)mlmat_notify, "notify", max::A_CANT, 0); //cant get notify to work unless i do this

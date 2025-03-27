@@ -195,7 +195,6 @@ public:
         eigvec_info.dim[0] = eigvec.n_cols;
         eigvec_info.planecount = eigvec.n_rows;
         
-            
         out_matrix = arma_to_jit(mode, query, static_cast<t_object*>(out_matrix), out_info );
         eigval_matrix = arma_to_jit(mode, eigVal, static_cast<t_object*>(eigval_matrix), eigVal_info );
         eigvec_matrix = arma_to_jit(mode, eigvec, static_cast<t_object*>(eigvec_matrix), eigvec_info );

@@ -143,6 +143,11 @@ public:
         float *tab = buffer_locksamples(buffer);
     
         err = (max::t_jit_err)max::object_method(in_matrix, max::_jit_sym_getinfo, &in_minfo);
+        
+        max::t_object* in_matrix32 = convert_to_float32(static_cast<max::t_object*>(in_matrix), in_minfo);
+        
+        err = (max::t_jit_err)max::object_method(in_matrix32, max::_jit_sym_getinfo, &in_minfo);
+        
         // what to do if error
 
         // need to check fftsize to matrrix dims
@@ -211,7 +216,7 @@ public:
             max::uchar *ip = nullptr;
             float *fp = nullptr;
             
-            err = (max::t_jit_err)max::object_method(in_matrix, max::_jit_sym_getdata, &dataptr);
+            err = (max::t_jit_err)max::object_method(in_matrix32, max::_jit_sym_getdata, &dataptr);
 
             long buf_pos = 0;
 
@@ -274,6 +279,7 @@ public:
     out:
         buffer_unlocksamples(buffer);
         max::object_method(in_matrix, c74::max::_jit_sym_lock, in_savelock);
+        if(in_matrix != in_matrix32) { jit_object_free(in_matrix32); }
         return err;
 
     }
@@ -435,54 +441,4 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
 
    }
 }
-
-
-///
-
-//    c74::max::t_jit_err matrix_calc(c74::max::t_object* x, c74::max::t_object* inputs, c74::max::t_object* outputs) {
-//        c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
-//        c74::max::t_jit_matrix_info in_minfo;
-//        auto in_matrix = c74::max::object_method(inputs, c74::max::_jit_sym_getindex, 0);
-//        long in_savelock = (long) c74::max::object_method(in_matrix, c74::max::_jit_sym_lock, 1);
-//        c74::min::buffer_lock<false> b(*m_buffer);
-//        auto chan = std::min<size_t>(channel - 1, b.channel_count());
-//
-//
-//        err = (c74::max::t_jit_err)c74::max::object_method(in_matrix, c74::max::_jit_sym_getinfo, &in_minfo);
-//
-//        if (b.valid()) {
-//            long frame_count = in_minfo.dim[0] * in_minfo.dim[1];
-//            b.resize_in_samples(frame_count);
-//
-//
-//            c74::max::uchar *dataptr = nullptr;
-//            c74::max::uchar *ip = nullptr;
-//            float *fp = nullptr;
-//
-//            err = (c74::max::t_jit_err)c74::max::object_method(in_matrix, c74::max::_jit_sym_getdata, &dataptr);
-//
-//            long buf_pos = 0 ;
-//
-//            for(auto width=0;width<in_minfo.dim[0];width++) {
-//                ip = dataptr + (width*in_minfo.dimstride[0]);
-//                for(auto height=0;height<in_minfo.dim[1];height++) {
-//                    fp = (float*)ip;
-//                    b.lookup(buf_pos++, chan) = *fp++;
-//                    *fp++ ;
-//                    //std::cout << buf_pos++ << ": " << *fp++ << " " << *fp++;
-//                    ip = ip + in_minfo.dimstride[1];
-//                }
-//            }
-//
-//            b.dirty();
-//        } else {
-//            cerr << "buffer specified is not valid" << endl;
-//            goto out;
-//        }
-//    out:
-//        c74::max::object_method(in_matrix, c74::max::_jit_sym_lock, in_savelock);
-//        return err;
-//
-//    }
-//
 

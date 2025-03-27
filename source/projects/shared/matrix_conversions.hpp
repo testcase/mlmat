@@ -129,11 +129,21 @@ c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, i
             break;
             
         case 2:
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
+            //stepsize
+//            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
+//                p = dataptr + (jcol*minfo.dimstride[1]);
+//                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
+//                    *(M*)p = arma(aelem++);
+//                    p += stepsize;
+//                }
+//            }
+
+            for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
+                p1 = dataptr + (jrow*minfo.dimstride[0]);
+                for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
+                    p = p1;
                     *(M*)p = arma(aelem++);
-                    p += stepsize;
+                    p1 += minfo.dimstride[1];
                 }
             }
             break;

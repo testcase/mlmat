@@ -107,7 +107,12 @@ public:
 
         residue = nmf.Apply(query, r, W, H);
     
-        std::cout << residue << std::endl;
+//        std::cout << residue << std::endl;
+//        
+//        std::cout << W.n_rows << " " << W.n_cols << std::endl;
+//        std::cout << H.n_rows << " " << H.n_cols << std::endl;
+//        std::cout << "_______" << std::endl;
+        
         
         
         switch(mode.get()) {
