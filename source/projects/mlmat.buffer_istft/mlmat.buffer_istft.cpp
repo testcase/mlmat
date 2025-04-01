@@ -135,7 +135,6 @@ public:
         size_t b_frame_count = full_spectrum ? (in_minfo.dim[0] * in_minfo.dim[1]) / 2 : (in_minfo.dim[0] * in_minfo.dim[1]);
         size_t output_length = (b_frame_count*2) / overlap;
 
-        
         max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
         
         max::object_method(static_cast<max::t_object*>(buffer), max::gensym("sizeinsamps"), (void*)output_length, 0);
@@ -143,20 +142,26 @@ public:
         float *tab = buffer_locksamples(buffer);
     
         err = (max::t_jit_err)max::object_method(in_matrix, max::_jit_sym_getinfo, &in_minfo);
-        
         max::t_object* in_matrix32 = convert_to_float32(static_cast<max::t_object*>(in_matrix), in_minfo);
-        
         err = (max::t_jit_err)max::object_method(in_matrix32, max::_jit_sym_getinfo, &in_minfo);
+
+        if(in_minfo.dim[1] != (full_spectrum ? fftsize : fftsize / 2)) {
+            int requested_fft = full_spectrum ? fftsize : fftsize / 2;
+            cerr << "dim[1] of input matrix is " << in_minfo.dim[1] << " but should be " << requested_fft << " to match requested fftsize." << endl;
+            goto out;
+        }
         
-        // what to do if error
+        if(in_minfo.planecount != 2) {
+            cerr << "input matrix has " << in_minfo.planecount << " planes. needs to have 2." << endl;
+        }
 
         // need to check fftsize to matrrix dims
         
         
+        
         if (buffer && tab) {
 
-            max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
-            size_t chan = std::min<size_t>(channel - 1, b_channel_count);
+            //max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
         
             size_t step = fftsize / overlap;
             size_t fftsize_2 = fftsize / 2;
@@ -171,7 +176,6 @@ public:
             m_samples.assign(b_frame_count+step, 0.0f);
             std::vector<float>signal(fftsize);
             std::vector<float> window_vector(fftsize);
-            
             
             size_t num_bins = fftsize_2;
             
@@ -204,13 +208,9 @@ public:
                 vDSP_DFT_DestroySetup(tmp_setup);
             }
             
-            // if full_spectrum just going to get half of matrix
-            
-            
             DSPSplitComplex complex_input = { in_real.data(), in_imag.data()};
             DSPSplitComplex complex_output = { frame_real.data(), frame_imag.data()};
     
-            
             /* write fft frames to vector*/
             max::uchar *dataptr = nullptr;
             max::uchar *ip = nullptr;
@@ -219,9 +219,6 @@ public:
             err = (max::t_jit_err)max::object_method(in_matrix32, max::_jit_sym_getdata, &dataptr);
 
             long buf_pos = 0;
-
-           // input_polar
-           
             
             if(input_polar) {
                 float r = 0.0;
@@ -263,10 +260,7 @@ public:
                     vDSP_vmul(signal.data(), 1, window_vector.data(), 1, signal.data(), 1, fftsize);
                 }
                 
-                
-                
                 vDSP_vadd(signal.data(), 1, m_samples.data()+j, 1, m_samples.data()+j, 1, fftsize);
-                
             }
             
             max::buffer_setdirty(buffer);
@@ -319,11 +313,6 @@ private:
             max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
             
             if (buffer && tab) {
-                
-//                if(b_frame_count != m_samples.size()) {
-//                    cerr << "b_frame_count != m_samples.size()" << endl;
-//                    return {};
-//                }
                 auto chan = std::min<size_t>(channel - 1, b_channel_count);
                 for(auto i = 0;i<b_frame_count;i++) {
                     tab[(i*b_channel_count) + chan] = m_samples[i];
