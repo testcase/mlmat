@@ -38,7 +38,7 @@ void max_mlmat_jit_matrix(max_jit_wrapper *x, max::t_symbol *s, short argc, max:
 void mlmat_notify(max::t_object* x, max::t_symbol *s, max::t_symbol *msg, void *sender, void *data);
 
 
-class mlmat_buffer_istft : public object<mlmat_buffer_istft>, public matrix_operator<>
+class mlmat_buffer_griffinlim : public object<mlmat_buffer_griffinlim>, public matrix_operator<>
 {
 public:
     MIN_DESCRIPTION    { "Read from a buffer~." };
@@ -75,14 +75,24 @@ public:
         description {
             "If set, output full spectrum."
     }};
-    
-    attribute<bool> input_polar { this, "input_polar", false,
-        description {
-            "If set, output polar."
-    }};
+//    
+//    attribute<bool> input_polar { this, "input_polar", false,
+//        description {
+//            "If set, output polar."
+//    }};
     
     attribute<min::symbol> initial_buffer { this, "initial_buffer", true,
         visibility(visibility::hide)
+    };
+    
+    attribute<double, threadsafe::no, limit::clamp> momentum {this, "momentum", .99,
+        description {"Overlap of windows."},
+        range {0., 1.} //what should max be?
+    };
+    
+    attribute<int, threadsafe::no, limit::clamp> iters {this, "iters", 25,
+        description {"Size of DFT ."},
+        range {1, 255} //what should max be?
     };
     
     // I find I need this to get valid buffer when instatiated in a loaded patch
@@ -161,7 +171,7 @@ public:
 
         // need to check fftsize to matrrix dims
         
-        
+       
         
         if (buffer && tab) {
 
@@ -169,14 +179,17 @@ public:
         
             size_t step = fftsize / overlap;
             size_t fftsize_2 = fftsize / 2;
-            m_samples.resize(b_frame_count+step);
-            vDSP_vclr(m_samples.data(), 1, b_frame_count+step);
+            m_samples.resize(b_frame_count+step, 0.0);
+
             size_t num_bins = fftsize_2;
             
             std::vector<float> in_real(b_frame_count+step);
             std::vector<float> in_imag(b_frame_count+step);
+            std::vector<float> out_real(b_frame_count+step);
+            std::vector<float> out_imag(b_frame_count+step);
+
             const string window_string = window.get().c_str();
-    
+        
             /* write fft frames to vector*/
             max::uchar *dataptr = nullptr;
             max::uchar *ip = nullptr;
@@ -186,6 +199,7 @@ public:
 
             long buf_pos = 0;
             
+
             for(auto width=0;width<in_minfo.dim[0];width++) {
                 ip = dataptr + (width*in_minfo.dimstride[0]);
                 for(auto height=0;height<num_bins;height++) {
@@ -196,16 +210,37 @@ public:
                 }
             }
             
+            for(auto i=0;i<iters;i++) {
+                try {
+                    istft.process(in_real, in_imag, m_samples, fftsize, overlap, window_string, true, full_spectrum);
+                } catch ( const std::invalid_argument& e ) {
+                    cerr << e.what() << endl;
+                    goto out;
+                }
+                
+                // rebuild spectrogram from inverse
+
+                try {
+                    stft.process(m_samples, out_real, out_imag, fftsize, overlap, window_string, true, full_spectrum);
+                } catch ( const std::invalid_argument& e ) {
+                    cerr << e.what() << endl;
+                    goto out;
+                }
+                in_imag = out_imag;
+            }
+            
             try {
-                istft.process(in_real, in_imag, m_samples, fftsize, overlap, window_string, input_polar, full_spectrum);
+                // in_real and in_imag rect
+                istft.process(in_real, in_imag, m_samples, fftsize, overlap, window_string, true, full_spectrum);
             } catch ( const std::invalid_argument& e ) {
                 cerr << e.what() << endl;
                 goto out;
             }
-
+            float o = overlap;
+            vDSP_vsmul(m_samples.data(), 1, &o, m_samples.data(), 1, m_samples.size());
+//            m_samples *= overlap;
             max::buffer_setdirty(buffer);
-           // update_buffer.set(); is this needed?
-            buffer_update();
+            update_buffer.set();
         } else {
            cerr << "buffer specified is not valid" << endl;
            goto out;
@@ -229,10 +264,11 @@ public:
         return output;
     }
     
-    ~mlmat_buffer_istft() {
+    ~mlmat_buffer_griffinlim() {
 
+        
         if(m_buffer_reference) {
-            max::object_free(m_buffer_reference);
+            object_free(m_buffer_reference);
         }
 
     }
@@ -307,17 +343,17 @@ private:
         return {};
     }};
 
-
     std::vector<float> m_samples;
     ISTFT istft;
+    STFT stft;
 };
 
 
-MIN_EXTERNAL(mlmat_buffer_istft);
+MIN_EXTERNAL(mlmat_buffer_griffinlim);
 
 void mlmat_notify(c74::max::t_object* x, c74::max::t_symbol *s, c74::max::t_symbol *msg, void *sender, void *data)
 {
-    minwrap<mlmat_buffer_istft>* job = (minwrap<mlmat_buffer_istft>*)(x);
+    minwrap<mlmat_buffer_griffinlim>* job = (minwrap<mlmat_buffer_griffinlim>*)(x);
     job->m_min_object.notify(x, s, msg, sender, data);
 }
 
@@ -326,7 +362,7 @@ c74::max::t_jit_err mlmat_matrix_calc(c74::max::t_object* x, c74::max::t_object*
     if (!x || !inputs || !outputs)
         return c74::max::JIT_ERR_INVALID_PTR;
     else {
-        minwrap<mlmat_buffer_istft>* job = (minwrap<mlmat_buffer_istft>*)(x);
+        minwrap<mlmat_buffer_griffinlim>* job = (minwrap<mlmat_buffer_griffinlim>*)(x);
         
         
         

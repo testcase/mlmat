@@ -11,11 +11,16 @@
 #include <iterator>
 #include <numeric>
 #include <vector>
+#include "mlmat_stft.hpp"
 using namespace c74;
 using namespace c74::min;
 
 /*
 */
+
+
+
+
 
 max::t_object* maxob_from_jitob(max::t_object* job) {
     max::t_object* mwrap = NULL;
@@ -142,7 +147,7 @@ public:
             max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
             size_t chan = std::min<size_t>(channel - 1, b_channel_count);
             
-            size_t step = fftsize/overlap;
+            //size_t step = fftsize/overlap;
             size_t out_len = (((b_frame_count * overlap) + fftsize - 1) / fftsize) * fftsize;
             size_t num_fft_frames = out_len / fftsize;
             size_t fftsize_2 = fftsize / 2;
@@ -157,109 +162,28 @@ public:
             } else {
                 out_minfo.dim[1] = fftsize_2;
             }
-        
-            vDSP_DFT_Setup tmp_setup = m_setup;
+            
+            std::vector<float> input(b_frame_count);
+            std::vector<float> out_magnitudes(b_frame_count*(full_spectrum ? 2 : 1)*overlap);
+            std::vector<float> out_phases(b_frame_count*(full_spectrum ? 2 : 1)*overlap);
+            
+            for(auto i=0;i<b_frame_count;i++) {
+                input[i] = tab[i*b_channel_count + chan];
+            }
 
-            m_setup = vDSP_DFT_zrop_CreateSetup(tmp_setup, fftsize, vDSP_DFT_FORWARD );
-            if(m_setup == 0) {
-                cerr << "fftsize " << fftsize << " is not valid." << endl;
-                goto out;
-            }
-            
-            if(tmp_setup != NULL) {
-                vDSP_DFT_DestroySetup(tmp_setup);
-            }
-            
-            std::vector<float> in_samples(fftsize);
-            std::vector<float> in_real(fftsize_2);
-            std::vector<float> in_imag(fftsize_2, 0.0f);
-            std::vector<float> out_real(fftsize_2);
-            std::vector<float> out_imag(fftsize_2);
-            std::vector<float> window_vector(fftsize);
-            std::vector<float> magnitudes(fftsize_2);
-            std::vector<float> phases(fftsize_2);
-            std::vector<float> out_magnitudes;
-            std::vector<float> out_phases;
-            
-            /* window */
             
             const string window_string = window.get().c_str();
             
-            if(window_string == "triangle") {
-                float tristart = 0.0f;
-                float tritop = 1.0f;
-                float up = 1.0f/fftsize_2;
-                float down = -1.0f/fftsize_2;
-                vDSP_vramp(&tristart, &up,window_vector.data(), 1, fftsize/2);
-                vDSP_vramp(&tritop, &down,window_vector.data()+((fftsize/2)-1), 1, fftsize/2);
-            } else if (window_string == "hanning") {
-                vDSP_hann_window(window_vector.data(), fftsize, vDSP_HANN_NORM );
-            } else if (window_string == "hamming") {
-                vDSP_hamm_window(window_vector.data(), fftsize, 0);
-            } else if (window_string == "blackman") {
-                vDSP_blkman_window(window_vector.data(), fftsize, 0);
-            }
-            
-            DSPSplitComplex complex_input = { in_real.data(), in_imag.data()};
-            DSPSplitComplex complex_output = { out_real.data(), out_imag.data()};
-            
-            
-            for (auto i = 0; i < b_frame_count; i+=step) {
-                //get next N samples
-                if(i+fftsize > b_frame_count) {
-                    for(auto j=0;j<fftsize;j++) {
-                        if((i+j) > b_frame_count) {
-                            in_samples[j] = 0.0f;
-                        } else {
-                            in_samples[j] = tab[(i+j)*b_channel_count + chan];
-                        }
-                    }
-                }
-                else {
-                    for(auto j=0;j<fftsize;j++) {
-                        in_samples[j] = tab[(i+j)*b_channel_count + chan];
-                    }
-                }
-                //window
-                if (window_string != "square") {
-                    vDSP_vmul(in_samples.data(), 1, window_vector.data(), 1, in_samples.data(), 1, fftsize);
-                }
+            try {
                 
-                //put into SplitComplex
-                vDSP_ctoz((DSPComplex *)in_samples.data(), 2, &complex_input, 1, fftsize_2);
+                stft.process(input, out_magnitudes, out_phases, fftsize, overlap, window_string, output_polar, full_spectrum);
 
-                // dft
-                vDSP_DFT_Execute(m_setup,complex_input.realp, complex_input.imagp,complex_output.realp,complex_output.imagp);
-            
-
-                float scale = .5;
-            
-                vDSP_vsmul(complex_output.realp, 1, &scale, complex_output.realp, 1, fftsize_2);
-                vDSP_vsmul(complex_output.imagp, 1, &scale, complex_output.imagp, 1, fftsize_2);
-         
-            
-                complex_output.imagp[0] = 0.0;
-                
-                if(output_polar) {
-                    
-                    vDSP_zvabs(&complex_output, 1, magnitudes.data(), 1, fftsize_2);  // Compute magnitude
-                    vDSP_zvphas(&complex_output, 1, phases.data(), 1, fftsize_2);  // Compute phase (radians)
-                    std::copy(magnitudes.begin(), magnitudes.end(), std::back_inserter(out_magnitudes));
-                    std::copy(phases.begin(), phases.end(), std::back_inserter(out_phases));
-                    if(full_spectrum) {
-                        std::copy(magnitudes.rbegin(), magnitudes.rend(), std::back_inserter(out_magnitudes));
-                        std::copy(phases.rbegin(), phases.rend(), std::back_inserter(out_phases));
-                    }
-                
-                } else {
-                    std::copy(out_real.begin(), out_real.end(), std::back_inserter(out_magnitudes));
-                    std::copy(out_imag.begin(), out_imag.end(), std::back_inserter(out_phases));
-                    if(full_spectrum) {
-                        std::copy(out_real.rbegin(), out_real.rend(), std::back_inserter(out_magnitudes));
-                        std::copy(out_imag.rbegin(), out_imag.rend(), std::back_inserter(out_phases));
-                    }
-                }
+            } catch ( const std::invalid_argument& e ) {
+                cerr << e.what() << endl;
+                goto out;
             }
+        
+          
             
             max::t_object* tmp_matrix = static_cast<max::t_object*>(max::jit_object_new(max::_jit_sym_jit_matrix,&out_minfo));
             
@@ -303,7 +227,6 @@ public:
           
     }
     
-    
     max::t_max_err notify(max::t_object* x, max::t_symbol *s, max::t_symbol *msg, void *sender, void *data) {
         return max::buffer_ref_notify(m_buffer_reference, s, msg, sender, data);
     }
@@ -317,10 +240,6 @@ public:
 
     
     ~mlmat_buffer_stft() {
-        if(m_setup != NULL) {
-            vDSP_DFT_DestroySetup(m_setup);
-        }
-        
         if(m_buffer_reference) {
             object_free(m_buffer_reference);
         }
@@ -377,7 +296,7 @@ private:
         return {};
     }};
     
-    vDSP_DFT_Setup m_setup = NULL;
+    STFT stft;
 };
 
 

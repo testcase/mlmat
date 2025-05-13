@@ -83,19 +83,29 @@ public:
             m_model.model = std::make_unique<FFN<MeanSquaredError,RandomInitialization>>();
             arma::mat out_data;
         
-            m_model.model->Add<Linear>(hidden_neurons.get());
+            m_model.model->Add<Linear>(m_training->n_rows);
             
             for(auto i = 0;i<hidden_layers-1;i++) {
                 add_layer(activation.get());
-                m_model.model->Add<Linear>(m_training->n_rows);
+                m_model.model->Add<Linear>(hidden_neurons.get());
             }
-
-            m_model.model->Add<Linear>( hidden_neurons.get());
             m_model.model->Add<Identity>();
+            m_model.model->Add<Linear>( m_target->n_rows);
+            m_model.model->Add<Identity>();
+            
+            //m_model.model->InputDimensions() = {m_training->n_rows};
+            
+            //std::cout << m_model.model->InputDimensions() << std::endl;
             
             scaler_fit(m_model, *m_training);
             out_data = scaler_transform(m_model, *m_training, out_data);
             
+//            auto ls =m_model.model->Network();
+//            
+//            for(auto i=0;i<ls.size();i++) {
+//                std::cout << ls[i]->InputDimensions() << std::endl;
+//            }
+//            
             if(optimizer.get() == "rmsprop") {
                 // this is default
                 try {

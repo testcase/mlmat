@@ -32,7 +32,7 @@ public:
     };
     
     attribute<int> replicates { this, "replicates", 30,
-        description { "Number of angles to consider in brute-force search during Radical2D."}
+        description { "Number of Gaussian-perturbed replicates to use (per point)."}
     };
     
     attribute<int> angles { this, "angles", 150,
@@ -40,8 +40,8 @@ public:
     };
     
     
-    attribute<int> sweeps { this, "sweeps", 0,
-        description { "Number of sweeps.  Each sweep calls Radical2D once for each pair of dimensions."}
+    attribute<int> sweeps { this, "sweeps", 1,
+        description { "Number of sweeps.  Each sweep calls Radical2D once for each pair of dimensions. 0 will set sweeps to the number of dimensions in the data minus one."}
     };
 
     attribute<int> seed { this, "seed", 0,
@@ -122,6 +122,8 @@ public:
         int nSweeps = 0;
         if(sweeps == 0) {
             nSweeps = query.n_rows - 1;
+        } else {
+            nSweeps = MIN(sweeps, query.n_rows - 1);
         }
         
         Radical rad(std_dev, replicates, angles, nSweeps);

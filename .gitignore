@@ -49,3 +49,6 @@ source/min-api/
 source/mlpack/
 source/min-api
 source/armadillo
+source/projects/mlmat.buffer_stft/mlmat.buffer_stft copy.cpp
+source/projects/mlmat.buffer_griffinlim/mlmat.buffer_griffinlim copy.cpp
+source/projects/mlmat.buffer_istft/mlmat.buffer_istft copy.cpp
