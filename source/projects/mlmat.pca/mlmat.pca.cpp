@@ -116,7 +116,9 @@ public:
         auto eigval_savelock = object_method(eigval_matrix, _jit_sym_lock, 1);
         auto eigvec_savelock = object_method(eigvec_matrix, _jit_sym_lock, 1);
         
-        const char* decomp = decomposition_method.get().c_str();
+        // must be a std::string: the decomposition name is compared
+        // against string literals by value below
+        const string decomp = decomposition_method.get().c_str();
         
         object_method(in_matrix, _jit_sym_getinfo, &in_query_info);
         t_object* in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_query_info);

@@ -204,7 +204,9 @@ public:
         t_jit_err err = JIT_ERR_NONE;
         t_atom a;
         void *o,*p;
-        const char* scalertype_string = scaler.get().c_str();
+        // must be a std::string: the scaler name is compared against
+        // string literals by value below
+        const string scalertype_string = scaler.get().c_str();
         auto* mob = maxob_from_jitob(maxobj());
         auto *mop = max_jit_obex_adornment_get(mob , _jit_sym_jit_mop);
         auto * op =  object_method(mop,_jit_sym_getoutputlist);
