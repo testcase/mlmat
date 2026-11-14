@@ -26,12 +26,6 @@ public:
     MIN_AUTHOR          {"Todd Ingalls"};
     MIN_RELATED         {"mlmat.svm"};
     
-    attribute<int> output_neurons { this, "output_neurons", 1,
-        description {
-            "Number of output neurons."
-        }
-    };
-    
     attribute<int> hidden_layers { this, "hidden_layers", 1,
         description {
             "Number of hidden layers."
@@ -96,8 +90,8 @@ public:
                 arma::vec flat_labels = arma::vectorise(*m_labels);
                 for (size_t i = 0; i < flat_labels.n_elem; ++i) {
                     double l = flat_labels(i);
-                    if (l != std::floor(l) || l < 0 || l >= output_neurons) {
-                        (cerr << "labels must be integers between 0 and " << (output_neurons - 1) << " (output_neurons)." << endl);
+                    if (l != std::floor(l) || l < 0) {
+                        (cerr << "labels must be non-negative integers." << endl);
                         return {};
                     }
                 }
@@ -118,7 +112,10 @@ public:
                 //(std::cout << "hidden layer: " << hidden_neurons.get() << " inputs " << hidden_neurons.get() << " outputs" << std::endl);
             }
                 
-            m_model.model->Add<Linear>(output_neurons.get());
+            // the class count is inferred from the labels (which are
+            // validated to be continuous from 0 at intake)
+            const size_t num_classes = size_t(m_labels->max()) + 1;
+            m_model.model->Add<Linear>(num_classes);
             m_model.model->Add<LogSoftMax<>>();
             //removing will test when labels inpput
             //double diff = m_labels_min - 1.0;
