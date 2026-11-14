@@ -27,19 +27,6 @@ max::t_object* maxob_from_jitob(max::t_object* job) {
     return mwrap;
 }
 
-max::t_object* convert_to_float64(max::t_object *matrix, max::t_jit_matrix_info& minfo) {
-    max::t_object *m; // destination matrix
-    if(minfo.type == max::_jit_sym_float64) {
-        return matrix;
-    }
-    max::t_jit_matrix_info dest_info = minfo;
-    
-    dest_info.type = max::_jit_sym_float64;
-    m = static_cast<max::t_object*>(max::jit_object_new(max::_jit_sym_jit_matrix,&dest_info));
-    max::object_method(m, max::_jit_sym_frommatrix,matrix,NULL);
-    return m;
-}
-   
 
 void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 max::t_jit_err mlmat_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs);
@@ -140,90 +127,67 @@ public:
 
         max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
         float *tab = buffer_locksamples(buffer);
-    
+
         if (buffer && tab) {
             size_t b_frame_count = max::buffer_getframecount(buffer);
             max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
             size_t chan = std::min<size_t>(channel - 1, b_channel_count);
-            
-            //size_t step = fftsize/overlap;
-            size_t out_len = (((b_frame_count * overlap) + fftsize - 1) / fftsize) * fftsize;
-            size_t num_fft_frames = out_len / fftsize;
-            size_t fftsize_2 = fftsize / 2;
-            
+
+            size_t num_fft_frames = (b_frame_count * overlap + fftsize - 1) / fftsize;
+            size_t spec_dim = full_spectrum ? fftsize : (fftsize / 2);
+
+            out_minfo.type = max::_jit_sym_float64;
             out_minfo.planecount = 2;
             out_minfo.dimcount = 2;
             out_minfo.dim[0] = num_fft_frames;
-            out_minfo.type = max::_jit_sym_float32;
+            out_minfo.dim[1] = spec_dim;
 
-            if(full_spectrum) {
-                out_minfo.dim[1] = fftsize ;
-            } else {
-                out_minfo.dim[1] = fftsize_2;
-            }
-            
-            std::vector<float> input(b_frame_count);
-            std::vector<float> out_magnitudes(b_frame_count*(full_spectrum ? 2 : 1)*overlap);
-            std::vector<float> out_phases(b_frame_count*(full_spectrum ? 2 : 1)*overlap);
-            
-            for(auto i=0;i<b_frame_count;i++) {
-                input[i] = tab[i*b_channel_count + chan];
+            // scratch members, so a steady-state bang allocates nothing
+            m_input.resize(b_frame_count);
+            m_out_magnitudes.resize(num_fft_frames * spec_dim);
+            m_out_phases.resize(num_fft_frames * spec_dim);
+
+            for(size_t i=0;i<b_frame_count;i++) {
+                m_input[i] = tab[i*b_channel_count + chan];
             }
 
-            
             const string window_string = window.get().c_str();
-            
-            try {
-                
-                stft.process(input, out_magnitudes, out_phases, fftsize, overlap, window_string, output_polar, full_spectrum);
 
+            try {
+                stft.process(m_input, m_out_magnitudes, m_out_phases, fftsize, overlap, window_string, output_polar, full_spectrum);
             } catch ( const std::invalid_argument& e ) {
                 cerr << e.what() << endl;
                 goto out;
             }
-        
-          
-            
-            max::t_object* tmp_matrix = static_cast<max::t_object*>(max::jit_object_new(max::_jit_sym_jit_matrix,&out_minfo));
-            
-            if(!tmp_matrix) {
-                (std::cerr << "could not create matrix" << std::endl);
-                return err;
-            }
-            
-            c74::max::uchar *dataptr = nullptr;
-            c74::max::uchar *ip = nullptr;
-            float *fp = nullptr;
-            err = (max::t_jit_err)max::object_method(tmp_matrix, max::_jit_sym_getinfo, &out_minfo);
-            err = (max::t_jit_err)max::object_method(tmp_matrix, max::_jit_sym_getdata, &dataptr);
-            
-            long buf_pos = 0 ;
 
-            for(auto width=0;width<out_minfo.dim[0];width++) {
-                ip = dataptr + (width*out_minfo.dimstride[0]);
-                for(auto height=0;height<out_minfo.dim[1];height++) {
-                    fp = (float*)ip;
-                    *fp++ = out_magnitudes[buf_pos];
-                    *fp++ = out_phases[buf_pos++];
-                    ip = ip + out_minfo.dimstride[1];
+            // resize the destination and write the analysis directly into
+            // it, converting float32 -> float64 in the same pass (no
+            // temporary matrices)
+            max::object_method(out_matrix, max::_jit_sym_setinfo, &out_minfo);
+            max::t_jit_matrix_info dest_minfo;
+            c74::max::uchar *dataptr = nullptr;
+            max::object_method(out_matrix, max::_jit_sym_getinfo, &dest_minfo);
+            max::object_method(out_matrix, max::_jit_sym_getdata, &dataptr);
+
+            if (dataptr != nullptr) {
+                size_t buf_pos = 0;
+                for(auto width=0;width<dest_minfo.dim[0];width++) {
+                    c74::max::uchar *ip = dataptr + (width*dest_minfo.dimstride[0]);
+                    for(auto height=0;height<dest_minfo.dim[1];height++) {
+                        double *fp = (double*)ip;
+                        fp[0] = m_out_magnitudes[buf_pos];
+                        fp[1] = m_out_phases[buf_pos++];
+                        ip = ip + dest_minfo.dimstride[1];
+                    }
                 }
             }
-            // not sure. seems easier to do fft in float32 since that is what buffer samples in and then convert to float64 matrix
-            max::t_object* out_matrix64 = convert_to_float64(static_cast<max::t_object*>(tmp_matrix), out_minfo);
-            err = (max::t_jit_err)max::object_method(out_matrix64, max::_jit_sym_getinfo, &out_minfo);
-            max::object_method(out_matrix, max::_jit_sym_setinfo,&out_minfo);
-            max::object_method(out_matrix, max::_jit_sym_frommatrix,out_matrix64,nullptr);
-            max::jit_object_free(tmp_matrix);
-            max::jit_object_free(out_matrix64);
-
-
         }
     out:
         buffer_unlocksamples(buffer);
         max::object_method(out_matrix, max::_jit_sym_lock, out_savelock);
 
         return err;
-          
+
     }
     
     max::t_max_err notify(max::t_object* x, max::t_symbol *s, max::t_symbol *msg, void *sender, void *data) {
@@ -296,6 +260,9 @@ private:
     }};
     
     STFT stft;
+    std::vector<float> m_input;
+    std::vector<float> m_out_magnitudes;
+    std::vector<float> m_out_phases;
 };
 
 
@@ -355,7 +322,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
        case 1:
            switch(index) {
                case 0:
-                   sprintf(s, "messages");
+                   snprintf(s, 64, "messages");
                    break;
                default:
                    break;
@@ -364,11 +331,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
        case 2:
            switch(index) {
                case 0:
-                   sprintf(s, "(matrix) data");
+                   snprintf(s, 64, "(matrix) data");
                    break;
 
                default:
-                   sprintf(s, "dumpout");
+                   snprintf(s, 64, "dumpout");
                    break;
            }
 

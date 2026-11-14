@@ -85,14 +85,14 @@ public:
         visibility(visibility::hide)
     };
     
-    attribute<double, threadsafe::no, limit::clamp> momentum {this, "momentum", .99,
-        description {"Overlap of windows."},
-        range {0., 1.} //what should max be?
+    attribute<double, threadsafe::no, limit::clamp> momentum {this, "momentum", 0.,
+        description {"Momentum for the fast Griffin-Lim phase reconstruction. 0 (the default) is the classic algorithm; nonzero values blend each phase update with the previous estimate, which can speed up convergence when using large iteration counts."},
+        range {0., 1.}
     };
     
     attribute<int, threadsafe::no, limit::clamp> iters {this, "iters", 25,
-        description {"Size of DFT ."},
-        range {1, 255} //what should max be?
+        description {"Number of Griffin-Lim iterations."},
+        range {1, 255}
     };
     
     // I find I need this to get valid buffer when instatiated in a loaded patch
@@ -155,97 +155,79 @@ public:
     
         float *tab = buffer_locksamples(buffer);
     
+        // float32 and float64 inputs are unpacked directly; other types go
+        // through a conversion matrix first
         err = (max::t_jit_err)max::object_method(in_matrix, max::_jit_sym_getinfo, &in_minfo);
-        max::t_object* in_matrix32 = convert_to_float32(static_cast<max::t_object*>(in_matrix), in_minfo);
-        err = (max::t_jit_err)max::object_method(in_matrix32, max::_jit_sym_getinfo, &in_minfo);
+        max::t_object* in_matrix32 = nullptr;
+        max::t_object* src_matrix = static_cast<max::t_object*>(in_matrix);
+        if(in_minfo.type != max::_jit_sym_float32 && in_minfo.type != max::_jit_sym_float64) {
+            in_matrix32 = convert_to_float32(static_cast<max::t_object*>(in_matrix), in_minfo);
+            src_matrix = in_matrix32;
+        }
+        err = (max::t_jit_err)max::object_method(src_matrix, max::_jit_sym_getinfo, &in_minfo);
+        const bool input_is_float64 = (in_minfo.type == max::_jit_sym_float64);
 
         if(in_minfo.dim[1] != (full_spectrum ? fftsize : fftsize / 2)) {
             int requested_fft = full_spectrum ? fftsize : fftsize / 2;
             cerr << "dim[1] of input matrix is " << in_minfo.dim[1] << " but should be " << requested_fft << " to match requested fftsize." << endl;
             goto out;
         }
-        
+
         if(in_minfo.planecount != 2) {
             cerr << "input matrix has " << in_minfo.planecount << " planes. needs to have 2." << endl;
         }
 
-        // need to check fftsize to matrrix dims
-        
-       
-        
         if (buffer && tab) {
 
-            //max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
-        
             size_t step = fftsize / overlap;
-            size_t fftsize_2 = fftsize / 2;
-            m_samples.resize(b_frame_count+step, 0.0);
+            size_t num_bins = in_minfo.dim[1];
 
-            size_t num_bins = fftsize_2;
-            
-            std::vector<float> in_real(b_frame_count+step);
-            std::vector<float> in_imag(b_frame_count+step);
-            std::vector<float> out_real(b_frame_count+step);
-            std::vector<float> out_imag(b_frame_count+step);
-
+            // scratch members, so a steady-state call allocates nothing.
+            // (griffin lim zeroes the sample buffer itself)
+            m_samples.resize(b_frame_count+step);
+            m_in_real.resize(b_frame_count+step);
+            m_in_imag.resize(b_frame_count+step);
             const string window_string = window.get().c_str();
-        
-            /* write fft frames to vector*/
+
+            /* write fft frames to vector (plane 0: magnitudes, plane 1: phases)*/
             max::uchar *dataptr = nullptr;
             max::uchar *ip = nullptr;
-            float *fp = nullptr;
-            
-            err = (max::t_jit_err)max::object_method(in_matrix32, max::_jit_sym_getdata, &dataptr);
 
-            long buf_pos = 0;
-            
+            err = (max::t_jit_err)max::object_method(src_matrix, max::_jit_sym_getdata, &dataptr);
+
+            size_t buf_pos = 0;
 
             for(auto width=0;width<in_minfo.dim[0];width++) {
                 ip = dataptr + (width*in_minfo.dimstride[0]);
                 for(auto height=0;height<num_bins;height++) {
-                    fp = (float*)ip;
-                    in_real[buf_pos] = *fp++;
-                    in_imag[buf_pos++] = *fp++;
+                    if(input_is_float64) {
+                        double *fp = (double*)ip;
+                        m_in_real[buf_pos] = float(fp[0]);
+                        m_in_imag[buf_pos++] = float(fp[1]);
+                    } else {
+                        float *fp = (float*)ip;
+                        m_in_real[buf_pos] = fp[0];
+                        m_in_imag[buf_pos++] = fp[1];
+                    }
                     ip = ip + in_minfo.dimstride[1];
                 }
             }
-            
-            for(auto i=0;i<iters;i++) {
-                try {
-                    istft.process(in_real, in_imag, m_samples, fftsize, overlap, window_string, true, full_spectrum);
-                } catch ( const std::invalid_argument& e ) {
-                    cerr << e.what() << endl;
-                    goto out;
-                }
-                
-                // rebuild spectrogram from inverse
 
-                try {
-                    stft.process(m_samples, out_real, out_imag, fftsize, overlap, window_string, true, full_spectrum);
-                } catch ( const std::invalid_argument& e ) {
-                    cerr << e.what() << endl;
-                    goto out;
-                }
-                in_imag = out_imag;
-            }
-            
             try {
-                // in_real and in_imag rect
-                istft.process(in_real, in_imag, m_samples, fftsize, overlap, window_string, true, full_spectrum);
+                griffinlim.process(m_in_real, m_in_imag, b_frame_count, m_samples, fftsize, overlap, window_string, iters, momentum, full_spectrum);
             } catch ( const std::invalid_argument& e ) {
                 cerr << e.what() << endl;
                 goto out;
             }
             float o = overlap;
             for (auto& s : m_samples) { s *= o; }
-//            m_samples *= overlap;
             max::buffer_setdirty(buffer);
             update_buffer.set();
         } else {
            cerr << "buffer specified is not valid" << endl;
            goto out;
         }
-        
+
     out:
         buffer_unlocksamples(buffer);
         max::object_method(in_matrix, c74::max::_jit_sym_lock, in_savelock);
@@ -344,8 +326,9 @@ private:
     }};
 
     std::vector<float> m_samples;
-    ISTFT istft;
-    STFT stft;
+    std::vector<float> m_in_real;
+    std::vector<float> m_in_imag;
+    GriffinLim griffinlim;
 };
 
 
@@ -384,7 +367,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
        case 1:
            switch(index) {
                case 0:
-                   sprintf(s, "messages");
+                   snprintf(s, 64, "messages");
                    break;
                default:
                    break;
@@ -393,11 +376,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
        case 2:
            switch(index) {
                case 0:
-                   sprintf(s, "(matrix) data");
+                   snprintf(s, 64, "(matrix) data");
                    break;
 
                default:
-                   sprintf(s, "dumpout");
+                   snprintf(s, 64, "dumpout");
                    break;
            }
 

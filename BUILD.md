@@ -134,6 +134,11 @@ Regression tests live in [`tests/`](tests/):
   starting maps and seeds (tight tolerance, since the optimization changes
   floating point evaluation order), and checks the new implementation's
   determinism bit-for-bit.
+- [`tests/spectral/`](tests/spectral/) covers the spectral objects' shared
+  core: STFT/ISTFT round trips, bit-identical window caching, and the
+  Griffin-Lim phase reconstruction (consistency-error convergence, momentum
+  0 matching the textbook algorithm, and a comparison against the
+  pre-fix iteration the object used to use).
 
 They are built as part of the normal build; run them with:
 

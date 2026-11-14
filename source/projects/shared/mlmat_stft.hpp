@@ -119,7 +119,13 @@ public:
         m_magnitudes.resize(fftsize_2);
         m_phases.resize(fftsize_2);
 
-        mlmat::make_window(m_window_vector, fftsize, window_string);
+        // the window only depends on (fftsize, window type): rebuild it
+        // only when either changes, not on every call
+        if (m_window_fftsize != fftsize || m_window_type != window_string) {
+            mlmat::make_window(m_window_vector, fftsize, window_string);
+            m_window_fftsize = fftsize;
+            m_window_type = window_string;
+        }
 
         int current_pos = 0;
 
@@ -196,6 +202,8 @@ private:
     std::vector<float> m_out_real;
     std::vector<float> m_out_imag;
     std::vector<float> m_window_vector;
+    int m_window_fftsize = 0;
+    string m_window_type;
     std::vector<float> m_magnitudes;
     std::vector<float> m_phases;
 };
@@ -253,11 +261,27 @@ public:
         m_signal.resize(fftsize);
         m_window_vector.resize(fftsize);
 
-        mlmat::make_window(m_window_vector, fftsize, window_string);
+        // the window only depends on (fftsize, window type): rebuild it
+        // only when either changes, not on every call
+        if (m_window_fftsize != fftsize || m_window_type != window_string) {
+            mlmat::make_window(m_window_vector, fftsize, window_string);
+            m_window_fftsize = fftsize;
+            m_window_type = window_string;
+        }
 
         float scaling = 1.0f / fftsize / overlap;
 
-        for (auto i = 0, j=0; i < (samples.size()); i+=fftsize_2, j+=step) {
+        // iterate over complete frames only: as many as fit both in the
+        // output buffer and in the provided input. (the output buffer can
+        // imply more frames than the input covers; reading those would run
+        // past the end of the input vectors)
+        const size_t out_frames = (samples.size() + fftsize_2 - 1) / fftsize_2;
+        const size_t in_frames = std::min(in_real.size(), in_imag.size()) / fftsize_2;
+        const size_t frames = std::min(out_frames, in_frames);
+
+        for (size_t frame = 0; frame < frames; ++frame) {
+            const size_t i = frame * fftsize_2;
+            const size_t j = frame * step;
 
             // Build the fftsize/2+1 bin spectrum expected by bqfft from the
             // fftsize/2 bins provided, matching the packing used by the
@@ -303,4 +327,94 @@ private:
     std::vector<float> m_spec_imag;
     std::vector<float> m_signal;
     std::vector<float> m_window_vector;
+    int m_window_fftsize = 0;
+    string m_window_type;
+};
+
+
+/// Griffin-Lim phase reconstruction (as used by mlmat.buffer_griffinlim).
+///
+/// Each iteration synthesizes a time-domain signal from the current complex
+/// estimate (magnitudes from the input, phases under refinement), analyzes
+/// it again, and forms a new phase estimate from the consistent analysis,
+/// restoring the original magnitudes. The update uses the fast Griffin-Lim
+/// momentum formulation (Perraudin et al. 2014):
+///
+///   combo = alpha * previous estimate + (1 - alpha) * mag * e^{i c}
+///   new estimate = mag * combo / |combo|
+///
+/// where c is the phase of the re-analysis. With momentum 0 this reduces to
+/// the classic Griffin-Lim algorithm.
+class GriffinLim {
+public:
+    GriffinLim() = default;
+    ~GriffinLim() = default;
+
+    /// magnitudes and phases provide the initial estimate; num_bins is the
+    /// number of valid spectral values (the vectors may hold more slack).
+    /// out_samples must be sized by the caller (num_bins + step, as the
+    /// istft convention) and receives the reconstructed signal.
+    void process(std::vector<float>& magnitudes,
+                 std::vector<float>& phases,
+                 size_t num_bins,
+                 std::vector<float>& out_samples,
+                 int fftsize,
+                 int overlap,
+                 const string window_string,
+                 long iters,
+                 double momentum,
+                 bool full_spectrum = false)
+    {
+        const size_t step = size_t(fftsize) / size_t(overlap);
+        const size_t fftsize_2 = size_t(fftsize) / 2;
+        const long spec_dim = full_spectrum ? fftsize : long(fftsize_2);
+
+        // rect working state from the initial (magnitude, phase) estimate
+        m_rect_real.resize(num_bins, 0.0f);
+        m_rect_imag.resize(num_bins, 0.0f);
+        for (size_t i = 0; i < num_bins; ++i) {
+            m_rect_real[i] = magnitudes[i] * std::cos(phases[i]);
+            m_rect_imag[i] = magnitudes[i] * std::sin(phases[i]);
+        }
+
+        // the consistent re-analysis of out_samples covers as many frames
+        // as fit in the sample buffer
+        const size_t analysis_frames = (out_samples.size() + step - 1) / step;
+        m_consistent_real.assign(analysis_frames * spec_dim, 0.0f);
+        m_consistent_imag.assign(analysis_frames * spec_dim, 0.0f);
+
+        for (long iter = 0; iter < iters; ++iter) {
+            m_istft.process(m_rect_real, m_rect_imag, out_samples, fftsize, overlap, window_string, false, full_spectrum);
+            m_stft.process(out_samples, m_consistent_real, m_consistent_imag, fftsize, overlap, window_string, true, full_spectrum);
+
+            // restore the original magnitudes, blending the previous phase
+            // estimate with the consistent analysis phase
+            const double a = momentum;
+            const double b = 1.0 - momentum;
+            for (size_t i = 0; i < num_bins; ++i) {
+                const double mag = magnitudes[i];
+                const double c = m_consistent_imag[i];  // consistent phase
+                const double combo_r = a * m_rect_real[i] + b * mag * std::cos(c);
+                const double combo_i = a * m_rect_imag[i] + b * mag * std::sin(c);
+                const double nrm = std::sqrt(combo_r * combo_r + combo_i * combo_i);
+                if (nrm > 0.0) {
+                    const double scale = mag / nrm;
+                    m_rect_real[i] = float(combo_r * scale);
+                    m_rect_imag[i] = float(combo_i * scale);
+                }
+                // else: keep the previous estimate (combo cancelled exactly)
+            }
+        }
+
+        // final synthesis with the refined estimate
+        m_istft.process(m_rect_real, m_rect_imag, out_samples, fftsize, overlap, window_string, false, full_spectrum);
+    }
+
+private:
+    STFT m_stft;
+    ISTFT m_istft;
+    std::vector<float> m_rect_real;
+    std::vector<float> m_rect_imag;
+    std::vector<float> m_consistent_real;
+    std::vector<float> m_consistent_imag;
 };

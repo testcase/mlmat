@@ -47,7 +47,7 @@ foreach (project_dir ${PROJECT_DIRS})
     endif ()
 endforeach ()
 
-# Regression tests (tests/conversions, tests/som). These are small compared
+# Regression tests (tests/conversions, tests/som, tests/spectral). These are small compared
 # to the externals themselves, so they are built by default; disable with
 # -DMLMAT_BUILD_TESTS=OFF.
 option(MLMAT_BUILD_TESTS "Build the regression tests" ON)
@@ -57,6 +57,9 @@ if (MLMAT_BUILD_TESTS)
     endif ()
     if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/som/CMakeLists.txt")
         add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests/som)
+    endif ()
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/spectral/CMakeLists.txt")
+        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests/spectral)
     endif ()
 endif ()
 
