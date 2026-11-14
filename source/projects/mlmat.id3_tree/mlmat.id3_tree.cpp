@@ -419,15 +419,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) testing points.");
+                    snprintf(s, 64, "(matrix) testing points.");
                     break;
                     
                 case 1:
-                    sprintf(s, "(matrix) training dataset.");
+                    snprintf(s, 64, "(matrix) training dataset.");
                     break;
                     
                 case 2:
-                    sprintf(s, "(matrix) training labels.");
+                    snprintf(s, 64, "(matrix) training labels.");
                     break;
                     
                 default:
@@ -437,15 +437,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) predictions");
+                    snprintf(s, 64, "(matrix) predictions");
                     break;
                     
                 case 1:
-                    sprintf(s, "(matrix) probabilities");
+                    snprintf(s, 64, "(matrix) probabilities");
                     break;
                     
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
         default:

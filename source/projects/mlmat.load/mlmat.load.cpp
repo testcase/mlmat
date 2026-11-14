@@ -191,7 +191,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
        case 1:
            switch(index) {
                case 0:
-                   sprintf(s, "messages");
+                   snprintf(s, 64, "messages");
                    break;
                default:
                    break;
@@ -200,11 +200,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
        case 2:
            switch(index) {
                case 0:
-                   sprintf(s, "(matrix) data");
+                   snprintf(s, 64, "(matrix) data");
                    break;
 
                default:
-                   sprintf(s, "dumpout");
+                   snprintf(s, 64, "dumpout");
                    break;
            }
 

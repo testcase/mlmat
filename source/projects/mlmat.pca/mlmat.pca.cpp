@@ -2,7 +2,6 @@
 /// @ingroup mlmat
 /// @copyright Copyright 2021 Todd Ingalls. All rights reserved. Also based on examples provided with the mlpack library. Please see source/mlpack for license details
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
-/// TODO: add seed as some strategies use random initialization??
 #include <string>
 
 #include "mlmat.hpp"
@@ -237,7 +236,7 @@ void mlmat_pca_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) dataset");
+                    snprintf(s, 64, "(matrix) dataset");
                     break;
 
                 default:
@@ -247,16 +246,16 @@ void mlmat_pca_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) transformed data");
+                    snprintf(s, 64, "(matrix) transformed data");
                     break;
                 case 1:
-                    sprintf(s, "(matrix) eigenvalues");
+                    snprintf(s, 64, "(matrix) eigenvalues");
                     break;
                 case 2:
-                    sprintf(s, "(matrix) eigenvectors");
+                    snprintf(s, 64, "(matrix) eigenvectors");
                     break;
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

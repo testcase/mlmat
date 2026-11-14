@@ -30,10 +30,7 @@ public:
     
     message<> train {this, "train", "Train model.",
         MIN_FUNCTION {
-            arma::Row<size_t> predictions;
-            arma::mat probabilities;
             t_atom a[1];
-            arma::vec params;
             if(!m_responses) {
                 (cerr << "no responses have been input" << endl);
                 goto out;
@@ -187,25 +184,19 @@ public:
         }
         
         try {
-            check_mode(in_matrix_info, mode, "hoeffding tree");
+            check_mode(in_matrix_info, mode, "linear regression");
         } catch (std::invalid_argument& s) {
             cerr << s.what() << endl;
             goto out;
         }
         
-        query = jit_to_arma(mode, in_matrix64, query);
-
         if(m_mode_changed) {
             cerr << "mode has changed must resubmit reference set" << endl;
             goto out;
         }
-        
-        if(!m_model.model) {
-            (cerr << "no linear regression model has been trained" << endl);
-            goto out;
-        }
 
-        
+        query = jit_to_arma(mode, in_matrix64, query);
+
         try {
             mlpack::util::CheckSameDimensionality(query, m_regression_dimensionality, "linear regression", "query");
         } catch (std::invalid_argument& s) {
@@ -321,15 +312,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) points");
+                    snprintf(s, 64, "(matrix) points");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) predictors");
+                    snprintf(s, 64, "(matrix) predictors");
                     break;
 
                 case 2:
-                    sprintf(s, "(matrix)) responses");
+                    snprintf(s, 64, "(matrix) responses");
                     break;
 
                 default:
@@ -339,11 +330,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) predictions");
+                    snprintf(s, 64, "(matrix) predictions");
                     break;
 
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
            default:

@@ -59,9 +59,10 @@ public:
         setter { MIN_FUNCTION {
             int value = args[0];
             
-            if (value < 1)
+            if (value < 1) {
                 value = 1;
-                return {value};
+            }
+            return {value};
         }}
     };
     
@@ -166,7 +167,7 @@ public:
             if(args.size() == 0) {
                 m_weights.reset();
         
-            } else if(args.size() != gaussians) {
+            } else if((long)args.size() != (long)gaussians) {
                 //error because weights don't equal gaussians
                 cerr << "Number of weights must equal the number of gaussians. Received "
                 << args.size()
@@ -474,12 +475,10 @@ public:
 
 
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
-        auto observations_matrix = object_method(inputs, _jit_sym_getindex, 1);
         auto out_probabilities = object_method(outputs, _jit_sym_getindex, 0);
         auto out_log_probabilities = object_method(outputs, _jit_sym_getindex, 1);
 
         auto in_matrix_savelock = object_method(in_matrix, _jit_sym_lock, 1);
-        auto observations_matrix_savelock = object_method(observations_matrix, _jit_sym_lock, 1);
         auto out_probabilities_savelock = object_method(out_probabilities, _jit_sym_lock, 1);
         auto out_log_probabilities_savelock = object_method(out_log_probabilities, _jit_sym_lock, 1);
         
@@ -548,7 +547,6 @@ public:
         if(in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
         
         object_method(in_matrix,_jit_sym_lock,in_matrix_savelock);
-        object_method(observations_matrix,_jit_sym_lock,observations_matrix_savelock);
         object_method(out_probabilities,_jit_sym_lock,out_probabilities_savelock);
         object_method(out_log_probabilities,_jit_sym_lock,out_log_probabilities_savelock);
        
@@ -842,11 +840,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "Input matrix to calculate probabilities of");
+                    snprintf(s, 64, "Input matrix to calculate probabilities of");
                     break;
                     
                 case 1:
-                    sprintf(s, "Training data on which the model will be fit");
+                    snprintf(s, 64, "Training data on which the model will be fit");
                     break;
                     
                 default:
@@ -856,19 +854,19 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "Generated samples from the pre-trained GMM");
+                    snprintf(s, 64, "Generated samples from the pre-trained GMM");
                     break;
                     
                 case 1:
-                    sprintf(s, "Probability that given points came from this GMM");
+                    snprintf(s, 64, "Probability that given points came from this GMM");
                     break;
                     
                 case 2:
-                    sprintf(s, "Log-probability that given points came from this GMM");
+                    snprintf(s, 64, "Log-probability that given points came from this GMM");
                     break;
                     
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
            default:

@@ -3,7 +3,7 @@
 /// @copyright Copyright 2021 Todd Ingalls. All rights reserved. Also based on examples provided with the mlpack library. Please see source/mlpack for license details
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// TODO: Use scaling_model.hpp for serialization
-/// TODO: Need to fix up error messagesß
+/// TODO: need to fix up error messages
 
 
 #include "mlmat.hpp"
@@ -217,7 +217,7 @@ public:
         object_method(matrix, _jit_sym_getinfo, &minfo);
                
         if(minfo.dimcount > 2) {
-            cout << "expecting 1d or 2d matrix, received " << minfo.dimcount << "d matrix" << endl;
+            cerr << "expecting 1d or 2d matrix, received " << minfo.dimcount << "d matrix" << endl;
             err = JIT_ERR_INVALID_INPUT;
             goto out;
         }
@@ -265,7 +265,8 @@ public:
             outlet_anything(o,_jit_sym_jit_matrix,1,&a);
         }
         m_scaler_changed = false;
-        m_mode_changed = false;
+        // (m_mode_changed is unused here: the mode is validated per
+        // matrix by check_mode)
     out:
         object_method(matrix, _jit_sym_lock, savelock);
         object_method(genmatrix,_jit_sym_lock,genmatrix_savelock);
@@ -403,11 +404,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) data");
+                    snprintf(s, 64, "(matrix) data");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) reference dataset");
+                    snprintf(s, 64, "(matrix) reference dataset");
                     break;
 
                 default:
@@ -417,15 +418,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) scaled data");
+                    snprintf(s, 64, "(matrix) scaled data");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) scaled reference set");
+                    snprintf(s, 64, "(matrix) scaled reference set");
                     break;
 
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

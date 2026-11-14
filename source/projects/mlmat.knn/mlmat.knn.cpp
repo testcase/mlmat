@@ -212,7 +212,7 @@ public:
             out_distances_info.dimcount = out_neighbors_info.dimcount;
             switch(out_neighbors_info.dimcount) {
                 case 1:
-                    out_neighbors_info.dim[0] = in_query_info.dim[0];;
+                    out_neighbors_info.dim[0] = in_query_info.dim[0];
                     out_neighbors_info.dim[1] = 1;
                     out_distances_info.dim[0] = in_query_info.dim[0];
                     out_distances_info.dim[1] = 1;
@@ -449,11 +449,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) query points");
+                    snprintf(s, 64, "(matrix) query points");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) reference dataset");
+                    snprintf(s, 64, "(matrix) reference dataset");
                     break;
 
                 default:
@@ -463,15 +463,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) neighbors");
+                    snprintf(s, 64, "(matrix) neighbors");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) distances");
+                    snprintf(s, 64, "(matrix) distances");
                     break;
 
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
     }

@@ -2,7 +2,6 @@
 /// @ingroup mlmat
 /// @copyright Copyright 2024 Todd Ingalls. All rights reserved. Also based on examples provided with the mlpack library. Please see source/mlpack for license details
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
-/// TODO: add seed as some strategies use random initialization??
 #include <string>
 
 #include "mlmat.hpp"
@@ -24,7 +23,7 @@ public:
     MIN_DESCRIPTION	{"Non-Negative Matrix factorization. Decomposes a matrix V in the form V ~ WH where W is called the basis matrix and H is called the encoding matrix. V is taken to be of size n x m and the obtained W is n x r and H is r x m. The size r is called the rank of the factorization. Factorization is done by alternately calculating W and H respectively while holding the other matrix constant."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
-    MIN_RELATED		{"mlmat.nmf"};
+    MIN_RELATED		{"mlmat.pca"};
 
 
     attribute<int> rank { this, "rank", 2,
@@ -169,11 +168,15 @@ public:
     out:
         if(in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
         
+        // only report a residue when the factorization ran
+        if (err == JIT_ERR_NONE && residue > 0.) {
+        
         object_method(in_matrix,_jit_sym_lock,in_savelock);
         object_method(W_matrix,_jit_sym_lock,W_savelock);
         object_method(H_matrix,_jit_sym_lock,H_savelock);
         atom_setfloat(a,residue);
         outlet_anything(m_dumpoutlet, gensym("residue"), 1, a);
+        }
         return err;
     }
 
@@ -205,7 +208,7 @@ void mlmat_nmf_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) dataset");
+                    snprintf(s, 64, "(matrix) dataset");
                     break;
 
                 default:
@@ -215,13 +218,13 @@ void mlmat_nmf_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) W");
+                    snprintf(s, 64, "(matrix) W");
                     break;
                 case 1:
-                    sprintf(s, "(matrix) H");
+                    snprintf(s, 64, "(matrix) H");
                     break;
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

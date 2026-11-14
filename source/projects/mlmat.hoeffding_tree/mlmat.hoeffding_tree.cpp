@@ -278,15 +278,11 @@ public:
         t_object* in_matrix64 = nullptr;
 
         auto in_matrix = (t_object*)object_method(inputs, _jit_sym_getindex, 0);
-        auto in_data = (t_object*)object_method(inputs, _jit_sym_getindex, 1);
-        auto in_labels = (t_object*)object_method(inputs, _jit_sym_getindex, 2);
 
         auto out_predictions = (t_object*)object_method(outputs, _jit_sym_getindex, 0);
         auto out_probabilities = (t_object*)object_method(outputs, _jit_sym_getindex, 1);
 
         auto in_matrix_savelock = object_method(in_matrix, _jit_sym_lock, 1);
-        auto in_data_savelock = object_method(in_data, _jit_sym_lock, 1);
-        auto in_labels_savelock = object_method(in_labels, _jit_sym_lock, 1);
         auto out_predictions_savelock = object_method(out_predictions, _jit_sym_lock, 1);
         auto out_probabilities_savelock = object_method(out_probabilities, _jit_sym_lock, 1);
         
@@ -342,8 +338,6 @@ public:
     out:
         if(in_matrix64 != nullptr && in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
         object_method(in_matrix,_jit_sym_lock,in_matrix_savelock);
-        object_method(in_data,_jit_sym_lock,in_data_savelock);
-        object_method(in_labels,_jit_sym_lock,in_labels_savelock);
         object_method(out_predictions,_jit_sym_lock,out_predictions_savelock);
         object_method(out_probabilities,_jit_sym_lock,out_probabilities_savelock);
 
@@ -359,24 +353,6 @@ public:
     arma::rowvec probabilities;
     
 private:
-    
-    void load_model_file(const atoms& args) {
-        atoms f{};
-
-        if(!args.empty()) {
-            f.push_back(args[0]);
-        }
-        
-        path p {f, path::filetype::any};
-
-        if(p) {
-            try {
-                mlpack::Load(string(p), "hoeffding_tree", m_model, true);
-            } catch (const std::runtime_error& s) {
-                std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-            }
-        }
-    }
 
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
     std::unique_ptr<arma::Row<size_t>> m_labels { nullptr };
@@ -452,15 +428,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) testing points.");
+                    snprintf(s, 64, "(matrix) testing points.");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) training dataset.");
+                    snprintf(s, 64, "(matrix) training dataset.");
                     break;
 
                 case 2:
-                    sprintf(s, "(matrix) training labels.");
+                    snprintf(s, 64, "(matrix) training labels.");
                     break;
 
                 default:
@@ -470,15 +446,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) predictions");
+                    snprintf(s, 64, "(matrix) predictions");
                     break;
                 
                 case 1:
-                    sprintf(s, "(matrix) probabilities");
+                    snprintf(s, 64, "(matrix) probabilities");
                     break;
 
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
            default:

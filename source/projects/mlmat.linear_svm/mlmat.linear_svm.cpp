@@ -55,7 +55,7 @@ public:
     };
     
     attribute<int> num_classes { this, "num_classes", 0,
-        description { "Margin of difference between correct class and other classes." }
+        description { "Number of classes for training. 0 means use the number of unique labels." }
     };
     
     attribute<bool> no_intercept { this, "no_intercept", false,
@@ -184,6 +184,11 @@ public:
         object_method(in_matrix, _jit_sym_getinfo, &in_query_info);
         
         t_object* in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_query_info);
+        
+        if(m_mode_changed) {
+            cerr << "mode has changed must resubmit reference set" << endl;
+            goto out;
+        }
         
         if(!m_model.model) {
             (cerr << "no model trained." << endl);
@@ -398,15 +403,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) points");
+                    snprintf(s, 64, "(matrix) points");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) training dataset");
+                    snprintf(s, 64, "(matrix) training dataset");
                     break;
                     
                 case 2:
-                    sprintf(s, "(matrix) training labels");
+                    snprintf(s, 64, "(matrix) training labels");
                     break;
 
                 default:
@@ -416,15 +421,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) predicted labels");
+                    snprintf(s, 64, "(matrix) predicted labels");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) label scores");
+                    snprintf(s, 64, "(matrix) label scores");
                     break;
 
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

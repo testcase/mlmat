@@ -159,7 +159,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) query points.");
+                    snprintf(s, 64, "(matrix) query points.");
                     break;
 
                 default:
@@ -169,13 +169,13 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) cluster assignments");
+                    snprintf(s, 64, "(matrix) cluster assignments");
                     break;
                 case 1:
-                    sprintf(s, "(matrix) cluster centroids");
+                    snprintf(s, 64, "(matrix) cluster centroids");
                     break;
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

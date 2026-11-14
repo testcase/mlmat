@@ -239,7 +239,7 @@ public:
             try {
                 mlpack::Load(std::string(p), classname(), m_model, true);
             } catch (const std::runtime_error& s) {
-                std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
+                std::throw_with_nested(std::runtime_error("Error reading model file from disk."));
             }
         }
     }
@@ -449,7 +449,7 @@ public:
             try {
                 mlpack::Load(std::string(p), classname(), m_model, true);
             } catch (const std::runtime_error& s) {
-                std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
+                std::throw_with_nested(std::runtime_error("Error reading model file from disk."));
             }
         }
     }

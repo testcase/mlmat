@@ -24,7 +24,7 @@ public:
     MIN_DESCRIPTION	{"RADICAL, an algorithm for independent component analysis (ICA). Let X be a matrix where each column is a point and each row a dimension. The goal is to find a square unmixing matrix W such that Y = W X and the rows of Y are independent components."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
-    MIN_RELATED		{"mlmat.radical"};
+    MIN_RELATED		{"mlmat.nmf"};
 
 
     attribute<double> std_dev { this, "std_dev", .175,
@@ -211,13 +211,17 @@ public:
         W_matrix = arma_to_jit(mode, matW, static_cast<t_object*>(W_matrix), W_info );
         
     out:
+        // only report an objective when the transform ran
+        bool ran = (err == JIT_ERR_NONE);
         if(in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
         
         object_method(in_matrix,_jit_sym_lock,in_savelock);
         object_method(Y_matrix,_jit_sym_lock,Y_savelock);
         object_method(W_matrix,_jit_sym_lock,W_savelock);
-        atom_setfloat(a,objective);
-        outlet_anything(m_dumpoutlet, gensym("objective"), 1, a);
+        if (ran) {
+            atom_setfloat(a,objective);
+            outlet_anything(m_dumpoutlet, gensym("objective"), 1, a);
+        }
         return err;
     }
 
@@ -249,7 +253,7 @@ void mlmat_radical_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) dataset X");
+                    snprintf(s, 64, "(matrix) dataset X");
                     break;
 
                 default:
@@ -259,13 +263,13 @@ void mlmat_radical_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) Y");
+                    snprintf(s, 64, "(matrix) Y");
                     break;
                 case 1:
-                    sprintf(s, "(matrix) W");
+                    snprintf(s, 64, "(matrix) W");
                     break;
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

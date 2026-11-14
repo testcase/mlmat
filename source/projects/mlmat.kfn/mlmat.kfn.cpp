@@ -190,7 +190,7 @@ public:
             out_distances_info.dimcount = out_neighbors_info.dimcount;
             switch(out_neighbors_info.dimcount) {
                 case 1:
-                    out_neighbors_info.dim[0] = in_query_info.dim[0];;
+                    out_neighbors_info.dim[0] = in_query_info.dim[0];
                     out_neighbors_info.dim[1] = 1;
                     out_distances_info.dim[0] = in_query_info.dim[0];
                     out_distances_info.dim[1] = 1;
@@ -348,25 +348,6 @@ public:
     
 private:
     
-                
-    void load_model_file(const atoms& args) {
-        atoms f{};
-
-        if(!args.empty()) {
-            f.push_back(args[0]);
-        }
-        
-        path p {f, path::filetype::any};
-
-        if(p) {
-            try {
-                mlpack::Load(string(p), "kfn_model", m_model, true);
-            } catch (const std::runtime_error& s) {
-                std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
-            }
-        }
-    }
-    
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
         t_class* c = args[0];
         // add mop
@@ -449,11 +430,11 @@ void mlmat_kfn_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) query points");
+                    snprintf(s, 64, "(matrix) query points");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) reference dataset");
+                    snprintf(s, 64, "(matrix) reference dataset");
                     break;
 
                 default:
@@ -463,15 +444,15 @@ void mlmat_kfn_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) neighbors");
+                    snprintf(s, 64, "(matrix) neighbors");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) distances");
+                    snprintf(s, 64, "(matrix) distances");
                     break;
 
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

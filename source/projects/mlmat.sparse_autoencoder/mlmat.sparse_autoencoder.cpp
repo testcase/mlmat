@@ -106,7 +106,7 @@ public:
            try {
                mlpack::Load(string(p), "sparse_autoencoder", m_model, true);
            } catch (const std::runtime_error& s) {
-               std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
+               std::throw_with_nested(std::runtime_error("Error reading model file from disk."));
            }
        }
     }
@@ -454,15 +454,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) data.");
+                    snprintf(s, 64, "(matrix) data.");
                     break;
                     
                 case 1:
-                    sprintf(s, "(matrix) features.");
+                    snprintf(s, 64, "(matrix) features.");
                     break;
                     
                 case 2:
-                    sprintf(s, "(matrix) training dataset.");
+                    snprintf(s, 64, "(matrix) training dataset.");
                     break;
                     
                 default:
@@ -472,13 +472,13 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) features");
+                    snprintf(s, 64, "(matrix) features");
                     break;
                 case 1:
-                    sprintf(s, "(matrix) predicted output");
+                    snprintf(s, 64, "(matrix) predicted output");
                     break;
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
         default:

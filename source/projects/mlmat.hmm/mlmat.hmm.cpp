@@ -14,7 +14,6 @@
 using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
-using namespace mlpack;
 using namespace mlpack::util;
 
 
@@ -85,7 +84,6 @@ public:
     
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
-            arma::mat out_data;
             t_jit_err init_err = JIT_ERR_NONE;
             
             const string type_string = hmm_type.get().c_str();
@@ -317,7 +315,7 @@ public:
             HMM<DiscreteDistribution<>>* hmm = m_model.model->DiscreteHMM();
             if(hmm != nullptr) {
                 try {
-                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
+                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "hmm", "sequence");
                 } catch (std::invalid_argument& s) {
                     cerr << s.what() << endl;
                     goto out;
@@ -331,7 +329,7 @@ public:
             HMM<GaussianDistribution<>>* hmm = m_model.model->GaussianHMM();
             if(hmm != nullptr) {
                 try {
-                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
+                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "hmm", "sequence");
                 } catch (std::invalid_argument& s) {
                     cerr << s.what() << endl;
                     goto out;
@@ -344,7 +342,7 @@ public:
             HMM<GMM>* hmm = m_model.model->GMMHMM();
             if(hmm != nullptr) {
                 try {
-                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
+                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "hmm", "sequence");
                 } catch (std::invalid_argument& s) {
                     cerr << s.what() << endl;
                     goto out;
@@ -357,7 +355,7 @@ public:
             HMM<DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
             if(hmm != nullptr) {
                 try {
-                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
+                    CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "hmm", "sequence");
                 } catch (std::invalid_argument& s) {
                     cerr << s.what() << endl;
                     goto out;
@@ -409,7 +407,7 @@ public:
         
         if(use_labels) {
             if(check_labels(m_labels, m_observations, hmm->Transition().n_cols)) {
-                return err;;
+                return err;
             }
             hmm->Train(m_observations, m_labels);
         } else {
@@ -790,15 +788,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "Input matrix to calculate probabilities of");
+                    snprintf(s, 64, "Input matrix to calculate probabilities of");
                     break;
                     
                 case 1:
-                    sprintf(s, "Training sequence");
+                    snprintf(s, 64, "Training sequence");
                     break;
                     
                 case 2:
-                    sprintf(s, "Training labels");
+                    snprintf(s, 64, "Training labels");
                     break;
                     
                 default:
@@ -808,15 +806,15 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "Generated samples from the pre-trained HMM");
+                    snprintf(s, 64, "Generated samples from the pre-trained HMM");
                     break;
                     
                 case 1:
-                    sprintf(s, "Most probable hidden state sequence");
+                    snprintf(s, 64, "Most probable hidden state sequence");
                     break;
                     
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
         default:
