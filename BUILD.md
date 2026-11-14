@@ -121,6 +121,25 @@ the zipped packages (`mlmat.zip` for macOS, `mlmat_windows.zip` for Windows)
 to a GitHub release of the same name. Manual `workflow_dispatch` runs build
 the externals without publishing a release.
 
+## Tests
+
+A regression test for the matrix conversion layer lives in
+[`tests/conversions/`](tests/conversions/). It compares the live
+`matrix_conversions.hpp` bit-for-bit against a frozen copy of the original
+implementation, using a fake of the Jitter API so it runs outside of Max.
+It is built as part of the normal build; run it with:
+
+```bash
+ctest --test-dir build -C Release --output-on-failure
+```
+
+or run the `mlmat_conversions_test` binary directly (pass `bench` to also
+print conversion timings). Any change to the conversion layer must keep
+parity with the reference implementation — if a behavior change is
+intended, update `matrix_conversions_reference.hpp` deliberately and note
+why in the commit. To skip building the test, configure with
+`-DMLMAT_BUILD_CONVERSION_TESTS=OFF`.
+
 ## Troubleshooting
 
 - **Apple Silicon "cannot be loaded due to system security policy"** when

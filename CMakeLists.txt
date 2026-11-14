@@ -47,6 +47,14 @@ foreach (project_dir ${PROJECT_DIRS})
     endif ()
 endforeach ()
 
+# Regression tests for the conversion layer (tests/conversions). These are
+# small compared to the externals themselves, so they are built by default;
+# disable with -DMLMAT_BUILD_CONVERSION_TESTS=OFF.
+option(MLMAT_BUILD_CONVERSION_TESTS "Build the matrix conversion regression tests" ON)
+if (MLMAT_BUILD_CONVERSION_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/conversions/CMakeLists.txt")
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests/conversions)
+endif ()
+
 # mlpack 4.x uses C++17 <filesystem>, which requires macOS 10.15 or later.
 # (The min-api scripts force the deployment target back to 10.11 in each
 # project subdirectory, so this must be set again after them.)

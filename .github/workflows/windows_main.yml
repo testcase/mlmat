@@ -32,6 +32,9 @@ jobs:
         VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
       run: cmake --build --preset windows-release
 
+    - name: test
+      run: ctest --test-dir build -C Release --output-on-failure
+
     - name: stamp version from tag
       if: startsWith(github.ref, 'refs/tags/')
       shell: pwsh
