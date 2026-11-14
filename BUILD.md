@@ -123,22 +123,29 @@ the externals without publishing a release.
 
 ## Tests
 
-A regression test for the matrix conversion layer lives in
-[`tests/conversions/`](tests/conversions/). It compares the live
-`matrix_conversions.hpp` bit-for-bit against a frozen copy of the original
-implementation, using a fake of the Jitter API so it runs outside of Max.
-It is built as part of the normal build; run it with:
+Regression tests live in [`tests/`](tests/):
+
+- [`tests/conversions/`](tests/conversions/) compares the matrix conversion
+  layer (`matrix_conversions.hpp`) bit-for-bit against a frozen copy of the
+  original implementation, using a fake of the Jitter API so it runs
+  outside of Max.
+- [`tests/som/`](tests/som/) compares the `mlmat.som` training
+  implementation against a frozen copy of the original, with identical
+  starting maps and seeds (tight tolerance, since the optimization changes
+  floating point evaluation order), and checks the new implementation's
+  determinism bit-for-bit.
+
+They are built as part of the normal build; run them with:
 
 ```bash
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-or run the `mlmat_conversions_test` binary directly (pass `bench` to also
-print conversion timings). Any change to the conversion layer must keep
-parity with the reference implementation — if a behavior change is
-intended, update `matrix_conversions_reference.hpp` deliberately and note
-why in the commit. To skip building the test, configure with
-`-DMLMAT_BUILD_CONVERSION_TESTS=OFF`.
+or run the `mlmat_conversions_test` / `mlmat_som_test` binaries directly
+(pass `bench` to also print timings). Any change to these components must
+keep parity with the reference implementation — if a behavior change is
+intended, update the reference deliberately and note why in the commit.
+To skip building the tests, configure with `-DMLMAT_BUILD_TESTS=OFF`.
 
 ## Troubleshooting
 
