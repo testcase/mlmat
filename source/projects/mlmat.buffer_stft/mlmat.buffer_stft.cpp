@@ -239,22 +239,36 @@ private:
     // making custom mop so max_jit_mop_matrix_args does not get called as don't need these
     message<> mop_setup {this, "mop_setup", MIN_FUNCTION {
         max::t_jit_err err = max::JIT_ERR_NONE;
-        max::t_object* x = maxob_from_jitob(min::object_base::maxobj());
+
+        // max_jit_mop_new() appends the max wrapper pointer as the final
+        // argument of this message, and inside the jit object maxobj() is
+        // the jit object itself. Link the two first: this is the canonical
+        // custom-mop sequence (see max.jit.mop.h), and it is also what
+        // stores the "maxwrapper" key that maxob_from_jitob() relies on
+        // elsewhere (e.g. in maxob_setup). Without it the wrapper and the
+        // jit object are never connected: no outlets are created, no
+        // attribute getting/setting is forwarded from the box, and
+        // jit_error_code() during creation crashes on the null doc.
+        max::t_object* x = args.empty()
+            ? maxob_from_jitob(min::object_base::maxobj())
+            : static_cast<max::t_object*>(args.back());
+        max::t_object* o = min::object_base::maxobj();
+        max::max_jit_obex_jitob_set(x, o);
 
         max::max_jit_obex_dumpout_set(x,outlet_new(x,NULL));
         err = max::max_jit_mop_setup(x);
         if(err != max::JIT_ERR_NONE) {
-            jit_error_code(x,err);
+            (cerr << "mop_setup: max_jit_mop_setup error " << err << endl);
         }
 
         err = max::max_jit_mop_inputs(x);
         if(err != max::JIT_ERR_NONE) {
-            jit_error_code(x,err);
+            (cerr << "mop_setup: max_jit_mop_inputs error " << err << endl);
         }
 
         err = max::max_jit_mop_outputs(x);
         if(err != max::JIT_ERR_NONE) {
-            jit_error_code(x,err);
+            (cerr << "mop_setup: max_jit_mop_outputs error " << err << endl);
         }
         return {};
     }};

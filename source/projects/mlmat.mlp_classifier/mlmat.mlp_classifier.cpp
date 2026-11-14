@@ -145,6 +145,25 @@ public:
             } else {
                 ///ERROR?
             }
+
+            // report the trained topology and the training-set accuracy so
+            // that training problems are visible from Max
+            {
+                arma::mat train_likelihoods;
+                m_model.model->Predict(out_data, train_likelihoods);
+                arma::vec flat_labels = arma::vectorise(*m_labels);
+                size_t correct = 0;
+                for(size_t i = 0; i < train_likelihoods.n_cols && i < flat_labels.n_elem; ++i) {
+                    if(static_cast<double>(arma::index_max(train_likelihoods.col(i))) == flat_labels(i)) {
+                        ++correct;
+                    }
+                }
+                (cout << "trained: " << num_classes << " classes, "
+                    << hidden_layers << " hidden layer(s) of " << hidden_neurons.get()
+                    << " units, training-set accuracy "
+                    << (train_likelihoods.n_cols > 0 ? 100.0 * correct / train_likelihoods.n_cols : 0.0)
+                    << "%" << endl);
+            }
             return {};
         }
     };
