@@ -38,6 +38,7 @@
 *.mxo
 *.mxe64
 
+better_docs.patch
 build/
 docs/
 externals/

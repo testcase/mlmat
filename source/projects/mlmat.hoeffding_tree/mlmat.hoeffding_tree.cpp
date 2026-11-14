@@ -67,14 +67,14 @@ public:
     
     attribute<min::symbol> numeric_split_strategy { this, "split_strategy", "binary",
         description {
-            "The splitting strategy to use for numeric features."
+            "The splitting strategy to use for numeric features. 'domingos' (the Hoeffding numeric split) is recommended for continuous features; the streaming tree only splits when the Hoeffding bound is satisfied, so for small datasets consider @batch_mode 1."
         },
         range {"domingos", "binary"}
     };
 
     attribute<bool> info_gain { this, "info_gain", false,
         description {
-            "If set, information gain is used instead of Gini impurity for calculating Hoeffding bounds."
+            "If set, use information gain rather than Gini impurity as the split criterion."
         }
     };
     
@@ -162,13 +162,13 @@ public:
                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_HOEFFDING);
                 }
                 else if (info_gain && (strategy == "binary")) {
-                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_BINARY);
+                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_BINARY);
                 }
                 else if (info_gain && (strategy == "domingos")) {
                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_HOEFFDING);
                 }
                 else {
-                    m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_BINARY);
+                    m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_BINARY);
                 }
             
                 numClasses = arma::max(arma::max(*m_labels)) + 1;

@@ -222,6 +222,7 @@ public:
         m_labels = std::make_unique<arma::Row<size_t>>();
         *m_labels = jit_to_arma(mode, in_matrix_long, *m_labels);
         if(matrix != in_matrix_long) { jit_object_free(in_matrix_long); }
+
         return err;
     }
     
