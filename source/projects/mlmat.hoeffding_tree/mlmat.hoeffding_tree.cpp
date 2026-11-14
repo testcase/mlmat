@@ -143,8 +143,16 @@ public:
             }
             
             //1. if model is null or type is different must remake
-            
-            scaler_fit(m_model, *m_data);
+            if(reset_tree) {
+                m_model.model = nullptr;
+            }
+
+            // the scaler must only be (re)fit when a new tree is built: the
+            // existing tree was trained under the previous scaling, so
+            // refitting here would feed it inconsistently scaled data
+            if(batch_mode || (m_model.model == nullptr)) {
+                scaler_fit(m_model, *m_data);
+            }
             out_data = scaler_transform(m_model, *m_data, out_data);
             
 
@@ -154,13 +162,13 @@ public:
                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_HOEFFDING);
                 }
                 else if (info_gain && (strategy == "binary")) {
-                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_BINARY);
+                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_BINARY);
                 }
                 else if (info_gain && (strategy == "domingos")) {
                     m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_HOEFFDING);
                 }
                 else {
-                    m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_BINARY);
+                    m_model.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_BINARY);
                 }
             
                 numClasses = arma::max(arma::max(*m_labels)) + 1;

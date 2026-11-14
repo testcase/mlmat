@@ -88,6 +88,21 @@ public:
             }
             
             
+            if(m_labels->n_elem != m_training->n_cols) {
+                (cerr << "number of labels (" << m_labels->n_elem << ") does not match number of training points (" << m_training->n_cols << ")." << endl);
+                return {};
+            }
+            {
+                arma::vec flat_labels = arma::vectorise(*m_labels);
+                for (size_t i = 0; i < flat_labels.n_elem; ++i) {
+                    double l = flat_labels(i);
+                    if (l != std::floor(l) || l < 0 || l >= output_neurons) {
+                        (cerr << "labels must be integers between 0 and " << (output_neurons - 1) << " (output_neurons)." << endl);
+                        return {};
+                    }
+                }
+            }
+
             arma::Mat<double> labels(*m_labels);
             arma::mat out_data;
             
@@ -103,7 +118,7 @@ public:
                 //(std::cout << "hidden layer: " << hidden_neurons.get() << " inputs " << hidden_neurons.get() << " outputs" << std::endl);
             }
                 
-            m_model.model->Add<Linear>(hidden_neurons.get());
+            m_model.model->Add<Linear>(output_neurons.get());
             m_model.model->Add<LogSoftMax<>>();
             //removing will test when labels inpput
             //double diff = m_labels_min - 1.0;
@@ -231,10 +246,7 @@ public:
         predictions.zeros(1, likelihoods.n_cols);
         
         for(auto i=0;i<likelihoods.n_cols;i++) {
-            predictions(i) = arma::as_scalar(arma::find(arma::max(likelihoods.col(i)) == likelihoods.col(i), 1));
-            
-            
-            //predictions(i) = arma::index_max(likelihoods.col(i));
+            predictions(i) = arma::as_scalar(arma::index_max(likelihoods.col(i)));
         }
         
         //labels = arma::conv_to<arma::Row<size_t>>::from(predictions) - (size_t)m_labels_min;

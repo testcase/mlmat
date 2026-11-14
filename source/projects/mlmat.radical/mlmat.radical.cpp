@@ -1,4 +1,4 @@
-/// @file mlmat.nmf.cpp
+/// @file mlmat.radical.cpp
 /// @ingroup mlmat
 /// @copyright Copyright 2024 Todd Ingalls. All rights reserved. Also based on examples provided with the mlpack library. Please see source/mlpack for license details
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
@@ -161,8 +161,8 @@ public:
                 Y_info.type = _jit_sym_float64;
                 Y_info.flags = 0;
                 Y_info.dimcount = 1;
-                Y_info.planecount = matY.n_cols;
-                Y_info.dim[0] = matY.n_rows;
+                Y_info.planecount = matY.n_rows;
+                Y_info.dim[0] = matY.n_cols;
                 
                 W_info.type = _jit_sym_float64;
                 W_info.flags = 0;

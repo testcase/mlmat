@@ -120,14 +120,14 @@ public:
                 W_info.type = _jit_sym_float64;
                 W_info.flags = 0;
                 W_info.dimcount = 1;
-                W_info.planecount = W.n_cols;
-                W_info.dim[0] = W.n_rows;
+                W_info.planecount = W.n_rows;
+                W_info.dim[0] = W.n_cols;
                 
                 H_info.type = _jit_sym_float64;
                 H_info.flags = 0;
                 H_info.dimcount = 1;
-                H_info.planecount = W.n_rows;
-                H_info.dim[0] = W.n_cols;
+                H_info.planecount = H.n_rows;
+                H_info.dim[0] = H.n_cols;
                 break;
             case 1:
                 W_info.type = _jit_sym_float64;

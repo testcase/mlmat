@@ -128,7 +128,7 @@ public:
             m_model.model->svm.Lambda() = lambda;
             m_model.model->svm.Delta() = delta;
             m_model.model->svm.NumClasses() = numClasses;
-            m_model.model->svm.FitIntercept() = no_intercept;
+            m_model.model->svm.FitIntercept() = !no_intercept;
             
             scaler_fit(m_model, *m_data);
             out_data = scaler_transform(m_model, *m_data, out_data);
@@ -202,8 +202,9 @@ public:
         
         numClasses = m_model.model->svm.NumClasses();
         
-        // Set the dimensionality according to fitz intercept.
-        if (no_intercept) {
+        // Set the dimensionality according to whether the intercept was fit
+        // (with an intercept the parameters carry one extra row).
+        if (m_model.model->svm.FitIntercept()) {
             training_dimensionality = m_model.model->svm.Parameters().n_rows - 1;
         } else {
             training_dimensionality = m_model.model->svm.Parameters().n_rows;
@@ -235,7 +236,14 @@ public:
         out_predictions_info.planecount = 1;
         
         out_scores_info = in_query_info;
-        out_scores_info.planecount = 1;
+        if (mode == 0) {
+            // each cell is a data point, one plane per class score
+            out_scores_info.planecount = scores.n_rows;
+            out_scores_info.dimcount = 1;
+            out_scores_info.dim[0] = scores.n_cols;
+        } else {
+            out_scores_info.planecount = 1;
+        }
      
         out_predictions = arma_to_jit(mode, predictions, static_cast<t_object*>(out_predictions), out_predictions_info);
         out_scores = arma_to_jit(mode, scores, static_cast<t_object*>(out_scores), out_scores_info);

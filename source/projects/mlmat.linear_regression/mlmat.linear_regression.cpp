@@ -56,11 +56,14 @@ public:
                 goto out;
             }
     
-            m_model.model = std::make_unique<LinearRegression<>>(std::move(*m_regressors), std::move(*m_responses), lambda);
-            
- 
+            // fit on a copy so the input members stay valid: the moved-from
+            // matrices were previously used for the training error and the
+            // predict-time dimensionality check
+            m_model.model = std::make_unique<LinearRegression<>>(*m_regressors, *m_responses, lambda);
+            m_regression_dimensionality = m_regressors->n_rows;
+
             //ComputeError
-            atom_setfloat(a,m_model.model->ComputeError(*m_regressors, *m_responses));
+            atom_setfloat(a, m_model.model->ComputeError(*m_regressors, *m_responses));
             outlet_anything(m_dumpoutlet, gensym("error"), 1, a);
         out:
             return {};
@@ -205,7 +208,7 @@ public:
 
         
         try {
-            CheckSameDimensionality(query, *m_regressors, "linear regression", "query");
+            mlpack::util::CheckSameDimensionality(query, m_regression_dimensionality, "linear regression", "query");
         } catch (std::invalid_argument& s) {
             cerr << s.what() << endl;
             goto out;
@@ -241,6 +244,7 @@ public:
                 
 private:
     std::unique_ptr<arma::Mat<double>> m_regressors { nullptr };
+    size_t m_regression_dimensionality = 0;
     std::unique_ptr<arma::Row<double>> m_responses { nullptr };
 };
 

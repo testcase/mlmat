@@ -274,11 +274,6 @@ public:
         query = jit_to_arma(mode, in_matrix64, query);
         
         
-        if(!m_data) {
-            (cerr << "no reference set exists" << endl);
-            goto out;
-        }
-        
         if(m_mode_changed) {
             (cerr << "mode has changed must resubmit training data and retrain" << endl);
             goto out;

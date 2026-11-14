@@ -196,12 +196,12 @@ public:
 
     message<> train { this, "train", "Train model.",
         MIN_FUNCTION {
-            auto trials = 1;
-        
+            long trial_count = trials;
+
             if(args.size() > 0) {
-                trials = args[0];
-                if(trials < 1) {
-                    trials = 1;
+                trial_count = args[0];
+                if(trial_count < 1) {
+                    trial_count = 1;
                 }
             }
 
@@ -214,7 +214,7 @@ public:
                 arma::Mat<double> scaled_data;
                 scaler_fit(m_model, *m_data);
                 scaled_data = scaler_transform(m_model, *m_data, scaled_data);
-                train_gmm(scaled_data);
+                train_gmm(scaled_data, trial_count);
                 if(autoclear) m_data.reset();
             }
             return {};
@@ -625,7 +625,11 @@ private:
         arma::mat cholDecomp;
         
         if (!arma::chol(cholDecomp, m_model.model->Component(gaussian).Covariance())) {
+            // drawing from a non positive definite covariance is
+            // meaningless; return the mean instead of using the failed
+            // (empty) decomposition
             cerr << "Cholesky decomposition failed." << endl;
+            return m_model.model->Component(gaussian).Mean();
         }
         return trans(cholDecomp) * arma::randn<arma::vec>(m_model.model->Dimensionality()) + m_model.model->Component(gaussian).Mean();
         
@@ -634,7 +638,7 @@ private:
      
 
         
-    void train_gmm(arma::Mat<double>& data) {
+    void train_gmm(arma::Mat<double>& data, long trial_count) {
         double likelihood;
         t_atom a[1];
         
@@ -659,7 +663,7 @@ private:
                 dgmm.Weights() = m_model.model->Weights();
 
                 EMFit<KMeansType, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution<>> em(max_iterations, tolerance, k);
-                likelihood = dgmm.Train(data, trials, false, em);
+                likelihood = dgmm.Train(data, trial_count, false, em);
                 for (size_t i = 0; i < size_t(gaussians); ++i) {
                     m_model.model->Component(i).Mean() = dgmm.Component(i).Mean();
                     m_model.model->Component(i).Covariance(arma::diagmat(dgmm.Component(i).Covariance()));
@@ -669,10 +673,10 @@ private:
             } else if (no_force_positive) {
                 // Compute the parameters of the model using the EM algorithm.
                 EMFit<KMeansType> em(max_iterations, tolerance, k);
-                likelihood = m_model.model->Train(data, trials, false, em);
+                likelihood = m_model.model->Train(data, trial_count, false, em);
             } else {
                 EMFit<KMeansType, NoConstraint> em(max_iterations, tolerance, k);
-                likelihood = m_model.model->Train(data, trials, false, em);
+                likelihood = m_model.model->Train(data, trial_count, false, em);
             }
         } else {
             m_model.model = std::make_unique<GMM>(gaussians,m_data->n_rows);
@@ -690,7 +694,7 @@ private:
                 dgmm.Weights() = m_model.model->Weights();
 
                 EMFit<KMeans<>, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution<>> em(max_iterations, tolerance, KMeans<>(kmeans_max_iterations));
-                likelihood = dgmm.Train(data, trials, false, em);
+                likelihood = dgmm.Train(data, trial_count, false, em);
                 for (size_t i = 0; i < size_t(gaussians); ++i) {
                     m_model.model->Component(i).Mean() = dgmm.Component(i).Mean();
                     m_model.model->Component(i).Covariance(arma::diagmat(dgmm.Component(i).Covariance()));
@@ -700,11 +704,11 @@ private:
             } else if (no_force_positive) {
                 // Compute the parameters of the model using the EM algorithm.
                 EMFit<> em(max_iterations, tolerance, KMeans<>(kmeans_max_iterations));
-                likelihood = m_model.model->Train(data, trials, false, em);
+                likelihood = m_model.model->Train(data, trial_count, false, em);
             } else {
                 KMeans<> k(kmeans_max_iterations);
                 EMFit<KMeans<>, NoConstraint> em(max_iterations, tolerance, k);
-                likelihood = m_model.model->Train(data, trials, false, em);
+                likelihood = m_model.model->Train(data, trial_count, false, em);
             }
         }
         

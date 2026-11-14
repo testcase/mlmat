@@ -77,7 +77,6 @@ public:
         ar(CEREAL_NVP(model));
         ar(CEREAL_NVP(autoscale));
         ar(CEREAL_NVP(scaler));
-        ar(CEREAL_NVP(scaler));
         ar(CEREAL_NVP(scaler_changed));
         ar(CEREAL_NVP(dim0));
         ar(CEREAL_NVP(dimcount));
@@ -271,7 +270,7 @@ public:
             } else if(scalertype_string == "pca_whitening") {
                 s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
             } else if(scalertype_string == "zca_whitening") {
-                s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
+                s.scaler->ScalerType() = mlpack::ScalingModel::ZCA_WHITENING;
             }
             s.scaler->Fit(arma_matrix);
         }
@@ -481,7 +480,7 @@ public:
             } else if(scalertype_string == "pca_whitening") {
                 s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
             } else if(scalertype_string == "zca_whitening") {
-                s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
+                s.scaler->ScalerType() = mlpack::ScalingModel::ZCA_WHITENING;
             }
             s.scaler->Fit(arma_matrix);
         }

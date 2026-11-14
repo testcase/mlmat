@@ -90,7 +90,9 @@ public:
         
             m_model.model->Add<Linear>(m_training->n_rows);
             
-            for(auto i = 0;i<hidden_layers-1;i++) {
+            // normalized with mlmat.mlp_classifier: hidden_layers is the
+            // number of hidden layers (previously this loop ran one fewer)
+            for(auto i = 0;i<hidden_layers;i++) {
                 add_layer(activation.get());
                 m_model.model->Add<Linear>(hidden_neurons.get());
             }

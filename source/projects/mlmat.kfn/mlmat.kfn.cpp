@@ -184,7 +184,7 @@ public:
         }
 
         
-        out_neighbors_info.planecount = m_model.dimcount;
+        out_neighbors_info.planecount = mode == 0 ? m_model.dimcount : 1;
         out_distances_info.planecount = 1;
         out_neighbors_info.type = _jit_sym_long;
         out_distances_info.type = _jit_sym_float64;
@@ -249,7 +249,10 @@ public:
         KFNModel::TreeTypes tree = KFNModel::KD_TREE;
         const string algorithm_string = algorithm.get().c_str();
         const string tree_type_string = tree_type.get().c_str();
-        double adjusted_epsilon = 1 - percentage;
+        // the search epsilon (@epsilon, relative error bound) is combined with
+        // the percentage-based degradation: both eat into the same error
+        // budget
+        double adjusted_epsilon = std::min(1.0, std::max(0.0, (double)epsilon) + (1.0 - std::min(1.0, std::max(0.0, (double)percentage))));
         
         long savelock = (long) object_method(matrix, _jit_sym_lock, 1);
         object_method(matrix, _jit_sym_getinfo, &minfo);
@@ -331,7 +334,7 @@ public:
         scaler_fit(m_model, dat);
         out_data = scaler_transform(m_model, dat, out_data);
 
-        m_model.model->BuildModel(u, std::move(dat), ModeToStrategy(search_mode), adjusted_epsilon);
+        m_model.model->BuildModel(u, std::move(out_data), ModeToStrategy(search_mode), adjusted_epsilon);
         m_mode_changed = false;
     out:
 

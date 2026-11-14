@@ -86,6 +86,7 @@ public:
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
             arma::mat out_data;
+            t_jit_err init_err = JIT_ERR_NONE;
             
             const string type_string = hmm_type.get().c_str();
             
@@ -108,23 +109,25 @@ public:
             m_model.model = std::make_unique<HMMModel>(typeId);
             
             
+            init_err = JIT_ERR_NONE;
             if(typeId == HMMType::DiscreteHMM) {
                 HMM<DiscreteDistribution<>>* hmm = m_model.model->DiscreteHMM();
-                init_hmm(hmm);
+                init_err = init_hmm(hmm);
             }
             else if (typeId == HMMType::GaussianHMM) {
                 HMM<GaussianDistribution<>>* hmm = m_model.model->GaussianHMM();
-                init_hmm(hmm);
+                init_err = init_hmm(hmm);
                 
             } else if (typeId == HMMType::GaussianMixtureModelHMM) {
                 HMM<GMM>* hmm = m_model.model->GMMHMM();
-                init_hmm(hmm);
+                init_err = init_hmm(hmm);
             } else if(typeId == HMMType::DiagonalGaussianMixtureModelHMM) {
                 HMM<DiagonalGMM>* hmm = m_model.model->DiagGMMHMM();
-                init_hmm(hmm);
+                init_err = init_hmm(hmm);
             }
             
-            if(autoclear) {
+            // only clear the training data if training actually succeeded
+            if(autoclear && init_err == JIT_ERR_NONE) {
                 m_observations.clear();
                 m_labels.clear();
             }
@@ -320,7 +323,7 @@ public:
                     goto out;
                 }
             }
-            loglik = hmm->LogLikelihood(query);
+            loglik = hmm->Predict(query, state_seq);
             
 //            k
             //(cout << "predict " << p << endl);
@@ -334,7 +337,7 @@ public:
                     goto out;
                 }
             }
-            loglik = hmm->LogLikelihood(query);
+            loglik = hmm->Predict(query, state_seq);
 
             //(cout << "predict " << p << endl);
         } else if (typeId == HMMType::GaussianMixtureModelHMM) {
@@ -347,7 +350,7 @@ public:
                     goto out;
                 }
             }
-            loglik = hmm->LogLikelihood(query);
+            loglik = hmm->Predict(query, state_seq);
 
             //(cout << "predict " << p << endl);
         } else if(typeId == HMMType::DiagonalGaussianMixtureModelHMM) {
@@ -360,13 +363,15 @@ public:
                     goto out;
                 }
             }
-            loglik = hmm->LogLikelihood(query);
+            loglik = hmm->Predict(query, state_seq);
 
             //(cout << "predict " << p << endl);
         }
         
         out_info = in_query_info;
-        in_query_info.type = _jit_sym_long;
+        out_info.type = _jit_sym_long;
+        // one state per cell (the input planecount is the feature count)
+        out_info.planecount = 1;
         
         out_states = arma_to_jit(mode, state_seq, static_cast<t_object*>(out_states), out_info);
         atom_setfloat(a,loglik);
@@ -465,11 +470,13 @@ public:
         if (gaussians == 0) {
             (cerr << "Number of gaussians for each GMM must be specified "
              << "when type = 'gmm'!" << endl);
+            return JIT_ERR_GENERIC;
         }
         
         if (gaussians < 0) {
             (cerr << "Invalid number of gaussians (" << gaussians << "); must "
              << "be greater than or equal to 1." << endl);
+            return JIT_ERR_GENERIC;
         }
         
         if(hmm != nullptr) {
@@ -520,9 +527,11 @@ public:
         
         if (gaussians == 0){
             (cerr << "Number of gaussians for each GMM must be specified " << "when type = 'diag_gmm'!" << endl);
+            return JIT_ERR_GENERIC;
         }
         if (gaussians < 0)  {
             (cerr << "Invalid number of gaussians (" << gaussians << "); must "  << "be greater than or equal to 1." << endl);
+            return JIT_ERR_GENERIC;
         }
         
         if(hmm != nullptr) {
@@ -660,7 +669,7 @@ private:
             }
             //do labels match hidden states of hmm
             for (size_t j = 0; j < labels[i].n_cols; j++) {
-                if (labels[i][j] > states) {
+                if (labels[i][j] >= states) {
                     cerr << "HMM has " << states << " hidden "
                     << "states, but labels contain " << labels[i][j]
                     << " (should be between 0 and "

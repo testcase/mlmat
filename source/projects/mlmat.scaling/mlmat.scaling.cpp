@@ -247,7 +247,7 @@ public:
         } else if(scalertype_string == "pca_whitening") {
             m_model->ScalerType() = ScalingModel::PCA_WHITENING;
         } else if(scalertype_string == "zca_whitening") {
-            m_model->ScalerType() = ScalingModel::PCA_WHITENING;
+            m_model->ScalerType() = ScalingModel::ZCA_WHITENING;
         } else {
             (cerr << "scaler attribute not valid" << endl);
             m_model.reset(nullptr);

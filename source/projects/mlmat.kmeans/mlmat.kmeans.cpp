@@ -227,7 +227,9 @@ public:
      
         
         if(m_previous_assignments) {
-            if(!reuse_assignments || m_previous_assignments->n_cols != clusters ) {
+            // assignments has one entry per data point of the dataset it was
+            // computed from; it is only reusable for the same dataset size
+            if(!reuse_assignments || m_previous_assignments->n_cols != dat.n_cols ) {
                 m_previous_assignments.reset();
             }
         }
