@@ -3,9 +3,10 @@
 /// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 /// http://www.ai-junkie.com/ann/som/som4.html
-/// In mode 0 the trained map is output as a 2d matrix (cols x rows) with
-/// the map weights as planes; in modes 1 and 2 it is output as a 3d
-/// single-plane matrix (weights, cols, rows).
+/// The trained map is always output as a 2d matrix: in mode 0 as
+/// (cols x rows) with the map weights as planes, in modes 1 and 2 with the
+/// nodes laid out along the matrix dimensions ((weights x cols*rows) and
+/// (cols*rows x weights) respectively).
 
 #include "mlmat.hpp"
 #include "mlmat_som.hpp"
@@ -224,27 +225,19 @@ public:
     
                 rescaled_data = scaler_inverse_transform(m_model, dat, rescaled_data);
                 
+                // the output is always a 2d matrix. mode 0: (cols x rows) with
+                // the map weights as planes; modes 1/2: arma_to_jit derives
+                // the dimensions from the node matrix ((weights x cols*rows)
+                // or (cols*rows x weights))
                 t_jit_matrix_info minfo;
                 minfo.type = _jit_sym_float64;
                 minfo.flags = 0;
-                if (mode == 0) {
-                    // mode 0: each cell is a node, the map weights are the planes
-                    minfo.planecount = rescaled_data.n_rows;
-                    minfo.dimcount = 2;
-                    minfo.dim[0] = cols;
-                    minfo.dim[1] = rows;
-                } else {
-                    // modes 1/2: the map as a 3d single-plane matrix
-                    // (weights, cols, rows). the mode 0 fill path is used so
-                    // that cell (w, cx, cy) holds weight w of node (cx, cy)
-                    minfo.planecount = 1;
-                    minfo.dimcount = 3;
-                    minfo.dim[0] = rescaled_data.n_rows;
-                    minfo.dim[1] = cols;
-                    minfo.dim[2] = rows;
-                }
+                minfo.planecount = rescaled_data.n_rows;
+                minfo.dimcount = 2;
+                minfo.dim[0] = cols;
+                minfo.dim[1] = rows;
 
-                genmatrix = arma_to_jit(0, rescaled_data, genmatrix, minfo);
+                genmatrix = arma_to_jit(mode, rescaled_data, genmatrix, minfo);
                 
                 if ((p=object_method((t_object*)mop,_jit_sym_getoutput,1)) && (o=max_jit_mop_io_getoutlet(p)))
                 {
