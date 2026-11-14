@@ -203,10 +203,8 @@ public:
         t_jit_matrix_info minfo;
         t_jit_err err = JIT_ERR_NONE;
         t_atom a;
-        arma::mat dat;
-        arma::mat out_data;
         void *o,*p;
-        const string scalertype_string = scaler.get().c_str();
+        const char* scalertype_string = scaler.get().c_str();
         auto* mob = maxob_from_jitob(maxobj());
         auto *mop = max_jit_obex_adornment_get(mob , _jit_sym_jit_mop);
         auto * op =  object_method(mop,_jit_sym_getoutputlist);
@@ -274,6 +272,10 @@ public:
         return err;
     }
 
+    // scratch buffers reused across calls
+    arma::mat dat;
+    arma::mat out_data;
+    
 private:
     // override jitclass_setup so we can have our own matrix_calc. jitclass_setup is called first (and only once when the object is loaded for the first time) during the intitialization of the object.
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {

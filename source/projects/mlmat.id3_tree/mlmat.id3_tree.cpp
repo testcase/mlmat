@@ -238,9 +238,7 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_matrix_info, out_predictions_info, out_probabilities_info;
-        arma::mat query;
-        arma::Row<size_t> predictions;
-        arma::mat probabilities;
+        t_object* in_matrix64 = nullptr;
         
         auto in_matrix = (t_object*)object_method(inputs, _jit_sym_getindex, 0);
         auto in_data = (t_object*)object_method(inputs, _jit_sym_getindex, 1);
@@ -257,8 +255,7 @@ public:
         
         object_method(in_matrix, _jit_sym_getinfo, &in_matrix_info);
         
-        t_object* in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_matrix_info);
-        
+        // cheap checks before the conversion (see knn)
         if(!m_model.model) {
             (cerr << "no model trained." << endl);
             goto out;
@@ -271,16 +268,15 @@ public:
             goto out;
         }
         
-        query = jit_to_arma(mode, in_matrix64, query);
-        
-        
         if(m_mode_changed) {
             (cerr << "mode has changed must resubmit training data and retrain" << endl);
             goto out;
         }
+
+        in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_matrix_info);
+        query = jit_to_arma(mode, in_matrix64, query);
         
         try {
-            arma::mat scaled_query;
             scaled_query = scaler_transform(m_model, query, scaled_query);
             m_model.model->tree.Classify(std::move(scaled_query), predictions, probabilities);
         } catch (const std::invalid_argument& s) {
@@ -331,7 +327,7 @@ public:
         out_probabilities = arma_to_jit(mode, probabilities, out_probabilities, out_probabilities_info);
         
     out:
-        if(in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
+        if(in_matrix64 != nullptr && in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
         object_method(in_matrix,_jit_sym_lock,in_matrix_savelock);
         object_method(in_data,_jit_sym_lock,in_data_savelock);
         object_method(in_labels,_jit_sym_lock,in_labels_savelock);
@@ -340,6 +336,12 @@ public:
         
         return err;
     }
+    
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::mat scaled_query;
+    arma::Row<size_t> predictions;
+    arma::mat probabilities;
     
 private:
 

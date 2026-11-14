@@ -471,10 +471,6 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_query_info, out_probabilities_info;
-        arma::mat query;
-        arma::mat scaled_query;
-        arma::Row<double> probabilities;
-        arma::Row<double> log_probabilities;
 
 
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
@@ -520,8 +516,11 @@ public:
        
      
         for (size_t i = 0; i < scaled_query.n_cols; i++) {
-            probabilities[i] = m_model.model->Probability(scaled_query.unsafe_col(i));
+            // one density evaluation per point: the probability is derived
+            // from the log probability instead of recomputing all the
+            // component densities a second time
             log_probabilities[i] = m_model.model->LogProbability(scaled_query.unsafe_col(i));
+            probabilities[i] = std::exp(log_probabilities[i]);
         }
         
         if(classify) {
@@ -531,7 +530,6 @@ public:
             minfo = in_query_info;
             minfo.planecount = 1;
             minfo.type = _jit_sym_long;
-            arma::Row<size_t> labels;
             m_model.model->Classify(scaled_query, labels);
             
             out_labels = arma_to_jit(mode, labels,  static_cast<t_object*>(out_labels), minfo);
@@ -558,6 +556,13 @@ public:
         return err;
     }
     
+    
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::mat scaled_query;
+    arma::Row<double> probabilities;
+    arma::Row<double> log_probabilities;
+    arma::Row<size_t> labels;
     
 private:
     

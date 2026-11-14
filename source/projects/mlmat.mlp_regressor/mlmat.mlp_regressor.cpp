@@ -185,8 +185,7 @@ public:
         // ignore last two inputs as they have already been processed
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_matrix_info, out_info;
-        arma::mat query;
-        arma::mat predictions;
+
 
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
         auto out_results_matrix = object_method(outputs, _jit_sym_getindex, 0);
@@ -222,7 +221,6 @@ public:
         }
         
         try {
-            arma::mat scaled_query;
             scaled_query = scaler_transform(m_model, query, scaled_query);
             m_model.model->Predict(std::move(scaled_query), predictions);
         } catch (const std::invalid_argument& s) {
@@ -304,6 +302,11 @@ public:
         return err;
     }
         
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::mat scaled_query;
+    arma::mat predictions;
+    
 private:
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
         t_class* c = args[0];

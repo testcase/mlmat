@@ -165,10 +165,6 @@ public:
 
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
-        arma::Mat<double> dat;
-        arma::Row<size_t> assignments;
-        arma::Mat<double> centroids;
-        KMeans<> kmeans;
         t_jit_matrix_info in_query_info, in_centroids_info, out_assignments_info, out_centroids_info;
         bool initial_assignment_guess;
         bool initial_centroid_guess;
@@ -298,6 +294,11 @@ public:
     }
     
 
+    // scratch buffers reused across calls
+    arma::Mat<double> dat;
+    arma::Row<size_t> assignments;
+    arma::Mat<double> centroids;
+    
 private:
     
     

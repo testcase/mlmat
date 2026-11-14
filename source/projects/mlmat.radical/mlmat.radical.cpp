@@ -84,7 +84,7 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_query_info, out_info, Y_info, W_info;
-        arma::mat query;
+
 
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
         auto Y_matrix = object_method(outputs, _jit_sym_getindex, 0);
@@ -127,8 +127,8 @@ public:
         }
         
         Radical rad(std_dev, replicates, angles, nSweeps);
-        arma::mat matY, matW;
-        arma::mat matYT;
+
+        //arma::mat matYT;
         double objective = 0.;
         t_atom a[1];
     
@@ -146,10 +146,11 @@ public:
             cerr << s.what() << endl;
             goto out;
         }
-        matYT = trans(matY);
-        for (size_t i = 0; i < matYT.n_cols; ++i)
+        // (vasicek sorts its argument in place, so each row is copied
+        // into a small vector; the full transpose of matY is avoided)
+        for (size_t i = 0; i < matY.n_rows; ++i)
         {
-            arma::vec y = arma::vec(matYT.col(i));
+            arma::vec y(matY.row(i));
             objective += rad.Vasicek(y, rad.M());
         }
         
@@ -219,6 +220,10 @@ public:
         outlet_anything(m_dumpoutlet, gensym("objective"), 1, a);
         return err;
     }
+
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::mat matY, matW;
 
 };
 

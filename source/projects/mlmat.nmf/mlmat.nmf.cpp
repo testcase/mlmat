@@ -71,7 +71,6 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_query_info, out_info, W_info, H_info;
-        arma::mat query;
 
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
         auto W_matrix = object_method(outputs, _jit_sym_getindex, 0);
@@ -86,7 +85,6 @@ public:
         t_object* in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_query_info);
         
         NMFALSFactorizer nmf;
-        arma::mat W, H;
         size_t r = rank;
         double residue = 0.;
         t_atom a[1];
@@ -178,6 +176,10 @@ public:
         outlet_anything(m_dumpoutlet, gensym("residue"), 1, a);
         return err;
     }
+
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::mat W, H;
 
 };
 

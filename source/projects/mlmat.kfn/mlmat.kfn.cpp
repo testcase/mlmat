@@ -124,9 +124,7 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_query_info, out_neighbors_info, out_distances_info;
-        arma::mat query;
-        arma::Mat<size_t> resulting_neighbors;
-        arma::mat resulting_distances;
+        t_object* in_matrix64 = nullptr;
         
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
         auto out_neighbors = object_method(outputs, _jit_sym_getindex, 0);
@@ -138,8 +136,7 @@ public:
         
         object_method(in_matrix, _jit_sym_getinfo, &in_query_info);
 
-        t_object* in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_query_info);
-        
+        // the cheap checks run before the conversion (see knn)
         if(m_model.model == nullptr || m_model.model->Dataset().is_empty()) {
             (cerr << "no reference set exists" << endl);
             goto out;
@@ -150,14 +147,15 @@ public:
             goto out;
         }
         
-        object_method(in_matrix64, _jit_sym_getinfo, &in_query_info);
-        
         try {
             check_mode(in_query_info, mode, "kfn");
         } catch (const std::invalid_argument& s) {
             cerr << s.what() << endl;
             goto out;
         }
+
+        in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_query_info);
+        object_method(in_matrix64, _jit_sym_getinfo, &in_query_info);
         
         query = jit_to_arma(mode, static_cast<t_object*>(in_matrix64), query);
         
@@ -174,10 +172,8 @@ public:
         }
         
         try {
-            Timers u = Timers();
-            arma::mat scaled_query;
             scaled_query = scaler_transform(m_model, query, scaled_query);
-            m_model.model->Search(u, std::move(scaled_query), neighbors, resulting_neighbors, resulting_distances);
+            m_model.model->Search(m_timers, std::move(scaled_query), neighbors, resulting_neighbors, resulting_distances);
         } catch (const std::invalid_argument& s) {
             cerr << s.what() << endl;
             goto out;
@@ -230,7 +226,7 @@ public:
         out_distances = arma_to_jit(mode, resulting_distances, static_cast<t_object*>(out_distances), out_distances_info);
 
     out:
-        if(in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
+        if(in_matrix64 != nullptr && in_matrix != in_matrix64) { jit_object_free(in_matrix64); }
         
         object_method(in_matrix,_jit_sym_lock,query_savelock);
         object_method(out_neighbors,_jit_sym_lock,out_neighbors_savelock);
@@ -244,7 +240,7 @@ public:
         t_jit_err err = JIT_ERR_NONE;
         arma::mat dat;
         arma::mat out_data;
-        Timers u = Timers();
+        Timers& u = m_timers;
         NeighborSearchMode search_mode = DUAL_TREE_MODE;
         KFNModel::TreeTypes tree = KFNModel::KD_TREE;
         const string algorithm_string = algorithm.get().c_str();
@@ -342,6 +338,13 @@ public:
         return err;
     }
     
+    
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::mat scaled_query;
+    arma::Mat<size_t> resulting_neighbors;
+    arma::mat resulting_distances;
+    Timers m_timers;
     
 private:
     

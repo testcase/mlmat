@@ -208,7 +208,7 @@ public:
         return rho;
     }
     
-    arma::mat Parameters() const
+    const arma::mat& Parameters() const
     {
         return parameters;
     }

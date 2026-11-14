@@ -79,11 +79,11 @@ public:
                    
                    const arma::vec params = m_model.model->Parameters();
 
-                   t_atom a[params.n_elem];
+                   std::vector<t_atom> a(params.n_elem);
                    for(auto i=0;i<params.n_elem;i++) {
-                       atom_setfloat(a+i,params(i));
+                       atom_setfloat(a.data()+i,params(i));
                    }
-                   outlet_anything(m_dumpoutlet, gensym("parameters"), params.n_elem, a);
+                   outlet_anything(m_dumpoutlet, gensym("parameters"), params.n_elem, a.data());
                } catch (const std::runtime_error& s) {
                    (cerr << s.what() << endl);
                }
@@ -167,8 +167,7 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_matrix_info, out_predictions_info;
-        arma::mat query;
-        arma::Row<double> predictions;
+
 
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
         auto out_predictions = object_method(outputs, _jit_sym_getindex, 0);
@@ -242,6 +241,10 @@ public:
         return err;
     }
                 
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::Row<double> predictions;
+    
 private:
     std::unique_ptr<arma::Mat<double>> m_regressors { nullptr };
     size_t m_regression_dimensionality = 0;

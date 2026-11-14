@@ -168,10 +168,7 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_query_info, out_predictions_info, out_scores_info;
-        arma::mat query;
-        arma::Row<size_t> predictions;
-        arma::Mat<double> scores;
-        arma::Row<size_t> predicted_labels;
+
 
         size_t training_dimensionality;
         size_t numClasses;
@@ -220,7 +217,6 @@ public:
         }
         
         try {
-            arma::mat scaled_query;
             scaled_query = scaler_transform(m_model, query, scaled_query);
             m_model.model->svm.Classify(std::move(scaled_query), predicted_labels, scores);
         } catch (const std::invalid_argument& s) {
@@ -271,7 +267,14 @@ public:
         m_mode_changed = false;
         return err;
     }
-    private:
+        // scratch buffers reused across calls
+    arma::mat query;
+    arma::mat scaled_query;
+    arma::Row<size_t> predictions;
+    arma::Mat<double> scores;
+    arma::Row<size_t> predicted_labels;
+    
+private:
     // override jitclass_setup so we can have our own matrix_calc. jitclass_setup is called first (and only once when the object is loaded for the first time) during the intitialization of the object.
     message<> jitclass_setup {this, "jitclass_setup",
         MIN_FUNCTION {

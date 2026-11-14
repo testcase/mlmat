@@ -103,9 +103,7 @@ public:
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info in_query_info, out_info, eigVal_info, eigvec_info;
-        arma::mat query;
-        arma::vec eigVal;
-        arma::mat eigvec;
+
         size_t input_dimensionality = 0;
 
         auto in_matrix = object_method(inputs, _jit_sym_getindex, 0);
@@ -119,7 +117,7 @@ public:
         auto eigval_savelock = object_method(eigval_matrix, _jit_sym_lock, 1);
         auto eigvec_savelock = object_method(eigvec_matrix, _jit_sym_lock, 1);
         
-        const string decomp = decomposition_method.get().c_str() ;
+        const char* decomp = decomposition_method.get().c_str();
         
         object_method(in_matrix, _jit_sym_getinfo, &in_query_info);
         t_object* in_matrix64 = convert_to_float64(static_cast<t_object*>(in_matrix), in_query_info);
@@ -209,6 +207,11 @@ public:
 
         return err;
     }
+
+    // scratch buffers reused across calls
+    arma::mat query;
+    arma::vec eigVal;
+    arma::mat eigvec;
 
 };
 
