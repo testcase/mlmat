@@ -79,6 +79,11 @@ public:
 
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
+            if(!m_training || !m_target) {
+                (cerr << "no training data or target received." << endl);
+                return {};
+            }
+
             // range for random initialization
             m_model.model = std::make_unique<FFN<MeanSquaredError,RandomInitialization>>();
             arma::mat out_data;
@@ -208,17 +213,10 @@ public:
         query = jit_to_arma(mode, static_cast<t_object*>(in_matrix64), query);
         
         try {
-            size_t p = m_model.model->InputDimensions()[0];
-            cout << p << endl;
-            mlpack::util::CheckSameDimensionality(query, p, "mlp regressor", "query");
+            mlpack::util::CheckSameDimensionality(query, m_model.model->InputDimensions()[0], "mlp regressor", "query");
         } catch (std::invalid_argument& s) {
             cerr << s.what() << endl;
             goto out;
-        }
-        
-        if(query.n_rows != m_training->n_rows) {
-            (cerr << "mismatched "<< endl);
-                goto out;
         }
         
         try {
@@ -231,7 +229,7 @@ public:
         }
 
         out_info = in_matrix_info;
-        out_info.planecount = m_target->n_rows;
+        out_info.planecount = predictions.n_rows;
         
         out_results_matrix = arma_to_jit(mode, predictions, static_cast<t_object*>(out_results_matrix), out_info);
         

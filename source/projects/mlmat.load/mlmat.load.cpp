@@ -56,8 +56,11 @@ public:
             }
             path p {f, path::filetype::any};
 
-            m_dataset = std::make_unique<arma::mat>();
-            mlpack::Load<double>(string(p), *m_dataset, false, transpose);
+            // load into a temporary first, so a failed read leaves any
+            // previously loaded dataset intact
+            auto dataset = std::make_unique<arma::mat>();
+            mlpack::Load<double>(string(p), *dataset, false, transpose);
+            m_dataset = std::move(dataset);
         }
         catch (...) {
             (cerr << "Could not read file " << endl);
@@ -70,7 +73,13 @@ public:
         t_jit_err err = JIT_ERR_NONE;
         t_jit_matrix_info out_minfo;
         auto out_savelock = object_method(out_matrix, _jit_sym_lock, (void*)1);
-    
+
+        if(!m_dataset) {
+            (cerr << "no file has been loaded." << endl);
+            object_method(out_matrix, _jit_sym_lock, out_savelock);
+            return err;
+        }
+
         out_minfo.type = _jit_sym_float64;
 
         switch(mode.get()) {

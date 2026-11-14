@@ -142,7 +142,13 @@ public:
     c74::min::attribute<bool> autoscale { this, "autoscale", false,
         c74::min::description {
             "Automatically scale data based on scaling_type."
-        }
+        },
+        c74::min::setter { MIN_FUNCTION {
+            // changing the scaling configuration invalidates the fitted
+            // scaler, so the reference/training set must be resubmitted
+            m_mode_changed = true;
+            return args;
+        }}
     };
     
     c74::min::attribute<c74::min::symbol> scaler { this, "scaler", "normalization",
@@ -274,6 +280,13 @@ public:
     template<typename ModelType>
     arma::mat& scaler_transform(ModelType& s, arma::Mat<double>& input, arma::Mat<double> &output) {
         if(autoscale) {
+            if(!s.scaler) {
+                // no scaler was fitted (e.g. autoscale toggled on after
+                // training); pass the data through rather than dereferencing
+                // null
+                cerr << "autoscale is on but no scaler was fit. resubmit the training/reference data.\n";
+                return input;
+            }
             try {
                 s.scaler->Transform(input, output);
             } catch (const std::runtime_error& s) {
@@ -288,6 +301,10 @@ public:
     template<typename ModelType>
     arma::mat& scaler_inverse_transform(ModelType& s, arma::Mat<double>& input, arma::Mat<double> &output) {
         if(autoscale) {
+            if(!s.scaler) {
+                cerr << "autoscale is on but no scaler was fit. resubmit the training/reference data.\n";
+                return input;
+            }
             s.scaler->InverseTransform(input, output);
             return output;
         } else {
@@ -332,7 +349,13 @@ public:
     c74::min::attribute<bool> autoscale { this, "autoscale", false,
         c74::min::description {
             "Automatically scale data based on scaling_type."
-        }
+        },
+        c74::min::setter { MIN_FUNCTION {
+            // changing the scaling configuration invalidates the fitted
+            // scaler, so the reference/training set must be resubmitted
+            m_mode_changed = true;
+            return args;
+        }}
     };
     
     c74::min::attribute<c74::min::symbol> scaler { this, "scaler", "normalization",
@@ -467,6 +490,13 @@ public:
     template<typename ModelType>
     arma::mat& scaler_transform(ModelType& s, arma::Mat<double>& input, arma::Mat<double> &output) {
         if(autoscale) {
+            if(!s.scaler) {
+                // no scaler was fitted (e.g. autoscale toggled on after
+                // training); pass the data through rather than dereferencing
+                // null
+                cerr << "autoscale is on but no scaler was fit. resubmit the training/reference data.\n";
+                return input;
+            }
             try {
                 s.scaler->Transform(input, output);
             } catch (const std::runtime_error& s) {
@@ -481,6 +511,10 @@ public:
     template<typename ModelType>
     arma::mat& scaler_inverse_transform(ModelType& s, arma::Mat<double>& input, arma::Mat<double> &output) {
         if(autoscale) {
+            if(!s.scaler) {
+                cerr << "autoscale is on but no scaler was fit. resubmit the training/reference data.\n";
+                return input;
+            }
             s.scaler->InverseTransform(input, output);
             return output;
         } else {

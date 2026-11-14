@@ -66,9 +66,9 @@ public:
         
         auto output1 = object_method(mop,_jit_sym_getoutput,1);
         jit_attr_setlong(output1,_jit_sym_dimlink,0);
-        auto output2 = object_method(mop,_jit_sym_getoutput,1);
+        auto output2 = object_method(mop,_jit_sym_getoutput,2);
         jit_attr_setlong(output2,_jit_sym_dimlink,0);
-        auto output3 = object_method(mop,_jit_sym_getoutput,1);
+        auto output3 = object_method(mop,_jit_sym_getoutput,3);
         jit_attr_setlong(output3,_jit_sym_dimlink,0);
 
         jit_class_addadornment(c, mop);
@@ -116,8 +116,8 @@ public:
     
         auto in_savelock = object_method(in_matrix, _jit_sym_lock, 1);
         auto out_savelock = object_method(out_matrix, _jit_sym_lock, 1);
-        auto eigval_savelock = object_method(out_matrix, _jit_sym_lock, 1);
-        auto eigvec_savelock = object_method(out_matrix, _jit_sym_lock, 1);
+        auto eigval_savelock = object_method(eigval_matrix, _jit_sym_lock, 1);
+        auto eigvec_savelock = object_method(eigvec_matrix, _jit_sym_lock, 1);
         
         const string decomp = decomposition_method.get().c_str() ;
         

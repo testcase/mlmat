@@ -140,11 +140,13 @@ public:
         path p {f, path::filetype::any};
     
         try {
-            ScalingModel *tmp = new ScalingModel();
+            auto tmp = std::make_unique<ScalingModel>();
             mlpack::Load(string(p), "scaling_model", *tmp, true);
-            m_model.reset( tmp );
+            m_model = std::move(tmp);
             m_model_trained = true;
         } catch (const std::runtime_error& s) {
+            // tmp is freed by the unique_ptr, and any previously loaded
+            // model is left intact
             (cerr << "error reading model file." << endl);
         }
     }

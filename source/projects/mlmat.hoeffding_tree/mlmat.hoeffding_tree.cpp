@@ -305,6 +305,11 @@ public:
             goto out;
         }
         
+        if(!m_model.model) {
+            cerr << "no trained tree exists" << endl;
+            goto out;
+        }
+        
         try {
             arma::mat scaled_query;
             scaled_query = scaler_transform(m_model, query, scaled_query);

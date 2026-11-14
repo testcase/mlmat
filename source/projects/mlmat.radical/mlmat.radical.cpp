@@ -60,7 +60,7 @@ public:
         
         auto output1 = object_method(mop,_jit_sym_getoutput,1);
         jit_attr_setlong(output1,_jit_sym_dimlink,0);
-        auto output2 = object_method(mop,_jit_sym_getoutput,1);
+        auto output2 = object_method(mop,_jit_sym_getoutput,2);
         jit_attr_setlong(output2,_jit_sym_dimlink,0);
 
         jit_class_addadornment(c, mop);
