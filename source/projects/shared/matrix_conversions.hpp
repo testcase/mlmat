@@ -11,6 +11,379 @@
 
 #include <algorithm>
 
+// ---------------------------------------------------------------------------
+// conversion notes
+//
+// The functions below move data between armadillo matrices and jit matrices.
+// jit matrices are normally allocated in a standard "packed" layout
+// (plane-interleaved cells, each dimstride the product of the dimensions
+// below it). When the layout is packed the copies are done with a single
+// linear pass (memcpy-able); for any other dimstride the element-by-element
+// fallback loops are used, which accept arbitrary strides.
+//
+// Loop counters, dimensions and byte offsets are held in size_t locals
+// (the jit API fields are long, which is only 32 bits on Windows).
+// ---------------------------------------------------------------------------
+
+
+namespace mlmat {
+
+/// Is the matrix data in Jitter's standard packed layout?
+/// (dimstride[0] == planecount * elem_size, and each higher dimstride the
+/// product of the dimensions below it.)
+inline bool jit_is_packed(const c74::max::t_jit_matrix_info& minfo, size_t elem_size)
+{
+    if (minfo.dimcount < 1 || minfo.planecount < 1)
+        return false;
+
+    size_t stride = size_t(minfo.planecount) * elem_size;
+    if (size_t(minfo.dimstride[0]) != stride)
+        return false;
+
+    for (long i = 1; i < minfo.dimcount; ++i) {
+        stride *= size_t(minfo.dim[i - 1]);
+        if (size_t(minfo.dimstride[i]) != stride)
+            return false;
+    }
+    return true;
+}
+
+/// Copy n elements from src to dst. Falls back to a converting loop when
+/// the element sizes differ (e.g. jit int32 <-> armadillo size_t).
+template <typename SrcElem, typename DstElem>
+inline void copy_elements(const SrcElem* src, DstElem* dst, size_t n)
+{
+    if constexpr (sizeof(SrcElem) == sizeof(DstElem)) {
+        std::copy_n(src, n, dst);
+    } else {
+        for (size_t i = 0; i < n; ++i)
+            dst[i] = DstElem(src[i]);
+    }
+}
+
+inline size_t trailing_zeros(size_t v)
+{
+    size_t s = 0;
+    while ((v & 1) == 0) {
+        v >>= 1;
+        ++s;
+    }
+    return s;
+}
+
+/// Core of fill_jit_matrix: writes arma_matrix into a jit matrix data
+/// buffer according to minfo and the mlmat mode. See the object
+/// documentation for the meaning of the modes.
+template <typename M, typename A>
+c74::max::t_jit_err fill_matrix_data(const c74::max::t_jit_matrix_info& minfo,
+                                     c74::max::uchar* dataptr,
+                                     const A& arma_matrix,
+                                     int mode,
+                                     bool is_coords,
+                                     size_t x)
+{
+    if (dataptr == nullptr)
+        return c74::max::JIT_ERR_INVALID_PTR;
+
+    const size_t stepsize = sizeof(M);
+    const size_t d0 = size_t(minfo.dim[0]);
+    const size_t d1 = size_t(minfo.dim[1]);
+    const size_t d2 = size_t(minfo.dim[2]);
+    const size_t pc = size_t(minfo.planecount);
+    const size_t s0 = size_t(minfo.dimstride[0]);
+    const size_t s1 = size_t(minfo.dimstride[1]);
+    const size_t s2 = size_t(minfo.dimstride[2]);
+
+    // for the coordinate conversions: divide/modulo by x, using shift/mask
+    // when x is a power of two and the value is non-negative
+    const bool x_is_pow2 = (x != 0) && ((x & (x - 1)) == 0);
+    const size_t x_shift = x_is_pow2 ? trailing_zeros(x) : 0;
+    const long xl = long(x);
+
+    switch (mode) {
+        case 0: {
+            if (is_coords && (minfo.dimcount == 1 || minfo.dimcount == 2)) {
+                // linear index -> (x, y) coordinate pairs written to planes 0/1
+                const auto* src = arma_matrix.memptr();
+                size_t aelem = 0;
+                for (size_t jslice = 0; jslice < d2; ++jslice) {
+                    c74::max::uchar* p = dataptr + jslice * s2;
+                    for (size_t jcol = 0; jcol < d1; ++jcol) {
+                        c74::max::uchar* p2 = p + jcol * s1;
+                        for (size_t jrow = 0; jrow < d0; ++jrow) {
+                            c74::max::uchar* p1 = p2 + jrow * s0;
+                            const M pos = M(src[aelem++]);
+                            const long ip = long(pos);
+                            long mx, my;
+                            if (x_is_pow2 && ip >= 0) {
+                                mx = ip & (xl - 1);
+                                my = ip >> x_shift;
+                            } else {
+                                mx = ip % xl;
+                                my = ip / xl;
+                            }
+                            *(M*)p1 = M(mx);
+                            p1 += stepsize;
+                            *(M*)p1 = M(my);
+                        }
+                    }
+                }
+            } else if (is_coords && (minfo.dimcount == 3)) {
+                // per-slice source rows, converted to (x, y) coordinate pairs
+                for (size_t jslice = 0; jslice < d2; ++jslice) {
+                    c74::max::uchar* p = dataptr + jslice * s2;
+                    size_t aelem = 0;
+                    for (size_t jcol = 0; jcol < d1; ++jcol) {
+                        c74::max::uchar* p2 = p + jcol * s1;
+                        for (size_t jrow = 0; jrow < d0; ++jrow) {
+                            c74::max::uchar* p1 = p2 + jrow * s0;
+                            const M pos = M(arma_matrix(jslice, aelem++));
+                            const long ip = long(pos);
+                            long mx, my;
+                            if (x_is_pow2 && ip >= 0) {
+                                mx = ip & (xl - 1);
+                                my = ip >> x_shift;
+                            } else {
+                                mx = ip % xl;
+                                my = ip / xl;
+                            }
+                            *(M*)p1 = M(mx);
+                            p1 += stepsize;
+                            *(M*)p1 = M(my);
+                        }
+                    }
+                }
+            } else {
+                if (jit_is_packed(minfo, stepsize)) {
+                    // packed cells interleave the planes exactly like the
+                    // column-major (planecount x cells) armadillo layout,
+                    // so the whole slice is one linear copy. (the original
+                    // loop restarts the source for every slice, so do the
+                    // same for 3d matrices)
+                    const size_t per_slice = std::min(pc * d0 * d1, size_t(arma_matrix.n_elem));
+                    const auto* src = arma_matrix.memptr();
+                    for (size_t jslice = 0; jslice < d2; ++jslice) {
+                        copy_elements(src, (M*)(dataptr + jslice * s2), per_slice);
+                    }
+                } else {
+                    const auto* src = arma_matrix.memptr();
+                    for (size_t jslice = 0; jslice < d2; ++jslice) {
+                        c74::max::uchar* p = dataptr + jslice * s2;
+                        size_t aelem = 0;
+                        for (size_t jcol = 0; jcol < d1; ++jcol) {
+                            c74::max::uchar* p2 = p + jcol * s1;
+                            for (size_t jrow = 0; jrow < d0; ++jrow) {
+                                c74::max::uchar* p1 = p2 + jrow * s0;
+                                for (size_t jplane = 0; jplane < pc; ++jplane) {
+                                    *(M*)p1 = M(src[aelem++]);
+                                    p1 += stepsize;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        case 1: {
+            // (the walk below assumes one plane per cell, so the linear fast
+            // path only applies to single-plane matrices)
+            if (pc == 1 && jit_is_packed(minfo, stepsize)) {
+                const size_t total = std::min(d0 * d1, size_t(arma_matrix.n_elem));
+                copy_elements(arma_matrix.memptr(), (M*)dataptr, total);
+            } else {
+                size_t aelem = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    c74::max::uchar* p = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        *(M*)p = M(arma_matrix(aelem++));
+                        p += stepsize;
+                    }
+                }
+            }
+            break;
+        }
+
+        case 2: {
+            // (single-plane matrices only, as above)
+            if (pc == 1 && jit_is_packed(minfo, stepsize)) {
+                // in the packed layout the jit matrix holds the transpose
+                // of the sequential arma data; armadillo's blocked transpose
+                // plus a linear copy beats strided element writes
+                arma::Mat<typename A::elem_type> tmp = arma_matrix.t();
+                const size_t total = std::min(d0 * d1, size_t(tmp.n_elem));
+                copy_elements(tmp.memptr(), (M*)dataptr, total);
+            } else {
+                size_t aelem = 0;
+                for (size_t jrow = 0; jrow < d0; ++jrow) {
+                    c74::max::uchar* p1 = dataptr + jrow * s0;
+                    for (size_t jcol = 0; jcol < d1; ++jcol) {
+                        *(M*)p1 = M(arma_matrix(aelem++));
+                        p1 += s1;
+                    }
+                }
+            }
+            break;
+        }
+
+        default:
+            (std::cerr << "could not create matrix" << std::endl);
+            break;
+    }
+    return c74::max::JIT_ERR_NONE;
+}
+
+/// Core of jit_to_arma for arma::Mat: reads a jit matrix data buffer into a
+/// column-major armadillo matrix according to the mlmat mode.
+/// JT is the jit element type (double or t_int32).
+template <typename JT, typename E>
+void read_matrix_data(const c74::max::t_jit_matrix_info& minfo,
+                      const c74::max::uchar* dataptr,
+                      int mode,
+                      arma::Mat<E>& arma_matrix)
+{
+    if (dataptr == nullptr)
+        return;
+
+    const size_t es = sizeof(JT);
+    const size_t d0 = size_t(minfo.dim[0]);
+    const size_t d1 = (minfo.dimcount == 1) ? 1 : size_t(minfo.dim[1]);
+    const size_t pc = size_t(minfo.planecount);
+    const size_t s0 = size_t(minfo.dimstride[0]);
+    const size_t s1 = size_t(minfo.dimstride[1]);
+
+    switch (mode) {
+        case 0: {
+            arma_matrix.set_size(pc, d0 * d1);
+            if (jit_is_packed(minfo, es)) {
+                // packed plane-interleaved cells are exactly the column-major
+                // (planecount x cells) armadillo layout
+                copy_elements((const JT*)dataptr, arma_matrix.memptr(), pc * d0 * d1);
+            } else {
+                size_t alem = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    const c74::max::uchar* pcol = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        const c74::max::uchar* p1 = pcol + jrow * s0;
+                        for (size_t jplane = 0; jplane < pc; ++jplane) {
+                            arma_matrix(alem++) = E(*(const JT*)(p1 + jplane * es));
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        case 1: {
+            arma_matrix.set_size(d0, d1);
+            // (the fallback walk assumes one plane per cell)
+            if (pc == 1 && jit_is_packed(minfo, es)) {
+                copy_elements((const JT*)dataptr, arma_matrix.memptr(), d0 * d1);
+            } else {
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    const JT* p = (const JT*)(dataptr + jcol * s1);
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        arma_matrix(jrow, jcol) = E(p[jrow]);
+                    }
+                }
+            }
+            break;
+        }
+
+        case 2: {
+            // (single-plane matrices only, as above)
+            if (pc == 1 && jit_is_packed(minfo, es)) {
+                // read linearly (mode 1 layout), then transpose once
+                arma::Mat<E> tmp(d0, d1, arma::fill::none);
+                copy_elements((const JT*)dataptr, tmp.memptr(), d0 * d1);
+                arma_matrix = tmp.t();
+            } else {
+                arma_matrix.set_size(d1, d0);
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    const JT* p = (const JT*)(dataptr + jcol * s1);
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        arma_matrix(jcol, jrow) = E(p[jrow]);
+                    }
+                }
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+/// Core of jit_to_arma for arma::Row: reads a jit matrix data buffer into a
+/// row vector, flattening in the same order as the original implementation.
+template <typename JT, typename E>
+void read_row_data(const c74::max::t_jit_matrix_info& minfo,
+                   const c74::max::uchar* dataptr,
+                   int mode,
+                   arma::Row<E>& arma_row)
+{
+    if (dataptr == nullptr)
+        return;
+
+    const size_t es = sizeof(JT);
+    const size_t d0 = size_t(minfo.dim[0]);
+    const size_t d1 = (minfo.dimcount == 1) ? 1 : size_t(minfo.dim[1]);
+    const size_t pc = size_t(minfo.planecount);
+    const size_t s0 = size_t(minfo.dimstride[0]);
+    const size_t s1 = size_t(minfo.dimstride[1]);
+
+    switch (mode) {
+        case 0: {
+            // one entry per plane of each cell
+            arma_row.set_size(pc * d0 * d1);
+            if (jit_is_packed(minfo, es)) {
+                copy_elements((const JT*)dataptr, arma_row.memptr(), pc * d0 * d1);
+            } else {
+                size_t arow = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    const c74::max::uchar* p = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        const c74::max::uchar* p1 = p + jrow * s0;
+                        for (size_t jplane = 0; jplane < pc; ++jplane) {
+                            arma_row(arow++) = E(*(const JT*)(p1 + jplane * es));
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        case 1:
+        case 2: {
+            arma_row.set_size(d0 * d1);
+            // (the fallback walk assumes one plane per cell)
+            if (pc == 1 && jit_is_packed(minfo, es)) {
+                copy_elements((const JT*)dataptr, arma_row.memptr(), d0 * d1);
+            } else {
+                size_t arow = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    const c74::max::uchar* p = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        arma_row(arow++) = E(*(const JT*)p);
+                        p += es;
+                    }
+                }
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+} // namespace mlmat
+
+
+// ---------------------------------------------------------------------------
+// public conversion API
+// ---------------------------------------------------------------------------
 
 c74::max::t_object* convert_to_float64(c74::max::t_object *matrix, c74::max::t_jit_matrix_info& minfo) {
     c74::max::t_object *m; // destination matrix
@@ -18,7 +391,7 @@ c74::max::t_object* convert_to_float64(c74::max::t_object *matrix, c74::max::t_j
         return matrix;
     }
     c74::max::t_jit_matrix_info dest_info = minfo;
-    
+
     dest_info.type = c74::max::_jit_sym_float64;
     m = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&dest_info));
     c74::max::object_method(m, c74::max::_jit_sym_frommatrix,matrix,NULL);
@@ -28,7 +401,7 @@ c74::max::t_object* convert_to_float64(c74::max::t_object *matrix, c74::max::t_j
 
 c74::max::t_object* convert_to_long(c74::max::t_object *matrix, c74::max::t_jit_matrix_info& minfo) {
     c74::max::t_object *m; // destination matrix
-   
+
     if(minfo.type == c74::max::_jit_sym_long) {
         return matrix;
     }
@@ -36,123 +409,46 @@ c74::max::t_object* convert_to_long(c74::max::t_object *matrix, c74::max::t_jit_
     dest_info.type = c74::max::_jit_sym_long;
     m = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&dest_info));
     c74::max::object_method(m, c74::max::_jit_sym_frommatrix,matrix,NULL);
-    
+
     return m;
 }
 
-//feel like this template is a little hacky with the coords stuff but keeps other things cleaner
+/// Fills a jit matrix from an armadillo matrix according to the mlmat
+/// mode. (The matrix is assumed to be locked by the caller.)
 template <typename M, typename A>
-c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, int mode, bool is_coords = false, long x = 0) {
-    c74::max::uchar *dataptr = nullptr;
-    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
-    size_t stepsize = sizeof(M);
+c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, const A& arma_matrix, int mode, bool is_coords = false, long x = 0) {
     c74::max::t_jit_matrix_info minfo;
-    c74::max::uchar *p = nullptr;
-    c74::max::uchar *p2 = nullptr;
-    c74::max::uchar *p1 = nullptr;
-    long aelem = 0;
-    
-    
-    //std::cout << arma << std::endl;
-    
-    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo,&minfo);
-    err = (c74::max::t_jit_err)c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
-    
-    switch (mode) {
-        case 0:
-            //if 2 planes and is suppose to contain 2d coords, do the conversion
-            if(is_coords && ((minfo.dimcount == 2) || (minfo.dimcount == 1))) {
-                M pos = 0;
-                for(auto jslice=0;jslice<minfo.dim[2];jslice++) {
-                    p = dataptr + (jslice*minfo.dimstride[2]);
-                    for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                        p2 = p + (jcol*minfo.dimstride[1]);
-                        for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                            p1 = p2 + (jrow*minfo.dimstride[0]);
-                            pos = arma(aelem++);
-                            *(M*)p1 = (M)((long)pos % x);
-                            p1 += stepsize;
-                            *(M*)p1 = (M)((long)pos / x);
-                        }
-                    }
-                }
-                
-            } else if(is_coords && (minfo.dimcount == 3)) {
-                M pos = 0;
-               // std::cout << "is_coords && (minfo.dimcount == 2)" << std::endl;
-                for(auto jslice=0;jslice<minfo.dim[2];jslice++) {
-                    aelem = 0;
-                    p = dataptr + (jslice*minfo.dimstride[2]);
-                    for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                        p2 = p + (jcol*minfo.dimstride[1]);
-                        for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                            p1 = p2 + (jrow*minfo.dimstride[0]);
-                           //00 std::cout << "jslice " << jslice << "aelem " << aelem << std::endl;
-                            pos = arma(jslice, aelem++);
-                            //std::cout << pos << std::endl;
-                            *(M*)p1 = (M)((long)pos % x);
-                            p1 += stepsize;
-                            *(M*)p1 = (M)((long)pos / x);
-                        }
-                    }
-                }
-                
-            } else {
-                for(auto jslice=0;jslice<minfo.dim[2];jslice++) {
-                    aelem = 0;
-                    p = dataptr + (jslice*minfo.dimstride[2]);
-                    // std::cout << "slice " << jslice << " " << (p - dataptr) << std::endl;
-                    for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                        p2 = p +   (jcol*minfo.dimstride[1]);
-                        // std::cout << "  col " << jcol << " " << (p2 - dataptr) << std::endl;
-                        for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                            p1 = p2 + (jrow*minfo.dimstride[0]);
-                            // std::cout << "    row " << jrow << " " << (p1 - dataptr) << std::endl;
-                            for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                                *(M*)p1 = arma(aelem++);
-                                p1 += stepsize;
-                            }
-                        }
-                    }
-                }
-            }
-            break;
-            
-        case 1:
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    *(M*)p = arma(aelem++);
-                    p += stepsize;
-                }
-            }
-            break;
-            
-        case 2:
-            //stepsize
-//            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-//                p = dataptr + (jcol*minfo.dimstride[1]);
-//                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-//                    *(M*)p = arma(aelem++);
-//                    p += stepsize;
-//                }
-//            }
+    c74::max::uchar *dataptr = nullptr;
 
-            for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                p1 = dataptr + (jrow*minfo.dimstride[0]);
-                for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                    p = p1;
-                    *(M*)p = arma(aelem++);
-                    p1 += minfo.dimstride[1];
-                }
-            }
-            break;
-            
-        default:
-            (std::cerr << "could not create matrix" << std::endl);
-            break;
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
+
+    return mlmat::fill_matrix_data<M>(minfo, dataptr, arma_matrix, mode, is_coords, size_t(x));
+}
+
+/// Resizes the destination jit matrix to minfo and fills it directly from
+/// the armadillo matrix (no temporary matrix, single copy).
+template <typename M, typename A>
+c74::max::t_object* arma_to_jit_fill(const A& arma_matrix,
+                                     c74::max::t_object* jitter_matrix,
+                                     c74::max::t_jit_matrix_info& minfo,
+                                     int mode,
+                                     bool is_coords,
+                                     long x)
+{
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo, &minfo);
+
+    // fill according to the matrix info as the jit system actually
+    // realized it (it normalizes dimcount/dims on setinfo)
+    c74::max::t_jit_matrix_info actual_info;
+    c74::max::uchar* dataptr = nullptr;
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &actual_info);
+    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
+
+    if (dataptr != nullptr) {
+        mlmat::fill_matrix_data<M>(actual_info, dataptr, arma_matrix, mode, is_coords, size_t(x));
     }
-    return err;
+    return jitter_matrix;
 }
 
 
@@ -163,7 +459,7 @@ c74::max::t_jit_err fill_jit_matrix(c74::max::t_object* jitter_matrix, A arma, i
  to use 2d ?
  mode 1: returns a 1d matrix along dim[0]
  mode 2: returns a 1d matrix along dim[1]
- 
+
  */
 
 c74::max::t_object* arma_to_jit(const int mode,
@@ -172,14 +468,12 @@ c74::max::t_object* arma_to_jit(const int mode,
                         c74::max::t_jit_matrix_info& target_info,
                       const bool is_coords = false,
                       const long x = 0) {
-//    c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::t_jit_matrix_info minfo;
-    c74::max::t_object* tmp_matrix = nullptr;
-    
+
     minfo = target_info;
     minfo.type = c74::max::_jit_sym_float64;
     minfo.flags = 0;
-    
+
     switch(mode) {
         case 0:
             if(target_info.dimcount == 1) {
@@ -189,43 +483,30 @@ c74::max::t_object* arma_to_jit(const int mode,
             } else {
                 minfo.dimcount = 2;
                 minfo.dim[0] = target_info.dim[0];
-                minfo.dim[1] = target_info.dim[1];;
-                //(std::cerr << "invalid dimcount requested" << std::endl);
+                minfo.dim[1] = target_info.dim[1];
             }
             break;
-            
+
         case 1:
             minfo.planecount = 1;
             minfo.dimcount = 1;
             minfo.dim[0] = 1;
             minfo.dim[1] = arma.n_elem;
             break;
-            
+
         case 2:
             minfo.planecount = 1;
             minfo.dimcount = 2;
             minfo.dim[0] = arma.n_elem;
             minfo.dim[1] = 1;
             break;
-            
+
         default:
             (std::cerr << "invalid mode for object" << std::endl);
             break;
     }
-    
-    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
-    if(!tmp_matrix) {
-        (std::cerr << "could not create matrix" << std::endl);
-        return jitter_matrix;
-    }
-    
-    fill_jit_matrix<double, arma::Row<double>>(tmp_matrix, arma, mode, is_coords, x);
-    
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
 
-    c74::max::jit_object_free(tmp_matrix);
-    return jitter_matrix;
+    return arma_to_jit_fill<double>(arma, jitter_matrix, minfo, mode, is_coords, x);
 }
 
 
@@ -237,12 +518,11 @@ c74::max::t_object* arma_to_jit(const int mode,
                                 const long x = 0) {
 
     c74::max::t_jit_matrix_info minfo;
-    c74::max::t_object* tmp_matrix = nullptr;
-    
+
     minfo.type = c74::max::_jit_sym_long;
     minfo.flags = 0;
-    
-    
+
+
     switch(mode) {
         case 0:
             if(target_info.dimcount == 1) {
@@ -257,47 +537,29 @@ c74::max::t_object* arma_to_jit(const int mode,
                 minfo.planecount = target_info.planecount;
             } else {
                 //should not happen
-                //cerr << "invalid dimcount requested" << endl;
             }
             break;
-            
+
         case 1:
             minfo.planecount = 1;
             minfo.dimcount = 2;
             minfo.dim[0] = 1;
             minfo.dim[1] = arma.n_elem;
             break;
-            
+
         case 2:
             minfo.planecount = 1;
             minfo.dimcount = 1;
             minfo.dim[0] = arma.n_elem;
             minfo.dim[1] = 1;
             break;
-            
+
         default:
             break;
             //should not happen
-            //cerr << "invalid mode for object" << endl;
     }
-    
-    //create temporary matrix
-    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
-    if(!tmp_matrix) {
-        //cerr << "could not create matrix" << endl;
-        return jitter_matrix;
-    }
-    
-    fill_jit_matrix<c74::max::t_int32, arma::Row<size_t>>(tmp_matrix, arma, mode,is_coords, x);
-    
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
-    
-    jit_object_free(tmp_matrix);
-    
-    
-    return jitter_matrix;
-    
+
+    return arma_to_jit_fill<c74::max::t_int32>(arma, jitter_matrix, minfo, mode, is_coords, x);
 }
 
 c74::max::t_object* arma_to_jit(const int mode,
@@ -306,10 +568,8 @@ c74::max::t_object* arma_to_jit(const int mode,
     c74::max::t_jit_matrix_info& target_info,
                       const bool is_coords = false,
                       const long x = 0) {
-    //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::t_jit_matrix_info minfo;
-    c74::max::t_object* tmp_matrix = nullptr;
-    
+
     minfo.type = c74::max::_jit_sym_float64;
     minfo.flags = 0;
 
@@ -332,7 +592,7 @@ c74::max::t_object* arma_to_jit(const int mode,
                 minfo.dim[2] = target_info.dim[2];
                 minfo.planecount = target_info.planecount;
             } else {
-                
+
             }
             break;
         case 1:
@@ -347,24 +607,12 @@ c74::max::t_object* arma_to_jit(const int mode,
             minfo.dim[0] = arma.n_cols;
             minfo.dim[1] = arma.n_rows;
             break;
-            
+
         default:
             break;
     }
-    
-    //create temporary matrix
-    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
-    if(!tmp_matrix) {
-        //cerr << "could not create matrix" << endl;
-        return jitter_matrix;
-    }
-    
-    fill_jit_matrix<double, arma::Mat<double>>(tmp_matrix, arma, mode, is_coords, x);
-    
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
-    c74::max::jit_object_free(tmp_matrix);
-    return jitter_matrix;
+
+    return arma_to_jit_fill<double>(arma, jitter_matrix, minfo, mode, is_coords, x);
 }
 
 c74::max::t_object* arma_to_jit(const int mode,
@@ -373,19 +621,17 @@ c74::max::t_object* arma_to_jit(const int mode,
     c74::max::t_jit_matrix_info& target_info,
                       const bool is_coords = false,
                       const long x = 0) {
-    //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::t_jit_matrix_info minfo;
-    c74::max::t_object* tmp_matrix = nullptr;
-    
-    
+
+
     minfo.type = c74::max::_jit_sym_long;
     minfo.flags = 0;
-    
+
     minfo.dimcount = target_info.dimcount;
-    
+
     switch(mode) {
         case 0:
-            
+
             if(target_info.dimcount == 1) {
                 minfo.dim[0] = target_info.dim[0];
                 minfo.dim[1] = 1;
@@ -402,7 +648,7 @@ c74::max::t_object* arma_to_jit(const int mode,
                 minfo.dim[2] = target_info.dim[2];
                 minfo.planecount = target_info.planecount;
             } else {
-                
+
             }
             break;
         case 1:
@@ -417,393 +663,186 @@ c74::max::t_object* arma_to_jit(const int mode,
             minfo.dim[0] = arma.n_cols;
             minfo.dim[1] = arma.n_rows;
             break;
-            
+
         default:
             break;
     }
-    
-    //create temporary matrix
-    tmp_matrix = static_cast<c74::max::t_object*>(c74::max::jit_object_new(c74::max::_jit_sym_jit_matrix,&minfo));
-    if(!tmp_matrix) {
-        //cerr << "could not create matrix" << endl;
-        return jitter_matrix;
-    }
-    
-    fill_jit_matrix<c74::max::t_int32, arma::Mat<size_t>>(tmp_matrix, arma, mode, is_coords, x);
-    
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_setinfo,&minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_frommatrix,tmp_matrix,nullptr);
-    c74::max::jit_object_free(tmp_matrix);
-    return jitter_matrix;
+
+    return arma_to_jit_fill<c74::max::t_int32>(arma, jitter_matrix, minfo, mode, is_coords, x);
 }
 
 
 arma::mat& jit_to_arma(const int mode,
                        const c74::max::t_object *jitter_matrix,
                        arma::Mat<double>& arma_matrix ) {
-    /* this is not optimized for speed */
     c74::max::t_jit_matrix_info minfo;
-    //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::uchar *dataptr = nullptr;
-    c74::max::uchar *p = nullptr;
-    c74::max::uchar *p1 = nullptr;
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
-    
+
+    c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
+
     if(minfo.type != c74::max::_jit_sym_float64) {
         //ERROR FOR NOW
         return arma_matrix;
     }
-    
-    if(minfo.dimcount == 1) { minfo.dim[1] = 1;} //for loops
-    
-    arma_matrix.set_size(minfo.planecount , minfo.dim[0]*minfo.dim[1]);
-    
-    long alem = 0;
-    
-    switch(mode) {
-        case 0:
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    p1 = p + (jrow*minfo.dimstride[0]);
-                    for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        arma_matrix(alem++) = *(double*)p1;
-                        
-                        p1 += sizeof(double);
-                    }
-                }
-            }
-            break;
-            
-        case 1:
-            arma_matrix.set_size(minfo.dim[0], minfo.dim[1]);
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_matrix(jrow, jcol) = *(double*)p;
-                    p += sizeof(double);
-                }
-            }
-            break;
-            
-        case 2:
-            //TODO: compare doing same as in mode 1 and then
-            //transposing the arma mat
-            // Will catch earlier if not a 1d or 2d matrix and not 1 plane
-            arma_matrix.set_size(minfo.dim[1],  minfo.dim[0]);
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_matrix(jcol, jrow) = *(double*)p;
-                    p += sizeof(double);
-                }
-            }
-        default:
-            break;
-            
-    }
+
+    mlmat::read_matrix_data<double>(minfo, dataptr, mode, arma_matrix);
     return arma_matrix;
 }
 
 arma::Mat<size_t>& jit_to_arma(const int mode,
                                const c74::max::t_object *jitter_matrix,
                                arma::Mat<size_t>& arma_matrix ) {
-    /* this is not optimized for speed */
     c74::max::t_jit_matrix_info minfo;
-//c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::uchar *dataptr = nullptr;
-    c74::max::uchar *p = nullptr;
+
     c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
-    
+    c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
+
     if(minfo.type != c74::max::_jit_sym_long) {
         //ERROR FOR NOW
         return arma_matrix;
     }
-    
-    if(minfo.dimcount == 1) { minfo.dim[1] = 1;} //for loops
-    
-    arma_matrix.set_size(minfo.planecount , minfo.dim[0]*minfo.dim[1]);
-    
-    long acol = 0;
-    
-    
-    switch(mode) {
-        case 0:
-            arma_matrix.resize(minfo.planecount,  minfo.dim[0]*minfo.dim[1]);
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    size_t *colptr = arma_matrix.colptr(acol++);
-                    for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        *colptr++ = *(c74::max::t_int32*)p;
-                        p += sizeof(c74::max::t_int32);
-                    }
-                }
-            }
-            break;
-            
-        case 1:
-            arma_matrix.resize(minfo.dim[0], minfo.dim[1]);
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_matrix(jrow, jcol) = *(c74::max::t_int32*)p;
-                    p += sizeof(c74::max::t_int32);
-                }
-            }
-            break;
-            
-        case 2:
-            //TODO: compare doing same as in mode 1 and then
-            //transposing the arma mat
-            // Will catch earlier if not a 1d or 2d matrix and not 1 plane
-            arma_matrix.resize(minfo.dim[1],  minfo.dim[0]);
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_matrix(jcol, jrow) = *(c74::max::t_int32*)p;
-                    p += sizeof(c74::max::t_int32);
-                }
-            }
-        default:
-            break;
-            
-    }
+
+    mlmat::read_matrix_data<c74::max::t_int32>(minfo, dataptr, mode, arma_matrix);
     return arma_matrix;
 }
 
 arma::Row<size_t>& jit_to_arma(const int mode,
                                  c74::max::t_object *jitter_matrix,
                                arma::Row<size_t>& arma_row ) {
-    /* this is not optimized for speed */
     c74::max::t_jit_matrix_info minfo;
-    //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::uchar *dataptr = nullptr;
-    c74::max::uchar *p = nullptr;
-    c74::max::uchar *p1 = nullptr;
+
     c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
     c74::max::object_method(jitter_matrix, c74::max:: _jit_sym_getdata, &dataptr);
-    
+
     if(minfo.type != c74::max::_jit_sym_long) {
         //ERROR FOR NOW
         return arma_row;
     }
-    
-    //think that the plane should be limited to 1
-    
-    if(minfo.dimcount == 1) { minfo.dim[1] = 1;} //for loops
-    
-    arma_row.set_size(minfo.dim[0]*minfo.dim[1]);
-    
-    long arow = 0;
-    
-    switch(mode) {
-        case 0:
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    p1 = p + (jrow*minfo.dimstride[0]);
-                    for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        arma_row(arow++) = *(c74::max::t_int32*)p1;
-                        p1 += sizeof(c74::max::t_int32);
-                    }
-                }
-            }
-            break;
-            
-        case 1:
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_row(arow++) = *(c74::max::t_int32*)p;
-                    p += sizeof(c74::max::t_int32);
-                }
-            }
-            break;
-            
-        case 2:
-            //TODO: compare doing same as in mode 1 and then
-            //transposing the arma mat
-            // Will catch earlier if not a 1d or 2d matrix and not 1 plane
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_row(arow++) = *(c74::max::t_int32*)p;
-                    p += sizeof(c74::max::t_int32);
-                }
-            }
-        default:
-            break;
-            
-    }
+
+    mlmat::read_row_data<c74::max::t_int32>(minfo, dataptr, mode, arma_row);
     return arma_row;
 }
-
-/// TODO: The jit matrix iter is wrong here!!!
-arma::Col<arma::uword>& jit_to_arma(const int mode,
-                                    const c74::max::t_object *jitter_matrix,
-                                    arma::Col<arma::uword>& arma_col) {
-    /* this is not optimized for speed */
-    c74::max::t_jit_matrix_info minfo;
-    //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
-    c74::max::uchar *dataptr = nullptr;
-    c74::max::uchar *p = nullptr;
-    c74::max::uchar *p1 = nullptr;
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
-    
-    if(minfo.type != c74::max::_jit_sym_long) {
-        //ERROR FOR NOW
-        return arma_col;
-    }
-    
-    if(minfo.dimcount == 1) { minfo.dim[1] = 1;}
-    
-    arma_col.set_size(minfo.dim[0]*minfo.dim[1]);
-    
-    long acol = 0;
-    long alem = 0;
-    // t_int32 pos = 0;
-    switch(mode) {
-        case 0:
-            
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    p1 = p + (jrow*minfo.dimstride[0]);
-                    for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                        arma_col(alem++) = *(c74::max::t_int32*)p1;
-                        p1 += sizeof(c74::max::t_int32);
-                    }
-                }
-            }
-            
-            break;
-            
-        case 1:
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_col(acol++) = *(c74::max::t_int32*)p;
-                    p += sizeof(c74::max::t_int32);
-                }
-            }
-            break;
-            
-        case 2:
-            //TODO: compare doing same as in mode 1 and then
-            //transposing the arma mat
-            // Will catch earlier if not a 1d or 2d matrix and not 1 plane
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    arma_col(acol++) = *(c74::max::t_int32*)p;
-                    p += sizeof(c74::max::t_int32);
-                }
-            }
-        default:
-            break;
-            
-    }
-    return arma_col;
-}
-
-
-
 
 arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
                                           const c74::max::t_object *jitter_matrix,
                                           arma::Col<arma::uword>& arma_col,
                                  c74::max::t_int32 max_x,
                                     c74::max::t_int32 max_y) {
-    /* this is not optimized for speed */
     c74::max::t_jit_matrix_info minfo;
-    //c74::max::t_jit_err err = c74::max::JIT_ERR_NONE;
     c74::max::uchar *dataptr = nullptr;
-    c74::max::uchar *p = nullptr;
-    c74::max::uchar *p1 = nullptr;
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
-    c74::max::object_method(jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
-    
+
+    c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
+    c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
+
     if(minfo.type != c74::max::_jit_sym_long) {
         //ERROR FOR NOW
         return arma_col;
     }
-    
-    if(minfo.dimcount == 1) { minfo.dim[1] = 1;}
-    
-    arma_col.set_size(minfo.dim[0]*minfo.dim[1]);
-    
-    long acol = 0;
-    long alem = 0;
-    // t_int32 pos = 0;
+
+    if (dataptr == nullptr)
+        return arma_col;
+
+    const size_t es = sizeof(c74::max::t_int32);
+    const size_t d0 = size_t(minfo.dim[0]);
+    const size_t d1 = (minfo.dimcount == 1) ? 1 : size_t(minfo.dim[1]);
+    const size_t pc = size_t(minfo.planecount);
+    const size_t s0 = size_t(minfo.dimstride[0]);
+    const size_t s1 = size_t(minfo.dimstride[1]);
+    const long mx_max = long(max_x) - 1;
+    const long my_max = long(max_y) - 1;
+    const long m_max = long(max_x) * long(max_y) - 1;
+
     switch(mode) {
         case 0:
             if(minfo.planecount == 1) {
-                c74::max::t_int32 m = (max_x * max_y)-1;
-                for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                    p = dataptr + (jcol*minfo.dimstride[1]);
-                    for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                        p1 = p + (jrow*minfo.dimstride[0]);
-                        for(auto jplane=0;jplane<minfo.planecount;jplane++) {
-                            c74::max::t_int32 d = *(c74::max::t_int32*)p1;
-                            d = std::clamp(d, 0, m);
-                            arma_col(alem++) = d;
-                            p1 += sizeof(c74::max::t_int32);
+                arma_col.set_size(pc * d0 * d1);
+                if (mlmat::jit_is_packed(minfo, es)) {
+                    const c74::max::t_int32* src = (const c74::max::t_int32*)dataptr;
+                    const size_t total = pc * d0 * d1;
+                    for (size_t i = 0; i < total; ++i) {
+                        arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), m_max));
+                    }
+                } else {
+                    size_t alem = 0;
+                    for (size_t jcol = 0; jcol < d1; ++jcol) {
+                        c74::max::uchar* p = dataptr + jcol * s1;
+                        for (size_t jrow = 0; jrow < d0; ++jrow) {
+                            c74::max::uchar* p1 = p + jrow * s0;
+                            for (size_t jplane = 0; jplane < pc; ++jplane) {
+                                const c74::max::t_int32 d = *(c74::max::t_int32*)p1;
+                                arma_col(alem++) = arma::uword(std::clamp(long(d), long(0), m_max));
+                                p1 += es;
+                            }
                         }
                     }
                 }
             } else if (minfo.planecount == 2) {
-                for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                    p = dataptr + (jcol*minfo.dimstride[1]);
-                    for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                        
-                        c74::max::t_int32 xpos = *(c74::max::t_int32*)p;
-                        xpos = std::clamp(xpos, 0, max_x-1);
-                        
-                        p += sizeof(c74::max::t_int32);
-                        c74::max::t_int32 ypos = *(c74::max::t_int32*)p;
-                        ypos = std::clamp(ypos, 0, max_y-1);
-                        p += sizeof(c74::max::t_int32);
-                        
-                        ypos *= max_x;//
-                        arma_col(acol++) =  xpos + ypos;
-                    }
+                // 2d coordinates clamped into the reference set bounds.
+                // (as before, this assumes fully packed data)
+                arma_col.set_size(d0 * d1);
+                size_t acol = 0;
+                const c74::max::t_int32* p = (const c74::max::t_int32*)dataptr;
+                for (size_t i = 0; i < d0 * d1; ++i) {
+                    c74::max::t_int32 xpos = std::clamp(p[2 * i], c74::max::t_int32(0), max_x - 1);
+                    c74::max::t_int32 ypos = std::clamp(p[2 * i + 1], c74::max::t_int32(0), max_y - 1);
+                    arma_col(acol++) = arma::uword(xpos) + arma::uword(ypos) * arma::uword(max_x);
                 }
             } else {
                 //ERROR
             }
             break;
-            
-        case 1:
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    c74::max::t_int32 tmp = *(c74::max::t_int32*)p; //added to stop VS from complaining
-                    arma_col(acol++) = std::clamp(tmp, 0, (max_y)-1);;
-                    p += sizeof(c74::max::t_int32);
+
+        case 1: {
+            arma_col.set_size(d0 * d1);
+            // (the fallback walk assumes one plane per cell)
+            if (pc == 1 && mlmat::jit_is_packed(minfo, es)) {
+                const c74::max::t_int32* src = (const c74::max::t_int32*)dataptr;
+                const size_t total = d0 * d1;
+                for (size_t i = 0; i < total; ++i) {
+                    arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), my_max));
+                }
+            } else {
+                size_t acol = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    c74::max::uchar* p = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        const c74::max::t_int32 tmp = *(c74::max::t_int32*)p;
+                        arma_col(acol++) = arma::uword(std::clamp(long(tmp), long(0), my_max));
+                        p += es;
+                    }
                 }
             }
             break;
-            
-        case 2:
-            //TODO: compare doing same as in mode 1 and then
-            //transposing the arma mat
-            // Will catch earlier if not a 1d or 2d matrix and not 1 plane
-            for(auto jcol=0;jcol<minfo.dim[1];jcol++) {
-                p = dataptr + (jcol*minfo.dimstride[1]);
-                for(auto jrow=0;jrow<minfo.dim[0];jrow++) {
-                    c74::max::t_int32 tmp = *(c74::max::t_int32*)p; //added to stop VS from complaining
-                    arma_col(acol++) = std::clamp(tmp,0, (max_x)-1);
-                    p += sizeof(c74::max::t_int32);
+        }
+
+        case 2: {
+            arma_col.set_size(d0 * d1);
+            // (single-plane matrices only, as above)
+            if (pc == 1 && mlmat::jit_is_packed(minfo, es)) {
+                const c74::max::t_int32* src = (const c74::max::t_int32*)dataptr;
+                const size_t total = d0 * d1;
+                for (size_t i = 0; i < total; ++i) {
+                    arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), mx_max));
+                }
+            } else {
+                size_t acol = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    c74::max::uchar* p = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        const c74::max::t_int32 tmp = *(c74::max::t_int32*)p;
+                        arma_col(acol++) = arma::uword(std::clamp(long(tmp), long(0), mx_max));
+                        p += es;
+                    }
                 }
             }
+            break;
+        }
+
         default:
             break;
-            
     }
     return arma_col;
 }
-
