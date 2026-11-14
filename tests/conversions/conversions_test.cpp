@@ -314,6 +314,42 @@ static void run_parity()
         limit_case("jit_to_arma_limit m1 unpacked", 1, 1, false);
         limit_case("jit_to_arma_limit m2 packed", 2, 1, true);
         limit_case("jit_to_arma_limit m2 unpacked", 2, 1, false);
+
+        // float64 coordinate matrices (e.g. arriving through a single-type
+        // float64 mop) are read directly: integral values must give exactly
+        // the same indices as the long path applied to the same values
+        auto limit_float64_case = [&](const char* what, int mode, long pc, bool packed) {
+            auto* src_f64 = make_source(jit_sym_float64, 6, 4, pc, packed ? 0 : 16);
+            auto* src_long = make_source(jit_sym_long, 6, 4, pc, packed ? 0 : 16);
+            // give the float64 matrix the same (integral) values as the long
+            // one, cell by cell
+            for (long jcol = 0; jcol < 4; ++jcol)
+                for (long jrow = 0; jrow < 6; ++jrow)
+                    for (long p = 0; p < pc; ++p) {
+                        size_t idx_l = size_t(jcol) * size_t(src_long->info.dimstride[1]) +
+                                       size_t(jrow) * size_t(src_long->info.dimstride[0]) + size_t(p) * 4;
+                        size_t idx_f = size_t(jcol) * size_t(src_f64->info.dimstride[1]) +
+                                       size_t(jrow) * size_t(src_f64->info.dimstride[0]) + size_t(p) * 8;
+                        c74::max::t_int32 v32;
+                        memcpy(&v32, src_long->data.data() + idx_l, 4);
+                        long v = v32;
+                        double d = double(v);
+                        memcpy(src_f64->data.data() + idx_f, &d, 8);
+                    }
+            arma::Col<arma::uword> c_long, c_f64;
+            REF::jit_to_arma_limit(mode, (c74::max::t_object*)src_long, c_long, 5, 3);
+            NEW::jit_to_arma_limit(mode, (c74::max::t_object*)src_f64, c_f64, 5, 3);
+            bool ok = c_long.n_elem == c_f64.n_elem &&
+                      memcmp(c_long.memptr(), c_f64.memptr(), c_long.n_elem * sizeof(arma::uword)) == 0;
+            check(ok, what);
+            delete src_f64;
+            delete src_long;
+        };
+        limit_float64_case("jit_to_arma_limit float64 m0 pc1 packed", 0, 1, true);
+        limit_float64_case("jit_to_arma_limit float64 m0 pc1 unpacked", 0, 1, false);
+        limit_float64_case("jit_to_arma_limit float64 m0 pc2 packed", 0, 2, true);
+        limit_float64_case("jit_to_arma_limit float64 m1 packed", 1, 1, true);
+        limit_float64_case("jit_to_arma_limit float64 m2 unpacked", 2, 1, false);
     }
 
     // ---------------- fill_jit_matrix on unpacked matrices ----------------

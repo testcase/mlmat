@@ -101,15 +101,11 @@ public:
                 cerr << s.what() << endl;
                 object_method(out_train_labels,_jit_sym_lock,out_train_labels_savelock);
                 object_method(out_test_labels,_jit_sym_lock,out_test_labels_savelock);
-                object_method(out_train_labels,_jit_sym_lock,out_train_labels_savelock);
-                object_method(out_test_labels,_jit_sym_lock,out_test_labels_savelock);
                 goto out;
             }
             
             if(in_labels_info.planecount > 1) {
                 (cerr << "Labels should be in a single plane matrix. Matrix received has " << in_labels_info.planecount << "." << endl);
-                object_method(out_train_labels,_jit_sym_lock,out_train_labels_savelock);
-                object_method(out_test_labels,_jit_sym_lock,out_test_labels_savelock);
                 object_method(out_train_labels,_jit_sym_lock,out_train_labels_savelock);
                 object_method(out_test_labels,_jit_sym_lock,out_test_labels_savelock);
                 goto out;
@@ -119,8 +115,6 @@ public:
             
             if(input_labels.n_cols != input_data.n_cols) {
                 (cerr << "labels wrong size. got " << input_labels.n_cols << " expected " << input_data.n_cols << "." << endl);
-                object_method(out_train_labels,_jit_sym_lock,out_train_labels_savelock);
-                object_method(out_test_labels,_jit_sym_lock,out_test_labels_savelock);
                 object_method(out_train_labels,_jit_sym_lock,out_train_labels_savelock);
                 object_method(out_test_labels,_jit_sym_lock,out_test_labels_savelock);
                 goto out;
@@ -330,11 +324,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) training data");
+                    snprintf(s, 64, "(matrix) training data");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) training labels");
+                    snprintf(s, 64, "(matrix) training labels");
                     break;
 
                 default:
@@ -344,23 +338,23 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) training data");
+                    snprintf(s, 64, "(matrix) training data");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) testing data");
+                    snprintf(s, 64, "(matrix) testing data");
                     break;
                     
                 case 2:
-                    sprintf(s, "(matrix) training labels");
+                    snprintf(s, 64, "(matrix) training labels");
                     break;
                     
                 case 3:
-                    sprintf(s, "(matrix) testing labels");
+                    snprintf(s, 64, "(matrix) testing labels");
                     break;
                     
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 

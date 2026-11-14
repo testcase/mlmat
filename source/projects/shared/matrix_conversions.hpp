@@ -726,6 +726,124 @@ arma::Row<size_t>& jit_to_arma(const int mode,
     return arma_row;
 }
 
+namespace mlmat {
+
+/// Core of jit_to_arma_limit. JT is the jit element type (t_int32 or
+/// double); values are truncated to long and clamped into the reference
+/// set bounds before being stored as indices.
+template <typename JT>
+void read_limited_indices(const c74::max::t_jit_matrix_info& minfo,
+                          const c74::max::uchar* dataptr,
+                          int mode,
+                          arma::Col<arma::uword>& arma_col,
+                          long max_x,
+                          long max_y)
+{
+    if (dataptr == nullptr)
+        return;
+
+    const size_t es = sizeof(JT);
+    const size_t d0 = size_t(minfo.dim[0]);
+    const size_t d1 = (minfo.dimcount == 1) ? 1 : size_t(minfo.dim[1]);
+    const size_t pc = size_t(minfo.planecount);
+    const size_t s0 = size_t(minfo.dimstride[0]);
+    const size_t s1 = size_t(minfo.dimstride[1]);
+    const long mx_max = max_x - 1;
+    const long my_max = max_y - 1;
+    const long m_max = max_x * max_y - 1;
+
+    switch(mode) {
+        case 0:
+            if(pc == 1) {
+                arma_col.set_size(pc * d0 * d1);
+                if (mlmat::jit_is_packed(minfo, es)) {
+                    const JT* src = (const JT*)dataptr;
+                    const size_t total = pc * d0 * d1;
+                    for (size_t i = 0; i < total; ++i) {
+                        arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), m_max));
+                    }
+                } else {
+                    size_t alem = 0;
+                    for (size_t jcol = 0; jcol < d1; ++jcol) {
+                        const c74::max::uchar* p = dataptr + jcol * s1;
+                        for (size_t jrow = 0; jrow < d0; ++jrow) {
+                            const c74::max::uchar* p1 = p + jrow * s0;
+                            for (size_t jplane = 0; jplane < pc; ++jplane) {
+                                const long d = long(*(const JT*)(p1 + jplane * es));
+                                arma_col(alem++) = arma::uword(std::clamp(d, long(0), m_max));
+                                p1 += es;
+                            }
+                        }
+                    }
+                }
+            } else if (pc == 2) {
+                // 2d coordinates clamped into the reference set bounds.
+                // (as before, this assumes fully packed data)
+                arma_col.set_size(d0 * d1);
+                size_t acol = 0;
+                const JT* p = (const JT*)dataptr;
+                for (size_t i = 0; i < d0 * d1; ++i) {
+                    const long xpos = std::clamp(long(p[2 * i]), long(0), mx_max);
+                    const long ypos = std::clamp(long(p[2 * i + 1]), long(0), my_max);
+                    arma_col(acol++) = arma::uword(xpos) + arma::uword(ypos) * arma::uword(max_x);
+                }
+            } else {
+                //ERROR
+            }
+            break;
+
+        case 1: {
+            arma_col.set_size(d0 * d1);
+            if (mlmat::jit_is_packed(minfo, es)) {
+                const JT* src = (const JT*)dataptr;
+                const size_t total = d0 * d1;
+                for (size_t i = 0; i < total; ++i) {
+                    arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), my_max));
+                }
+            } else {
+                size_t acol = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    const c74::max::uchar* p = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        const long tmp = long(*(const JT*)p);
+                        arma_col(acol++) = arma::uword(std::clamp(tmp, long(0), my_max));
+                        p += es;
+                    }
+                }
+            }
+            break;
+        }
+
+        case 2: {
+            arma_col.set_size(d0 * d1);
+            if (mlmat::jit_is_packed(minfo, es)) {
+                const JT* src = (const JT*)dataptr;
+                const size_t total = d0 * d1;
+                for (size_t i = 0; i < total; ++i) {
+                    arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), mx_max));
+                }
+            } else {
+                size_t acol = 0;
+                for (size_t jcol = 0; jcol < d1; ++jcol) {
+                    const c74::max::uchar* p = dataptr + jcol * s1;
+                    for (size_t jrow = 0; jrow < d0; ++jrow) {
+                        const long tmp = long(*(const JT*)p);
+                        arma_col(acol++) = arma::uword(std::clamp(tmp, long(0), mx_max));
+                        p += es;
+                    }
+                }
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+} // namespace mlmat
+
+
 arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
                                           const c74::max::t_object *jitter_matrix,
                                           arma::Col<arma::uword>& arma_col,
@@ -737,112 +855,18 @@ arma::Col<arma::uword>& jit_to_arma_limit(const int mode,
     c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getinfo, &minfo);
     c74::max::object_method((c74::max::t_object*)jitter_matrix, c74::max::_jit_sym_getdata, &dataptr);
 
-    if(minfo.type != c74::max::_jit_sym_long) {
+    if(minfo.type == c74::max::_jit_sym_long) {
+        mlmat::read_limited_indices<c74::max::t_int32>(minfo, dataptr, mode, arma_col, long(max_x), long(max_y));
+    } else if(minfo.type == c74::max::_jit_sym_float64) {
+        // float64 coordinates (e.g. from a single-type float64 mop) are
+        // read directly, avoiding a conversion matrix. values are
+        // truncated, so integral coordinates behave identically to the
+        // long path
+        mlmat::read_limited_indices<double>(minfo, dataptr, mode, arma_col, long(max_x), long(max_y));
+    } else {
         //ERROR FOR NOW
         return arma_col;
     }
 
-    if (dataptr == nullptr)
-        return arma_col;
-
-    const size_t es = sizeof(c74::max::t_int32);
-    const size_t d0 = size_t(minfo.dim[0]);
-    const size_t d1 = (minfo.dimcount == 1) ? 1 : size_t(minfo.dim[1]);
-    const size_t pc = size_t(minfo.planecount);
-    const size_t s0 = size_t(minfo.dimstride[0]);
-    const size_t s1 = size_t(minfo.dimstride[1]);
-    const long mx_max = long(max_x) - 1;
-    const long my_max = long(max_y) - 1;
-    const long m_max = long(max_x) * long(max_y) - 1;
-
-    switch(mode) {
-        case 0:
-            if(minfo.planecount == 1) {
-                arma_col.set_size(pc * d0 * d1);
-                if (mlmat::jit_is_packed(minfo, es)) {
-                    const c74::max::t_int32* src = (const c74::max::t_int32*)dataptr;
-                    const size_t total = pc * d0 * d1;
-                    for (size_t i = 0; i < total; ++i) {
-                        arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), m_max));
-                    }
-                } else {
-                    size_t alem = 0;
-                    for (size_t jcol = 0; jcol < d1; ++jcol) {
-                        c74::max::uchar* p = dataptr + jcol * s1;
-                        for (size_t jrow = 0; jrow < d0; ++jrow) {
-                            c74::max::uchar* p1 = p + jrow * s0;
-                            for (size_t jplane = 0; jplane < pc; ++jplane) {
-                                const c74::max::t_int32 d = *(c74::max::t_int32*)p1;
-                                arma_col(alem++) = arma::uword(std::clamp(long(d), long(0), m_max));
-                                p1 += es;
-                            }
-                        }
-                    }
-                }
-            } else if (minfo.planecount == 2) {
-                // 2d coordinates clamped into the reference set bounds.
-                // (as before, this assumes fully packed data)
-                arma_col.set_size(d0 * d1);
-                size_t acol = 0;
-                const c74::max::t_int32* p = (const c74::max::t_int32*)dataptr;
-                for (size_t i = 0; i < d0 * d1; ++i) {
-                    c74::max::t_int32 xpos = std::clamp(p[2 * i], c74::max::t_int32(0), max_x - 1);
-                    c74::max::t_int32 ypos = std::clamp(p[2 * i + 1], c74::max::t_int32(0), max_y - 1);
-                    arma_col(acol++) = arma::uword(xpos) + arma::uword(ypos) * arma::uword(max_x);
-                }
-            } else {
-                //ERROR
-            }
-            break;
-
-        case 1: {
-            arma_col.set_size(d0 * d1);
-            // (the fallback walk assumes one plane per cell)
-            if (pc == 1 && mlmat::jit_is_packed(minfo, es)) {
-                const c74::max::t_int32* src = (const c74::max::t_int32*)dataptr;
-                const size_t total = d0 * d1;
-                for (size_t i = 0; i < total; ++i) {
-                    arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), my_max));
-                }
-            } else {
-                size_t acol = 0;
-                for (size_t jcol = 0; jcol < d1; ++jcol) {
-                    c74::max::uchar* p = dataptr + jcol * s1;
-                    for (size_t jrow = 0; jrow < d0; ++jrow) {
-                        const c74::max::t_int32 tmp = *(c74::max::t_int32*)p;
-                        arma_col(acol++) = arma::uword(std::clamp(long(tmp), long(0), my_max));
-                        p += es;
-                    }
-                }
-            }
-            break;
-        }
-
-        case 2: {
-            arma_col.set_size(d0 * d1);
-            // (single-plane matrices only, as above)
-            if (pc == 1 && mlmat::jit_is_packed(minfo, es)) {
-                const c74::max::t_int32* src = (const c74::max::t_int32*)dataptr;
-                const size_t total = d0 * d1;
-                for (size_t i = 0; i < total; ++i) {
-                    arma_col(i) = arma::uword(std::clamp(long(src[i]), long(0), mx_max));
-                }
-            } else {
-                size_t acol = 0;
-                for (size_t jcol = 0; jcol < d1; ++jcol) {
-                    c74::max::uchar* p = dataptr + jcol * s1;
-                    for (size_t jrow = 0; jrow < d0; ++jrow) {
-                        const c74::max::t_int32 tmp = *(c74::max::t_int32*)p;
-                        arma_col(acol++) = arma::uword(std::clamp(long(tmp), long(0), mx_max));
-                        p += es;
-                    }
-                }
-            }
-            break;
-        }
-
-        default:
-            break;
-    }
     return arma_col;
 }

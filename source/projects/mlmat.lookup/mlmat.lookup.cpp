@@ -54,7 +54,7 @@ public:
         auto out_results = object_method(outputs, _jit_sym_getindex, 0);
 
         auto query_savelock = object_method(in_matrix, _jit_sym_lock, 1);
-        auto data_matrix_savelock = object_method(data_matrix, _jit_sym_getindex, 1);
+        auto data_matrix_savelock = object_method(data_matrix, _jit_sym_lock, 1);
         auto out_results_savelock = object_method(out_results, _jit_sym_lock, 1);
         object_method(in_matrix, _jit_sym_getinfo, &in_query_info);
         object_method(data_matrix, _jit_sym_getinfo, &in_data_info);
@@ -85,11 +85,19 @@ public:
             goto out;
         }
     
-        in_matrix_long  = convert_to_long(static_cast<t_object*>(in_matrix), in_query_info);
-        
-        query = jit_to_arma_limit(mode, static_cast<t_object*>(in_matrix_long), query, in_data_info.dim[0], in_data_info.dim[1]);
+        // jit_to_arma_limit reads float64 (the usual case, since the mop is
+        // single-type float64) and long matrices directly; other types go
+        // through a conversion matrix
+        if(in_query_info.type != _jit_sym_float64 && in_query_info.type != _jit_sym_long) {
+            in_matrix_long  = convert_to_long(static_cast<t_object*>(in_matrix), in_query_info);
+        }
 
-        query.clamp(0, (m_data->n_cols-1));//this is extra safeguard. could remove
+        query = jit_to_arma_limit(mode, static_cast<t_object*>(in_matrix_long ? in_matrix_long : in_matrix), query, in_data_info.dim[0], in_data_info.dim[1]);
+
+        // safeguard: the limit clamps against the *current* data matrix dims,
+        // while m_data is the stored snapshot; this guards against the data
+        // matrix having changed since
+        query.clamp(0, (m_data->n_cols-1));
 
         resulting = m_data->cols(query);
         
@@ -124,7 +132,7 @@ public:
 
     out:
         
-        if(in_matrix != in_matrix_long) { jit_object_free(in_matrix_long); }
+        if(in_matrix_long != nullptr && in_matrix != in_matrix_long) { jit_object_free(in_matrix_long); }
         object_method(in_matrix,_jit_sym_lock,query_savelock);
         object_method(data_matrix,_jit_sym_lock,data_matrix_savelock);
         object_method(out_results,_jit_sym_lock,out_results_savelock);
@@ -226,11 +234,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 1:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) coordinates");
+                    snprintf(s, 64, "(matrix) coordinates");
                     break;
 
                 case 1:
-                    sprintf(s, "(matrix) dataset");
+                    snprintf(s, 64, "(matrix) dataset");
                     break;
 
                 default:
@@ -240,11 +248,11 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
         case 2:
             switch(index) {
                 case 0:
-                    sprintf(s, "(matrix) results");
+                    snprintf(s, 64, "(matrix) results");
                     break;
 
                 default:
-                    sprintf(s, "dumpout");
+                    snprintf(s, 64, "dumpout");
                     break;
             }
 
