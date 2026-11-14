@@ -658,7 +658,7 @@ private:
             
                 dgmm.Weights() = m_model.model->Weights();
 
-                EMFit<KMeansType, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution> em(max_iterations, tolerance, k);
+                EMFit<KMeansType, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution<>> em(max_iterations, tolerance, k);
                 likelihood = dgmm.Train(data, trials, false, em);
                 for (size_t i = 0; i < size_t(gaussians); ++i) {
                     m_model.model->Component(i).Mean() = dgmm.Component(i).Mean();
@@ -689,7 +689,7 @@ private:
             
                 dgmm.Weights() = m_model.model->Weights();
 
-                EMFit<KMeans<>, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution> em(max_iterations, tolerance, KMeans<>(kmeans_max_iterations));
+                EMFit<KMeans<>, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution<>> em(max_iterations, tolerance, KMeans<>(kmeans_max_iterations));
                 likelihood = dgmm.Train(data, trials, false, em);
                 for (size_t i = 0; i < size_t(gaussians); ++i) {
                     m_model.model->Component(i).Mean() = dgmm.Component(i).Mean();

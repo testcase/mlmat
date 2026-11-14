@@ -237,7 +237,7 @@ public:
                 goto out;
             }
             float o = overlap;
-            vDSP_vsmul(m_samples.data(), 1, &o, m_samples.data(), 1, m_samples.size());
+            for (auto& s : m_samples) { s *= o; }
 //            m_samples *= overlap;
             max::buffer_setdirty(buffer);
             update_buffer.set();

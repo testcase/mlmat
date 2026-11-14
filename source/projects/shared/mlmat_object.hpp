@@ -32,7 +32,7 @@ inline void save_model_file(const c74::min::atoms& args,
             c74::max::path_toabsolutesystempath(path, filename, fullpath);
             c74::max::path_nameconform(fullpath, native_path, c74::max::PATH_STYLE_NATIVE, c74::max::PATH_TYPE_PATH);
             try {
-                mlpack::data::Save(std::string(fullpath), model_description, model, true);
+                mlpack::Save(std::string(fullpath), model_description, model, true);
             }
             catch (const std::runtime_error& s) {
                 std::throw_with_nested(std::runtime_error("Error writing model file to disk."));
@@ -43,7 +43,7 @@ inline void save_model_file(const c74::min::atoms& args,
                 c74::max::path_toabsolutesystempath(path, filename, fullpath);
                 c74::max::path_nameconform(fullpath, native_path, c74::max::PATH_STYLE_NATIVE, c74::max::PATH_TYPE_PATH);
                 try {
-                    mlpack::data::Save(std::string(fullpath), model_description, model, true);
+                    mlpack::Save(std::string(fullpath), model_description, model, true);
                 }
                 catch (const std::runtime_error& s) {
                     std::throw_with_nested(std::runtime_error("Error writing model file to disk."));
@@ -65,7 +65,7 @@ class mlmat_serializable_model
 public:
     std::unique_ptr<class_type> model{ nullptr };
     //bool model_trained = false;
-    std::unique_ptr<mlpack::data::ScalingModel> scaler{ nullptr };
+    std::unique_ptr<mlpack::ScalingModel> scaler{ nullptr };
     bool scaler_changed = false;
     long dim0 = 0;//this is lame but cant see how else to do this. only needed for mode 0 with 2d reference matrix
     long dimcount = 1; //the horror
@@ -232,7 +232,7 @@ public:
         
         if(p) {
             try {
-                mlpack::data::Load(std::string(p), classname(), m_model, true);
+                mlpack::Load(std::string(p), classname(), m_model, true);
             } catch (const std::runtime_error& s) {
                 std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
             }
@@ -253,19 +253,19 @@ public:
         const std::string scalertype_string = scaler.get().c_str();
         
         if(autoscale) {
-            s.scaler = std::make_unique<mlpack::data::ScalingModel>(scaler_min, scaler_max, scaler_epsilon);
+            s.scaler = std::make_unique<mlpack::ScalingModel>(scaler_min, scaler_max, scaler_epsilon);
             if(scalertype_string == "standard") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::STANDARD_SCALER;
+                s.scaler->ScalerType() = mlpack::ScalingModel::STANDARD_SCALER;
             } else if(scalertype_string == "min_max") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::MIN_MAX_SCALER;
+                s.scaler->ScalerType() = mlpack::ScalingModel::MIN_MAX_SCALER;
             } else if(scalertype_string == "normalization") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::MEAN_NORMALIZATION;
+                s.scaler->ScalerType() = mlpack::ScalingModel::MEAN_NORMALIZATION;
             } else if(scalertype_string == "abs") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::MAX_ABS_SCALER;
+                s.scaler->ScalerType() = mlpack::ScalingModel::MAX_ABS_SCALER;
             } else if(scalertype_string == "pca_whitening") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::PCA_WHITENING;
+                s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
             } else if(scalertype_string == "zca_whitening") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::PCA_WHITENING;
+                s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
             }
             s.scaler->Fit(arma_matrix);
         }
@@ -425,7 +425,7 @@ public:
         
         if(p) {
             try {
-                mlpack::data::Load(std::string(p), classname(), m_model, true);
+                mlpack::Load(std::string(p), classname(), m_model, true);
             } catch (const std::runtime_error& s) {
                 std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
             }
@@ -446,19 +446,19 @@ public:
         const std::string scalertype_string = scaler.get().c_str();
         
         if(autoscale) {
-            s.scaler = std::make_unique<mlpack::data::ScalingModel>(scaler_min, scaler_max, scaler_epsilon);
+            s.scaler = std::make_unique<mlpack::ScalingModel>(scaler_min, scaler_max, scaler_epsilon);
             if(scalertype_string == "standard") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::STANDARD_SCALER;
+                s.scaler->ScalerType() = mlpack::ScalingModel::STANDARD_SCALER;
             } else if(scalertype_string == "min_max") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::MIN_MAX_SCALER;
+                s.scaler->ScalerType() = mlpack::ScalingModel::MIN_MAX_SCALER;
             } else if(scalertype_string == "normalization") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::MEAN_NORMALIZATION;
+                s.scaler->ScalerType() = mlpack::ScalingModel::MEAN_NORMALIZATION;
             } else if(scalertype_string == "abs") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::MAX_ABS_SCALER;
+                s.scaler->ScalerType() = mlpack::ScalingModel::MAX_ABS_SCALER;
             } else if(scalertype_string == "pca_whitening") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::PCA_WHITENING;
+                s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
             } else if(scalertype_string == "zca_whitening") {
-                s.scaler->ScalerType() = mlpack::data::ScalingModel::PCA_WHITENING;
+                s.scaler->ScalerType() = mlpack::ScalingModel::PCA_WHITENING;
             }
             s.scaler->Fit(arma_matrix);
         }

@@ -24,7 +24,6 @@ using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
 using namespace mlpack::util;
-using namespace mlpack::data;
 
 typedef NSModel<NearestNeighborSort> KNNModel;
 // C function declarations
@@ -352,7 +351,7 @@ public:
         scaler_fit(m_model, dat);
         out_data = scaler_transform(m_model, dat, out_data);
         
-        m_model.model->BuildModel(u, std::move(out_data), search_mode, epsilon);
+        m_model.model->BuildModel(u, std::move(out_data), ModeToStrategy(search_mode), epsilon);
         m_mode_changed = false;
     out:
         

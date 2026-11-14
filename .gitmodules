@@ -12,4 +12,10 @@
 	url = https://github.com/mlpack/ensmallen.git
 [submodule "source/armadillo-code"]
 	path = source/armadillo-code
-	url = https://gitlab.com/conradsnicta/armadillo-code.git
+	url = https://gitlab.com/armadillo-lib/armadillo-code.git
+[submodule "source/bqfft"]
+	path = source/bqfft
+	url = https://github.com/breakfastquay/bqfft.git
+[submodule "source/bqvec"]
+	path = source/bqvec
+	url = https://github.com/breakfastquay/bqvec.git

@@ -4,7 +4,6 @@
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 
-#include <Accelerate/Accelerate.h>
 #include "c74_min.h"
 #include <algorithm>
 #include <iostream>

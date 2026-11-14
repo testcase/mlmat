@@ -57,7 +57,7 @@ public:
             path p {f, path::filetype::any};
 
             m_dataset = std::make_unique<arma::mat>();
-            mlpack::data::Load<double>(string(p), *m_dataset, false, transpose);
+            mlpack::Load<double>(string(p), *m_dataset, false, transpose);
         }
         catch (...) {
             (cerr << "Could not read file " << endl);

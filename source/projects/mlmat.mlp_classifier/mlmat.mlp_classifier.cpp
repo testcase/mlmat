@@ -103,8 +103,8 @@ public:
                 //(std::cout << "hidden layer: " << hidden_neurons.get() << " inputs " << hidden_neurons.get() << " outputs" << std::endl);
             }
                 
-            m_model.model->Add<LinearType<arma::mat, NoRegularizer>>(hidden_neurons.get());
-            m_model.model->Add<LogSoftMaxType<>>();
+            m_model.model->Add<Linear>(hidden_neurons.get());
+            m_model.model->Add<LogSoftMax<>>();
             //removing will test when labels inpput
             //double diff = m_labels_min - 1.0;
             //labels = labels - diff;
@@ -142,24 +142,24 @@ public:
         const string layer_string = layer_type.c_str();
         
         if(layer_string == "sigmoid") {
-            m_model.model->Add<mlpack::SigmoidType<>>();
+            m_model.model->Add<mlpack::Sigmoid<>>();
 
         } else if(layer_string == "gaussian") {
-            m_model.model->Add<GaussianType<>>();
+            m_model.model->Add<Gaussian<>>();
 
         } else if(layer_string == "relu") {
-            m_model.model->Add<ReLUType<>>();
+            m_model.model->Add<ReLU<>>();
 
         } else if(layer_string == "tanh") {
-            m_model.model->Add<TanHType<>>();
+            m_model.model->Add<TanH<>>();
 
         } else if(layer_string == "soft_plus") {
-            m_model.model->Add<SoftPlusType<>>();
+            m_model.model->Add<SoftPlus<>>();
 
         } else if(layer_string == "linear") {
-            m_model.model->Add<LinearType<arma::mat, NoRegularizer>>();
+            m_model.model->Add<Linear>();
         } else if(layer_string == "identity") {
-            m_model.model->Add<IdentityType<>>();
+            m_model.model->Add<Identity<>>();
         }
 
     }

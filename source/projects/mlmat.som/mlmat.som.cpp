@@ -282,7 +282,7 @@ public:
 
        if(p) {
            try {
-               mlpack::data::Load(string(p), "som", m_model, true);
+               mlpack::Load(string(p), "som", m_model, true);
            } catch (const std::runtime_error& s) {
                std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
            }

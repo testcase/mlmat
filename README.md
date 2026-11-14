@@ -6,10 +6,6 @@ The package is most reliant on the [mlpack](https://www.mlpack.org) and [armadil
 
 Many of the description of classes and their use comes from the main source code or the many wonderful examples included with mlpack. 
 
-## Building:
-This package is using the [min-devkit](https://github.com/Cycling74/min-devkit) however there are a couple 
-fixes in the local version related to issue #189 #168 #184 #183
-
 ## Data conversion
 Armadillo matrices are organized in memory using column major order. When used with mlpack classes
 each column in the matrix is a data point or feature vector and each row is elements of vector.
@@ -32,221 +28,24 @@ In this mode jitter matrices are going to be 1 or 2d with a single plane. Each c
 	
 ## Building
 
-Over view
-0. Clone repo 
-1. Build armadillo static lib
-2. Install prereqs for buildng mlpack
-3. Build mlpack static lib
-4. Generate projects and build objects
-
-
-### Clone rep
-
-remember this to get all min-api stuff :
-* `git submodule init`
-* `git submodule update --init --recursive`
-
-### Apply patch
-
-cd source/min-api
-
-git apply ../../better_docs.patch
-
-
-## Building on macOS
-
-### Build armadillo static lib
-
-`cd source/armadillo` to go to armadillo directory
-
-run `mkdir build` to create build directory
-
-`cd build`
-
-This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment.
-
-`cmake  -DBUILD_SHARED_LIBS=OFF -DALLOW_BLAS_LAPACK_MACOS=ON -DALLOW_OPENBLAS_MACOS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15  -G Xcode ..`
-
-You can now use 
-
-`cmake --build . --config Release` to build release version of library
-
-if wanting to debug also do
-
-`cmake --build . --config Debug`
-
-You should now have static library at build/Release/libarmadillo.a
-
-
-### Ensmallen
-
-in source directory:
-
-`cd source/ensmallen`
-
-`mkdir build`
-
-`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" ..`
-
-this just copies headers into ./include so nothing more to do here.
-
-### Cereal
-
-only headers being used so no cmake needed
-
-
-### Build mlpack static lib 
-
-From the source/mlpack directory run
-`mkdir build`
-
-`cd build`
-
-These are the cmake options I use. mlpack has a number of potential bindings but these are not of use for this project
-
-`cmake -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.a" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo-coed/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DCMAKE_INSTALL_PREFIX=./ -G Xcode ..`
-
-
-
-You can now use 
-
-`cmake --build . --config Release` to build release version of library
-
-if wanting to debug also do
-
-`cmake --build . --config Debug`
-
-### Generate projects and build
-
-cd into main mlmat directory
-
-run 
-`mkdir build`
-
-`cd build`
-
-`cmake -GXcode ..`
-
-You should now be able to do the following
-
-`cmake --build . --config Release` to build release version of library
-
-if wanting to debug also do
-
-`cmake --build . --config Debug`
-
-
-
-### Removed windows instructions until working better
-
-<!-- 
-
-## Building on Windows
-
-A few more steps here mainly to get armadillo to build.
-
-I am using vcpkg to get dependencies. I am building against static libs 
-
-First use vcpkg 
-
-vcpkg install lapack:x64-windows-static
-vcpkg install openblas:x64-windows-static   -- this also install openblas and lapack. 
-
-
-
-### Build armadillo static lib
-
-`cd source/armadillo` to go to armadillo directory
-
-run `mkdir build` to create build directory
-
-`cd build`
-
-This is the cmake I use. I do not install superlu, ARPACK, OpenBLAS, or hdf5 at the moment.
-
-Replace `[path to vcpkg]` with the correct path for your system
-
-`cmake  -DBUILD_SHARED_LIBS=OFF  -DARMA_USE_WRAPPER=ON  -DCMAKE_TOOLCHAIN_FILE=C:/Users/Administrator/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" ..`
-
-You can now use 
-
-`cmake --build . --config Release` to build release version of library
-
-if wanting to debug also do
-
-`cmake --build . --config Debug`
-
-You should now have static library at build/Release/libarmadillo.a
-
-### Ensmallen
-
-in source directory:
-
-`cd source/ensmallen`
-
-`mkdir build`
-
-Replace `[path to vcpkg]` with the correct path for your system
-
-`cmake -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCMAKE_TOOLCHAIN_FILE="C:/Users/Administrator/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" ..`
-
-this just copies headers into ./include so nothing more to do here.
-
-### Cereal
-
-only headers being used so no cmake needed
-
-
-### Build mlpack static lib 
-
-delete directory src/mlpack/core/std_backport
-Remove the line "std_backport" from src/mlpack/core/CMakeLists.txt (if it exists)
-Use the C++17 standard by modifying the mlpack/CMakeLists.txt  change line  `set(CMAKE_CXX_STANDARD 11)` to `set(CMAKE_CXX_STANDARD 17)`
-
-From the source/mlpack directory run
-`mkdir build`
-
-`cd build`
-
-These are the cmake options I use. mlpack has a number of potential bindings but these are not of use for this project
-
-Replace `[path to vcpkg]` with the correct path for your system
-
-`cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE="[path to vcpkg]/scripts/buildsystems/vcpkg.cmake" -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../armadillo/build/Release/libarmadillo.lib" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -DBOOST_ROOT="../boost_1_79_0" -DBOOST_INCLUDE_DIR="../boost_1_79_0" -DDISABLE_DOWNLOADS=ON -G "Visual Studio 17 2022" ..`
- 
-You can now use 
-
-`cmake --build . --config Release` to build release version of library
-
-if wanting to debug also do
-
-`cmake --build . --config Debug`
-
-### Generate projects and build
-
-cd into main mlmat directory
-
-run 
-`mkdir build`
-
-`cd build`
-
-`cmake -DCMAKE_TOOLCHAIN_FILE=C:/Users/Administrator/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake  -G "Visual Studio 16 2019" ..`
-
-
-You should now be able to do the following 
-
-`cmake --build . --config Release` to build release version of library
-
-if wanting to debug also do
-
-`cmake --build . --config Debug`
-
-
-
-
-
-potential future objects
+See [BUILD.md](BUILD.md) for complete instructions for macOS and Windows.
+In short:
+
+```
+git clone --recursive <repo>
+cmake --preset macos        # or: windows
+cmake --build --preset macos-release   # or: windows-release
+```
+
+All third-party dependencies are git submodules (see BUILD.md for the pinned
+versions). mlpack, ensmallen, cereal and armadillo are consumed header-only,
+and armadillo is used in no-wrapper mode linked directly against BLAS/LAPACK
+(Apple Accelerate on macOS, static OpenBLAS/clapack on Windows), so no
+third-party libraries need to be built separately or distributed with the
+package. The spectral objects (buffer_stft, buffer_istft, buffer_griffinlim)
+use bqfft, which uses vDSP on macOS and its built-in FFT on Windows.
+
+## Potential future objects
 
 * 	mlpack.variational_autoencoder - have one working but unclear if useful given constraints. _
 *	mlpack.naive_bayes - probabilistic clustering. 
@@ -264,41 +63,37 @@ type of mapping object that one could give examples to and it could be told to l
 For many applications one wants multiples of a type of model. For instance 1 hmm for each example of a gesture. This can be done through patching but might want 
 to have objects that create a bank of objects and can dynamically add to the bank if more models are needed.
 	
-## Examples 
+## Examples
 Have been working on examples and helpfiles. Will be going back and adding more descriptions so auto-generated ref files are better. 
 	
 
 	
 
-[X]mlmat.convert.maxhelp
-[X]mlmat.gmm.maxhelp
-[X]mlmat.hoeffding_tree.maxhelp
-[X]mlmat.id3_tree.maxhelp
-[X]mlmat.kfn.maxhelp
-[X]mlmat.kmeans.maxhelp
-[X]mlmat.knn.maxhelp
+[x]mlmat.convert.maxhelp
+[x]mlmat.gmm.maxhelp
+[x]mlmat.hoeffding_tree.maxhelp
+[x]mlmat.id3_tree.maxhelp
+[x]mlmat.kfn.maxhelp
+[x]mlmat.kmeans.maxhelp
+[x]mlmat.knn.maxhelp
 [ ]mlmat.linear_regression.maxhelp
 [ ]mlmat.linear_svm.maxhelp
-[X]mlmat.load.maxhelp
-[X]mlmat.lookup.maxhelp
-[X]mlmat.mean_shift.maxhelp
-[X]mlmat.mlp_classifier.maxhelp
-[X]mlmat.mlp_regressor.maxhelp
-[X]mlmat.pca.maxhelp
-[X]mlmat.scaling.maxhelp
-[X]mlmat.som.maxhelp
-[X]mlmat.sparse_autoencoder.maxhelp
+[x]mlmat.load.maxhelp
+[x]mlmat.lookup.maxhelp
+[x]mlmat.mean_shift.maxhelp
+[x]mlmat.mlp_classifier.maxhelp
+[x]mlmat.mlp_regressor.maxhelp
+[x]mlmat.pca.maxhelp
+[x]mlmat.scaling.maxhelp
+[x]mlmat.som.maxhelp
+[x]mlmat.sparse_autoencoder.maxhelp
 [ ]mlmat.split.maxhelp
 [ ]mlmat.starter.maxhelp
 
 
- -->
-	
+ 
 
-
-
-
-
+---
 
 Armadillo C++ Linear Algebra Library
 Copyright 2008-2022 Conrad Sanderson (http://conradsanderson.id.au)

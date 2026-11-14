@@ -29,6 +29,8 @@ endif()
 # Misc setup and subroutines
 include(${CMAKE_CURRENT_SOURCE_DIR}/source/min-api/script/min-package.cmake)
 
+# Centralized third-party dependency targets (mlmat::deps, mlmat::fft)
+include(${CMAKE_CURRENT_SOURCE_DIR}/source/cmake/mlmat_deps.cmake)
 
 # Add the Lib, if it exists
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/source/min-lib/CMakeLists.txt")
@@ -44,6 +46,13 @@ foreach (project_dir ${PROJECT_DIRS})
         add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/projects/${project_dir})
     endif ()
 endforeach ()
+
+# mlpack 4.x uses C++17 <filesystem>, which requires macOS 10.15 or later.
+# (The min-api scripts force the deployment target back to 10.11 in each
+# project subdirectory, so this must be set again after them.)
+if (APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum OS X deployment version" FORCE)
+endif ()
 
 # Comment the line below if you want automatic cmake regneration enabled
 set(CMAKE_SUPPRESS_REGENERATION true)

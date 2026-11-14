@@ -1,80 +1,69 @@
-name: build windows release manually triggered 
-  
-# Controls when the action will run. Workflow runs when manually triggered using the UI
-# or API.
-on:
-  workflow_dispatch:
-    # Inputs the workflow accepts.
-    inputs:
-      name:
-        # Friendly description to be shown in the UI instead of 'name'
-        description: 'making mlmat'
-        # Default value if no value is explicitly provided
-        default: 'make'
-        # Input has to be provided for the workflow to run
-        required: true
-        # The data type of the input
-        type: string
+name: build (windows)
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# Tag pushes of the form v0.6.0 build a release: the version is taken from
+# the tag, stamped into package-info.json, and the zipped package is
+# attached (together with the macOS build) to a GitHub release with the same
+# name. Manual runs only build and upload an artifact.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build_windows:
-    name: build windows
+    name: build windows externals (x64)
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: build arma
-      run: | 
-        cd source/armadillo-code
-        mkdir build
-        cd build
-        cmake -DBUILD_SHARED_LIBS=OFF -G "Visual Studio 17 2022" -A x64 ..
-        cmake --build . --config Release
-    - name: build ensmallen
-      run: | 
-        cd source/ensmallen
-        mkdir build
-        cd build
-        cmake -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" ..
-    - name: build mlpack
-      run: | 
-        cd source/mlpack
-        mkdir build
-        cd build
-        cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DBUILD_JULIA_BINDINGS=OFF -DBUILD_GO_BINDINGS=OFF -DBUILD_R_BINDINGS=OFF -DARMADILLO_LIBRARY="../../armadillo-code/build/Release/armadillo.lib" -DENSMALLEN_INCLUDE_DIR="../../ensmallen/include" -DARMADILLO_INCLUDE_DIR="../../armadillo-code/include" -DCEREAL_INCLUDE_DIR="../../cereal/include" -G "Visual Studio 17 2022" -A x64 ..
-        cmake --build . --config Release
-    - name: build mlmat
-      run: | 
-        mkdir build
-        cd build
-        cmake -G "Visual Studio 17 2022" -A x64 ..
-        cmake --build . --config Release
 
-    # - name: make zip file
-    #   run: |
-    #     mkdir mlmat
-    #     mv ./examples ./mlmat
-    #     mv ./extras ./mlmat
-    #     mv ./externals ./mlmat
-    #     mv ./help ./mlmat 
-    #     mv ./init ./mlmat
-    #     mv ./javascript ./mlmat
-    #     mv ./misc ./mlmat
-    #     mv ./patchers ./mlmat
-    #     mv LICENSE ./mlmat
-    #     mv README.md ./mlmat
-    #     mv package-info.json ./mlmat
-    #     zip -r mlmat mlmat
-    # - name: Create Release
-    #   uses: softprops/action-gh-release@v0.1.15
-    #   with:
-    #     tag_name: "v0.5.0"
-    #     files: mlmat_windows.zip
-    #     token: ${{ secrets.THIS_REPO }}
+    # GitHub runners ship vcpkg; the build consumes it in manifest mode
+    # (vcpkg.json) through the toolchain file referenced by the preset.
+    - name: configure
+      env:
+        VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
+      run: cmake --preset windows
 
-    
-    
+    - name: build
+      env:
+        VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
+      run: cmake --build --preset windows-release
+
+    - name: stamp version from tag
+      if: startsWith(github.ref, 'refs/tags/')
+      shell: pwsh
+      run: |
+        $version = "${env:GITHUB_REF_NAME}".TrimStart('v')
+        (Get-Content package-info.json) `
+          -replace '"version"\s*:\s*"[^"]*"', ('"version" : "' + $version + '"') |
+          Set-Content package-info.json
+
+    - name: zip package
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Name mlmat | Out-Null
+        $items = "examples", "extras", "externals", "help", "init",
+                 "javascript", "misc", "patchers", "LICENSE", "README.md",
+                 "BUILD.md", "package-info.json"
+        foreach ($item in $items) {
+          Move-Item -Path $item -Destination mlmat
+        }
+        Compress-Archive -Path mlmat -DestinationPath mlmat_windows.zip
+
+    - name: upload artifact (manual runs)
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlmat-windows
+        path: mlmat_windows.zip
+
+    - name: create release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        files: mlmat_windows.zip
+        token: ${{ secrets.THIS_REPO }}

@@ -17,7 +17,6 @@
 #define MLPACK_METHODS_PCA_PCA_EXT_IMPL_HPP
 
 #include <mlpack/prereqs.hpp>
-#include <mlpack/core/math/lin_alg.hpp>
 #include "pca_ext.hpp"
 
 namespace mlpack {
@@ -46,8 +45,8 @@ double PCA_EXT<DecompositionPolicy>::Apply(arma::mat& data,
         << data.n_rows << ")!" << std::endl;
 
   // Center the data into a temporary matrix.
-  arma::mat centeredData;
-  Center(data, centeredData);
+  arma::mat centeredData = data;
+  centeredData.each_col() -= arma::mean(centeredData, 1);
 
   // Scale the data if the user ask for.
   ScaleData(centeredData);

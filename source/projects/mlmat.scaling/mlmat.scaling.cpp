@@ -13,7 +13,7 @@
 using namespace c74;
 using namespace c74::min;
 using namespace c74::max;
-using namespace mlpack::data;
+using namespace mlpack;
 
 void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
@@ -100,7 +100,7 @@ public:
                 max::path_nameconform(fullpath, native_path, max::PATH_STYLE_NATIVE, max::PATH_TYPE_PATH);
                // std::cout << native_path << std::endl;
                 try {
-                    mlpack::data::Save(string(fullpath), "scaling_model", *m_model, true);
+                    mlpack::Save(string(fullpath), "scaling_model", *m_model, true);
                 } catch (const std::runtime_error& s) {
                     (cerr  <<  "error writing model file."  << endl);
                 }
@@ -112,7 +112,7 @@ public:
                     path_nameconform(fullpath, native_path, max::PATH_STYLE_NATIVE, max::PATH_TYPE_PATH);
                     //std::cout << native_path << std::endl;
                     try {
-                        mlpack::data::Save(string(fullpath), "scaling_model", *m_model, true);
+                        mlpack::Save(string(fullpath), "scaling_model", *m_model, true);
                     } catch (const std::runtime_error& s) {
                         (cerr << "error writing model file." << endl);
                     }
@@ -141,7 +141,7 @@ public:
     
         try {
             ScalingModel *tmp = new ScalingModel();
-            mlpack::data::Load(string(p), "scaling_model", *tmp, true);
+            mlpack::Load(string(p), "scaling_model", *tmp, true);
             m_model.reset( tmp );
             m_model_trained = true;
         } catch (const std::runtime_error& s) {

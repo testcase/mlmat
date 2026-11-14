@@ -109,11 +109,11 @@ public:
             
             
             if(typeId == HMMType::DiscreteHMM) {
-                HMM<DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
+                HMM<DiscreteDistribution<>>* hmm = m_model.model->DiscreteHMM();
                 init_hmm(hmm);
             }
             else if (typeId == HMMType::GaussianHMM) {
-                HMM<GaussianDistribution>* hmm = m_model.model->GaussianHMM();
+                HMM<GaussianDistribution<>>* hmm = m_model.model->GaussianHMM();
                 init_hmm(hmm);
                 
             } else if (typeId == HMMType::GaussianMixtureModelHMM) {
@@ -186,11 +186,11 @@ public:
             
             
             if(typeId == HMMType::DiscreteHMM) {
-                HMM<DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
+                HMM<DiscreteDistribution<>>* hmm = m_model.model->DiscreteHMM();
                 hmm->Generate(num, samples, states, start);
             }
             else if (typeId == HMMType::GaussianHMM) {
-                HMM<GaussianDistribution>* hmm = m_model.model->GaussianHMM();
+                HMM<GaussianDistribution<>>* hmm = m_model.model->GaussianHMM();
                 hmm->Generate(num, samples, states, start);
                 
             } else if (typeId == HMMType::GaussianMixtureModelHMM) {
@@ -311,7 +311,7 @@ public:
         typeId = m_model.model->Type();
         
         if(typeId == HMMType::DiscreteHMM) {
-            HMM<DiscreteDistribution>* hmm = m_model.model->DiscreteHMM();
+            HMM<DiscreteDistribution<>>* hmm = m_model.model->DiscreteHMM();
             if(hmm != nullptr) {
                 try {
                     CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
@@ -325,7 +325,7 @@ public:
 //            k
             //(cout << "predict " << p << endl);
         }  else if (typeId == HMMType::GaussianHMM) {
-            HMM<GaussianDistribution>* hmm = m_model.model->GaussianHMM();
+            HMM<GaussianDistribution<>>* hmm = m_model.model->GaussianHMM();
             if(hmm != nullptr) {
                 try {
                     CheckSameDimensionality(query, hmm->Emission()[0].Dimensionality(), "gmm", "sequence");
@@ -380,7 +380,7 @@ public:
         
     }
     
-    t_jit_err init_hmm(HMM<DiscreteDistribution>* hmm) {
+    t_jit_err init_hmm(HMM<DiscreteDistribution<>>* hmm) {
         t_jit_err err = JIT_ERR_NONE;
         arma::Col<size_t> maxEmissions(m_observations[0].n_rows);
         maxEmissions.zeros();
@@ -390,8 +390,8 @@ public:
         }
         
         if(hmm != nullptr) {
-            *hmm = HMM<DiscreteDistribution>(size_t(states), DiscreteDistribution(maxEmissions), tolerance);
-            std::vector<DiscreteDistribution>& e = hmm->Emission();
+            *hmm = HMM<DiscreteDistribution<>>(size_t(states), DiscreteDistribution<>(maxEmissions), tolerance);
+            std::vector<DiscreteDistribution<>>& e = hmm->Emission();
             for (size_t i = 0; i < e.size(); ++i)
             {
                 e[i].Probabilities().randu();
@@ -413,7 +413,7 @@ public:
         return err;
     }
     
-    t_jit_err init_hmm(HMM<GaussianDistribution>* hmm) {
+    t_jit_err init_hmm(HMM<GaussianDistribution<>>* hmm) {
         t_jit_err err = JIT_ERR_NONE;
         // Find dimension of the data.
         const size_t dimensionality = m_observations[0].n_rows;
@@ -430,9 +430,9 @@ public:
         }
         
         if(hmm != nullptr) {
-            *hmm = HMM<GaussianDistribution>(size_t(states), GaussianDistribution(dimensionality), tolerance);
+            *hmm = HMM<GaussianDistribution<>>(size_t(states), GaussianDistribution<>(dimensionality), tolerance);
             
-            std::vector<GaussianDistribution>& e = hmm->Emission();
+            std::vector<GaussianDistribution<>>& e = hmm->Emission();
             for (size_t i = 0; i < e.size(); ++i) {
                 const size_t dimensionality = e[i].Mean().n_rows;
                 e[i].Mean().randu();

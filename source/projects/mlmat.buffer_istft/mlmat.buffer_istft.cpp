@@ -170,7 +170,7 @@ public:
             size_t step = fftsize / overlap;
             size_t fftsize_2 = fftsize / 2;
             m_samples.resize(b_frame_count+step);
-            vDSP_vclr(m_samples.data(), 1, b_frame_count+step);
+            std::fill(m_samples.begin(), m_samples.begin() + b_frame_count + step, 0.0f);
             size_t num_bins = fftsize_2;
             
             std::vector<float> in_real(b_frame_count+step);

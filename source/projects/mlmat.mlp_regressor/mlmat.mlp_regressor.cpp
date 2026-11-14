@@ -154,22 +154,22 @@ public:
         const string layer_string = layer_type.c_str();
         
         if(layer_string == "sigmoid") {
-            m_model.model->Add<SigmoidType<>>();
+            m_model.model->Add<Sigmoid<>>();
 
         } else if(layer_string == "gaussian") {
-            m_model.model->Add<GaussianType<>>();
+            m_model.model->Add<Gaussian<>>();
 
         } else if(layer_string == "relu") {
-            m_model.model->Add<ReLUType<>>();
+            m_model.model->Add<ReLU<>>();
 
         } else if(layer_string == "tanh") {
-            m_model.model->Add<TanHType<>>();
+            m_model.model->Add<TanH<>>();
 
         } else if(layer_string == "soft_plus") {
-            m_model.model->Add<SoftPlusType<>>();
+            m_model.model->Add<SoftPlus<>>();
 
         } else if(layer_string == "identity") {
-            m_model.model->Add<IdentityType<>>();
+            m_model.model->Add<Identity<>>();
         }
 
     }

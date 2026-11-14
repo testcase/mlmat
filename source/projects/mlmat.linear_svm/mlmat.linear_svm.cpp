@@ -122,7 +122,7 @@ public:
             
             m_model.model = std::make_unique<LinearSVMModel>();
             
-            data::NormalizeLabels(*m_labels, labels, m_model.model->mappings);
+            NormalizeLabels(*m_labels, labels, m_model.model->mappings);
             
             numClasses = (num_classes == 0) ? m_model.model->mappings.n_elem : num_classes;
             m_model.model->svm.Lambda() = lambda;
@@ -230,7 +230,7 @@ public:
         
         
         //map normalized labels back to original labels.
-        data::RevertLabels(predicted_labels, m_model.model->mappings, predictions);
+        RevertLabels(predicted_labels, m_model.model->mappings, predictions);
         out_predictions_info = in_query_info;
         out_predictions_info.planecount = 1;
         

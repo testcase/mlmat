@@ -18,7 +18,6 @@ using namespace c74::min;
 using namespace c74::max;
 using namespace mlpack;
 using namespace mlpack::util;
-using namespace mlpack::data;
 typedef std::tuple<DatasetInfo, arma::mat> TupleType;
 
 void mlmat_assist(void* x, void* b, long io, long index, char* s);
@@ -169,7 +168,7 @@ public:
                 dataset_info.SetDimensionality(m_data->n_rows);
                 
                 for (auto i = 0; i < dataset_info.Dimensionality(); i++) {
-                    dataset_info.Type(i) = data::Datatype::numeric;
+                    dataset_info.Type(i) = Datatype::numeric;
                 }
                 // this will reset the model and build a new one. if batch_mode is true will also train using 1 pass
                 m_model.model->BuildModel(out_data, dataset_info, *m_labels, numClasses, batch_mode, confidence, max_samples, check_interval, min_samples, bins, observations_before_binning);
@@ -360,7 +359,7 @@ private:
 
         if(p) {
             try {
-                mlpack::data::Load(string(p), "hoeffding_tree", m_model, true);
+                mlpack::Load(string(p), "hoeffding_tree", m_model, true);
             } catch (const std::runtime_error& s) {
                 std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
             }

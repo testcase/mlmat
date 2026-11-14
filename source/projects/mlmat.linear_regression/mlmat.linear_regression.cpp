@@ -6,6 +6,7 @@
 
 #include "mlmat.hpp"
 #include <mlpack/methods/linear_regression/linear_regression.hpp>
+#include <memory>
 
 using namespace c74::min;
 using namespace c74::max;
@@ -16,7 +17,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s);
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
 void max_mlmat_jit_matrix(max_jit_wrapper *x, t_symbol *s, short argc,t_atom *argv);
 
-class mlmat_linear_regression : public mlmat_object_writable<mlmat_linear_regression, LinearRegression> {
+class mlmat_linear_regression : public mlmat_object_writable<mlmat_linear_regression, LinearRegression<>> {
 public:
     MIN_DESCRIPTION {"A Linear Regression Model. An implementation of simple linear regression and ridge regression using ordinary least squares.  Given a dataset and responses, a model can be trained and saved for later use, or a pre-trained model can be used to output regression predictions for a test set."};
     MIN_TAGS        {"ML"};
@@ -55,7 +56,7 @@ public:
                 goto out;
             }
     
-            m_model.model = std::make_unique<LinearRegression>(std::move(*m_regressors), std::move(*m_responses), lambda);
+            m_model.model = std::make_unique<LinearRegression<>>(std::move(*m_regressors), std::move(*m_responses), lambda);
             
  
             //ComputeError

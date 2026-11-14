@@ -150,7 +150,7 @@ public:
         for (size_t i = 0; i < matYT.n_cols; ++i)
         {
             arma::vec y = arma::vec(matYT.col(i));
-            objective += rad.Vasicek(y);
+            objective += rad.Vasicek(y, rad.M());
         }
         
         //std::cout << matY.n_cols << " " <<  matY.n_rows << " " << matW.n_cols << " " << matW.n_rows << std::endl;

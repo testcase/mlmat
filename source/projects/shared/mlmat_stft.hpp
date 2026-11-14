@@ -1,29 +1,84 @@
-/// @file mlmat.hpp
+/// @file mlmat_stft.hpp
 /// @ingroup mlmat
-/// @copyright Copyright 2021 Todd Ingalls. All rights reserved.
+/// @copyright Copyright 2026 Todd Ingalls. All rights reserved.
 /// @license  Use of this source code is governed by the MIT License found in the License.md file.
 
 #pragma once
 
 #include "c74_min.h"
-#include <Accelerate/Accelerate.h>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <numeric>
+#include <sstream>
 #include <vector>
+
+#include "bqfft/FFT.h"
+
 using namespace c74;
 using namespace c74::min;
+
+namespace mlmat {
+
+/// bqfft's vDSP (macOS) and built-in (Windows) backends both support
+/// power-of-two transform sizes only.
+inline bool fftsize_is_valid(int fftsize) {
+    return fftsize >= 2 && (fftsize & (fftsize - 1)) == 0;
+}
+
+/// Window generation. These reproduce the conventions of the vDSP window
+/// generators used by earlier versions of this code:
+///   hanning  : vDSP_hann_window(..., vDSP_HANN_NORM)  == sqrt(8/3) * periodic Hann
+///   hamming  : vDSP_hamm_window(..., 0)               == periodic Hamming
+///   blackman : vDSP_blkman_window(..., 0)            == periodic Blackman
+///   triangle : the vDSP_vramp construction used previously
+inline void make_window(std::vector<float>& window, int fftsize, const string& window_string) {
+    const int fftsize_2 = fftsize / 2;
+
+    if (window_string == "triangle") {
+        const float tristart = 0.0f;
+        const float tritop = 1.0f;
+        const float up = 1.0f / fftsize_2;
+        const float down = -1.0f / fftsize_2;
+        // Up ramp across the first half (vDSP_vramp semantics).
+        for (int i = 0; i < fftsize_2; ++i) {
+            window[i] = tristart + up * i;
+        }
+        // Down ramp across the second half, starting one sample earlier so
+        // that the center sample holds the peak value (as before).
+        for (int i = 0; i < fftsize_2; ++i) {
+            window[fftsize_2 - 1 + i] = tritop + down * i;
+        }
+    } else if (window_string == "hanning") {
+        // vDSP_HANN_NORM is the periodic Hann window scaled by sqrt(8/3).
+        const float scale = 0.5f * 1.6329931618554521f;
+        for (int i = 0; i < fftsize; ++i) {
+            window[i] = scale * (1.0f - std::cos((2.0f * static_cast<float>(M_PI) * i) / fftsize));
+        }
+    } else if (window_string == "hamming") {
+        for (int i = 0; i < fftsize; ++i) {
+            window[i] = 0.54f - 0.46f * std::cos((2.0f * static_cast<float>(M_PI) * i) / fftsize);
+        }
+    } else if (window_string == "blackman") {
+        for (int i = 0; i < fftsize; ++i) {
+            const float a = (2.0f * static_cast<float>(M_PI) * i) / fftsize;
+            window[i] = 0.42f - 0.5f * std::cos(a) + 0.08f * std::cos(2.0f * a);
+        }
+    }
+}
+
+} // namespace mlmat
 
 
 class STFT
 {
-    
+
 public:
-    STFT() {
-        
-    }
-    
+    STFT() = default;
+    ~STFT() = default;
+
     void process(std::vector<float>& input,
                  std::vector<float>& out_magnitudes,
                  std::vector<float>& out_phases,
@@ -33,62 +88,41 @@ public:
                  bool output_polar = true,
                  bool full_spectrum = false)
     {
-        
-        size_t step = fftsize/overlap;
-        
-        vDSP_DFT_Setup tmp_setup = m_setup;
-
-        m_setup = vDSP_DFT_zrop_CreateSetup(tmp_setup, fftsize, vDSP_DFT_FORWARD );
-        if(m_setup == 0) {
+        if (!mlmat::fftsize_is_valid(fftsize)) {
             std::stringstream ss;
             ss << "fftsize " << fftsize << " is not valid.";
-            throw std::invalid_argument( ss.str()  );
+            throw std::invalid_argument(ss.str());
         }
-        
-        if(tmp_setup != NULL) {
-            vDSP_DFT_DestroySetup(tmp_setup);
+
+        // (Re)create the FFT setup when the size changes.
+        if (!m_fft || m_fft_size != fftsize) {
+            try {
+                m_fft.reset(new breakfastquay::FFT(fftsize));
+                m_fft_size = fftsize;
+            } catch (breakfastquay::FFT::Exception) {
+                std::stringstream ss;
+                ss << "fftsize " << fftsize << " is not valid.";
+                throw std::invalid_argument(ss.str());
+            }
         }
+
+        size_t step = fftsize/overlap;
         size_t fftsize_2 = fftsize / 2;
         size_t frame_count = input.size();
-        
-        // throw error if out vectors not correct length to hold data?
 
-
-        
-        // with resize and same sizes as last run should not incur much overhead. right?
-        
         m_in_samples.resize(fftsize);
-        m_in_real.resize(fftsize_2);
-        m_in_imag.resize(fftsize_2, 0.0f);
+        m_spec_real.resize(fftsize_2 + 1);
+        m_spec_imag.resize(fftsize_2 + 1, 0.0f);
         m_out_real.resize(fftsize_2);
         m_out_imag.resize(fftsize_2);
         m_window_vector.resize(fftsize);
         m_magnitudes.resize(fftsize_2);
         m_phases.resize(fftsize_2);
-        
 
-        /* window */
-    
-        
-        if(window_string == "triangle") {
-            float tristart = 0.0f;
-            float tritop = 1.0f;
-            float up = 1.0f/fftsize_2;
-            float down = -1.0f/fftsize_2;
-            vDSP_vramp(&tristart, &up,m_window_vector.data(), 1, fftsize/2);
-            vDSP_vramp(&tritop, &down,m_window_vector.data()+((fftsize/2)-1), 1, fftsize/2);
-        } else if (window_string == "hanning") {
-            vDSP_hann_window(m_window_vector.data(), fftsize, vDSP_HANN_NORM );
-        } else if (window_string == "hamming") {
-            vDSP_hamm_window(m_window_vector.data(), fftsize, 0);
-        } else if (window_string == "blackman") {
-            vDSP_blkman_window(m_window_vector.data(), fftsize, 0);
-        }
-        
-        DSPSplitComplex complex_input = { m_in_real.data(), m_in_imag.data()};
-        DSPSplitComplex complex_output = { m_out_real.data(), m_out_imag.data()};
+        mlmat::make_window(m_window_vector, fftsize, window_string);
+
         int current_pos = 0;
-        
+
         for (auto i = 0; i < frame_count; i+=step) {
             //get next N samples
             if(i+fftsize > frame_count) {
@@ -102,41 +136,42 @@ public:
             }
             else {
                 std::copy_n(input.begin()+i, fftsize, m_in_samples.begin());
-                
             }
             //window
             if (window_string != "square") {
-                vDSP_vmul(m_in_samples.data(), 1, m_window_vector.data(), 1, m_in_samples.data(), 1, fftsize);
+                for(auto j=0;j<fftsize;j++) {
+                    m_in_samples[j] *= m_window_vector[j];
+                }
             }
-            
-            //put into SplitComplex
-            vDSP_ctoz((DSPComplex *)m_in_samples.data(), 2, &complex_input, 1, fftsize_2);
 
-            // dft
-            vDSP_DFT_Execute(m_setup,complex_input.realp, complex_input.imagp,complex_output.realp,complex_output.imagp);
-        
+            // Real FFT: fftsize real samples in, fftsize/2+1 complex
+            // bins out (DC through Nyquist).
+            m_fft->forward(m_in_samples.data(), m_spec_real.data(), m_spec_imag.data());
 
-            float scale = .5;
-        
-            vDSP_vsmul(complex_output.realp, 1, &scale, complex_output.realp, 1, fftsize_2);
-            vDSP_vsmul(complex_output.imagp, 1, &scale, complex_output.imagp, 1, fftsize_2);
-     
-            complex_output.imagp[0] = 0.0;
-            
+            // Keep bins 0 .. fftsize/2-1, matching the output of the previous
+            // vDSP implementation. bqfft's forward transform already returns
+            // the unscaled DFT (the old vDSP zrop result was 2x the DFT, which
+            // the previous code compensated for with a 0.5 factor); the
+            // Nyquist bin is discarded as before.
+            std::copy_n(m_spec_real.begin(), fftsize_2, m_out_real.begin());
+            std::copy_n(m_spec_imag.begin(), fftsize_2, m_out_imag.begin());
+            m_out_imag[0] = 0.0f;
+
             if(output_polar) {
-                //this gets a little convoluted but after profiling seems faster
-                vDSP_zvabs(&complex_output, 1, m_magnitudes.data(), 1, fftsize_2);  // Compute magnitude
-                vDSP_zvphas(&complex_output, 1, m_phases.data(), 1, fftsize_2);  // Compute phase (radians)
+                for(size_t j=0;j<fftsize_2;j++) {
+                    m_magnitudes[j] = std::sqrt(m_out_real[j]*m_out_real[j] + m_out_imag[j]*m_out_imag[j]);
+                    m_phases[j] = std::atan2(m_out_imag[j], m_out_real[j]);
+                }
                 std::copy(m_magnitudes.begin(), m_magnitudes.end(), out_magnitudes.begin()+current_pos);
                 std::copy(m_phases.begin(), m_phases.end(), out_phases.begin()+current_pos);
                 current_pos += fftsize_2;
-                
+
                 if(full_spectrum) {
                     std::copy(m_magnitudes.rbegin(), m_magnitudes.rend(), out_magnitudes.begin()+current_pos);
                     std::copy(m_phases.rbegin(), m_phases.rend(), out_phases.begin()+current_pos);
                     current_pos += fftsize_2;
                 }
-            
+
             } else {
                 // output rectangular data. vectors are magnitudes and phases in this case but that is misleading
                 std::copy(m_out_real.begin(), m_out_real.end(), out_magnitudes.begin()+current_pos);
@@ -149,19 +184,15 @@ public:
                 }
             }
         }
-        
+
     }
-    
-    ~STFT() {
-        if(m_setup != nullptr) {
-            vDSP_DFT_DestroySetup(m_setup);
-        }
-    }
+
 private:
-    vDSP_DFT_Setup m_setup = nullptr;
+    std::unique_ptr<breakfastquay::FFT> m_fft;
+    int m_fft_size = 0;
     std::vector<float> m_in_samples;
-    std::vector<float> m_in_real;
-    std::vector<float> m_in_imag;
+    std::vector<float> m_spec_real;
+    std::vector<float> m_spec_imag;
     std::vector<float> m_out_real;
     std::vector<float> m_out_imag;
     std::vector<float> m_window_vector;
@@ -173,9 +204,9 @@ private:
 
 class ISTFT {
 public:
-    ISTFT() {
-    }
-    
+    ISTFT() = default;
+    ~ISTFT() = default;
+
     void process(std::vector<float>& in_real,
                  std::vector<float>& in_imag,
                  std::vector<float>& samples,
@@ -185,100 +216,91 @@ public:
                  bool input_polar = true,
                  bool full_spectrum = false)
     {
-        
-        if(input_polar) {
-            float r = 0.0;
-            float theta = 0.0;
-            for(auto i=0;i<in_real.size();++i) {
-                r = in_real[i];
-                theta = in_imag[i];
-                in_real[i] = r * cos(theta);
-                in_imag[i] = r * sin(theta);
+        if (!mlmat::fftsize_is_valid(fftsize)) {
+            std::stringstream ss;
+            ss << "fftsize " << fftsize << " is not valid.";
+            throw std::invalid_argument(ss.str());
+        }
+
+        if (!m_fft || m_fft_size != fftsize) {
+            try {
+                m_fft.reset(new breakfastquay::FFT(fftsize));
+                m_fft_size = fftsize;
+            } catch (breakfastquay::FFT::Exception) {
+                std::stringstream ss;
+                ss << "fftsize " << fftsize << " is not valid.";
+                throw std::invalid_argument(ss.str());
             }
         }
-        
+
+        if(input_polar) {
+            for(auto i=0;i<in_real.size();++i) {
+                const float r = in_real[i];
+                const float theta = in_imag[i];
+                in_real[i] = r * std::cos(theta);
+                in_imag[i] = r * std::sin(theta);
+            }
+        }
 
         size_t step = fftsize / overlap;
         size_t fftsize_2 = fftsize / 2;
-        
-        m_frame_real.resize(fftsize_2, 0.0f);
-        m_frame_imag.resize(fftsize_2, 0.0f);
-        
-        vDSP_vclr(samples.data(), 1, samples.size());
-        
-        
+
+        m_spec_real.resize(fftsize_2 + 1, 0.0f);
+        m_spec_imag.resize(fftsize_2 + 1, 0.0f);
+
+        std::fill(samples.begin(), samples.end(), 0.0f);
+
         m_signal.resize(fftsize);
         m_window_vector.resize(fftsize);
 
-        //size_t num_bins = fftsize_2;
-        
-        /* window */
-        if(window_string == "triangle") {
-            float tristart = 0.0f;
-            float tritop = 1.0f;
-            float up = 1.0f/fftsize_2;
-            float down = -1.0f/fftsize_2;
-            vDSP_vramp(&tristart, &up,m_window_vector.data(), 1, fftsize_2);
-            vDSP_vramp(&tritop, &down,m_window_vector.data()+((fftsize/2)-1), 1, fftsize_2);
-        } else if (window_string == "hanning") {
-            vDSP_hann_window(m_window_vector.data(), fftsize, vDSP_HANN_NORM );
-        } else if (window_string == "hamming") {
-            vDSP_hamm_window(m_window_vector.data(), fftsize, 0);
-        } else if (window_string == "blackman") {
-            vDSP_blkman_window(m_window_vector.data(), fftsize, 0);
-        }
-        
-        vDSP_DFT_Setup tmp_setup = m_setup;
-        
-        m_setup = vDSP_DFT_zrop_CreateSetup(tmp_setup, fftsize, vDSP_DFT_INVERSE );
-        
-        if(m_setup == 0) {
-            std::stringstream ss;
-            ss << "fftsize " << fftsize << " is not valid.";
-            throw std::invalid_argument( ss.str()  );
-        }
-        
-        if(tmp_setup != NULL) {
-            vDSP_DFT_DestroySetup(tmp_setup);
-        }
-        
-        DSPSplitComplex complex_input = { in_real.data(), in_imag.data()};
-        DSPSplitComplex complex_output = { m_frame_real.data(), m_frame_imag.data()};
+        mlmat::make_window(m_window_vector, fftsize, window_string);
 
-        
         float scaling = 1.0f / fftsize / overlap;
-        
-        for (auto i = 0, j=0; i < (samples.size()); i+=fftsize_2, j+=step) {
-            
-            vDSP_DFT_Execute(m_setup,complex_input.realp+i, complex_input.imagp+i,complex_output.realp,complex_output.imagp);
 
-            vDSP_ztoc(&complex_output, 1, ( DSPComplex *)m_signal.data(), 2,fftsize_2);
-            
-            vDSP_vsmul(m_signal.data(), 1, &scaling, m_signal.data(), 1, fftsize);
-            
-            if (window_string != "square") {
-                vDSP_vmul(m_signal.data(), 1, m_window_vector.data(), 1, m_signal.data(), 1, fftsize);
+        for (auto i = 0, j=0; i < (samples.size()); i+=fftsize_2, j+=step) {
+
+            // Build the fftsize/2+1 bin spectrum expected by bqfft from the
+            // fftsize/2 bins provided, matching the packing used by the
+            // previous vDSP implementation: the imaginary part of bin 0
+            // held the real part of the (discarded) Nyquist bin.
+            for(size_t k=0;k<fftsize_2;k++) {
+                m_spec_real[k] = in_real[i+k];
+                m_spec_imag[k] = in_imag[i+k];
             }
-            
-            vDSP_vadd(m_signal.data(), 1, samples.data()+j, 1, samples.data()+j, 1, fftsize);
+            m_spec_imag[0] = 0.0f;
+            m_spec_real[fftsize_2] = in_imag[i];
+            m_spec_imag[fftsize_2] = 0.0f;
+
+            // Inverse real FFT: fftsize/2+1 complex bins in, fftsize real
+            // samples out.
+            m_fft->inverse(m_spec_real.data(), m_spec_imag.data(), m_signal.data());
+
+            for(auto k=0;k<fftsize;k++) {
+                m_signal[k] *= scaling;
+            }
+
+            if (window_string != "square") {
+                for(auto k=0;k<fftsize;k++) {
+                    m_signal[k] *= m_window_vector[k];
+                }
+            }
+
+            // Overlap-add. The caller sizes the buffer like the previous
+            // implementation did, which can be a few samples short of the
+            // last frame; stay in bounds.
+            const size_t samples_size = samples.size();
+            for(auto k=0;k<fftsize && (j+k) < samples_size;k++) {
+                samples[j+k] += m_signal[k];
+            }
         }
     }
-    
-    
-    
-    ~ISTFT() {
-        if(m_setup != nullptr) {
-            vDSP_DFT_DestroySetup(m_setup);
-        }
-    }
-    
+
 private:
-    vDSP_DFT_Setup m_setup = nullptr;
-    
-    std::vector<float> m_frame_real;
-    std::vector<float> m_frame_imag;
+    std::unique_ptr<breakfastquay::FFT> m_fft;
+    int m_fft_size = 0;
+
+    std::vector<float> m_spec_real;
+    std::vector<float> m_spec_imag;
     std::vector<float> m_signal;
     std::vector<float> m_window_vector;
-        
-    
 };

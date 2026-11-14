@@ -11,7 +11,6 @@
 using namespace c74;
 using namespace c74::min;
 using namespace c74::max;
-using namespace mlpack::data;
 
 void mlmat_assist(void* x, void* b, long m, long a, char* s) ;
 t_jit_err mlmat_matrix_calc(t_object* x, t_object* inputs, t_object* outputs);
@@ -127,7 +126,7 @@ public:
                 goto out;
             }
             
-            mlpack::data::Split(input_data, input_labels, train_data, test_data, train_labels, test_labels, ratio, shuffle);
+            mlpack::Split(input_data, input_labels, train_data, test_data, train_labels, test_labels, ratio, shuffle);
             
             out_train_labels_info = in_labels_info;
             out_train_labels_info.dimcount = 1;
@@ -141,7 +140,7 @@ public:
             out_test_labels = arma_to_jit(mode, test_labels, out_test_labels, out_test_labels_info);
             
         } else {
-            mlpack::data::Split(input_data, train_data, test_data, ratio, shuffle);
+            mlpack::Split(input_data, train_data, test_data, ratio, shuffle);
         }
     
         out_train_data_info = in_matrix_info;

@@ -1,0 +1,9 @@
+{
+    "$comment": "vcpkg manifest consumed by the 'windows' CMake preset. On the x64-windows-static triplet this resolves to OpenBLAS (BLAS) and clapack (LAPACK), both linked statically into the externals. On macOS the build does not use vcpkg at all (Accelerate is used instead), but the manifest must still be valid.",
+    "name": "mlmat",
+    "version-string": "dev",
+    "dependencies": [
+        "blas",
+        "lapack"
+    ]
+}

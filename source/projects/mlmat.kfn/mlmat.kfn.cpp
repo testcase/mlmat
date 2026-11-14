@@ -331,7 +331,7 @@ public:
         scaler_fit(m_model, dat);
         out_data = scaler_transform(m_model, dat, out_data);
 
-        m_model.model->BuildModel(u, std::move(dat), search_mode, adjusted_epsilon);
+        m_model.model->BuildModel(u, std::move(dat), ModeToStrategy(search_mode), adjusted_epsilon);
         m_mode_changed = false;
     out:
 
@@ -354,7 +354,7 @@ private:
 
         if(p) {
             try {
-                mlpack::data::Load(string(p), "kfn_model", m_model, true);
+                mlpack::Load(string(p), "kfn_model", m_model, true);
             } catch (const std::runtime_error& s) {
                 std::throw_with_nested(std::runtime_error("Error reading model file to disk."));
             }

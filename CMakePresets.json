@@ -1,0 +1,65 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+    "configurePresets": [
+        {
+            "name": "macos",
+            "displayName": "macOS (Xcode, universal binary)",
+            "description": "Builds universal (x86_64 + arm64) externals against the system Accelerate framework. No third-party dependencies to install.",
+            "generator": "Xcode",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_OSX_ARCHITECTURES": "x86_64;arm64",
+                "CMAKE_OSX_DEPLOYMENT_TARGET": "10.15"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "windows",
+            "displayName": "Windows (Visual Studio 2022, x64, vcpkg static)",
+            "description": "Builds x64 externals with static OpenBLAS/clapack pulled in by the vcpkg manifest (vcpkg.json). Requires the VCPKG_ROOT environment variable to point at a vcpkg checkout. Externals link everything statically, so no DLLs need to be distributed.",
+            "generator": "Visual Studio 17 2022",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "macos-release",
+            "displayName": "macOS Release",
+            "configurePreset": "macos",
+            "configuration": "Release"
+        },
+        {
+            "name": "macos-debug",
+            "displayName": "macOS Debug",
+            "configurePreset": "macos",
+            "configuration": "Debug"
+        },
+        {
+            "name": "windows-release",
+            "displayName": "Windows Release",
+            "configurePreset": "windows",
+            "configuration": "Release"
+        },
+        {
+            "name": "windows-debug",
+            "displayName": "Windows Debug",
+            "configurePreset": "windows",
+            "configuration": "Debug"
+        }
+    ]
+}
