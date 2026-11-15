@@ -11,6 +11,13 @@
 /// alone.
 
 #include "c74_min.h"
+
+// the Windows C74 SDK headers map hypot to the legacy CRT name _hypot
+// (mlmat.hpp neutralizes this for the externals; the docgen pulls in
+// armadillo/mlpack through the object below and needs the same)
+#ifdef _WIN32
+#undef hypot
+#endif
 #include "mlmat_docgen.hpp"
 #include "../../projects/mlmat.radical/mlmat.radical.cpp"
 

@@ -87,4 +87,10 @@ if(APPLE)
     target_compile_definitions(mlmat_fft PRIVATE HAVE_VDSP=1)
     find_library(MLMAT_ACCELERATE_LIB2 Accelerate REQUIRED)
     target_link_libraries(mlmat_fft PRIVATE ${MLMAT_ACCELERATE_LIB2})
+else()
+    # bqfft needs an explicit backend: on non-Apple platforms use its
+    # self-contained built-in double-precision FFT (no external
+    # dependency). Without one, FFT.cpp #errors at compile time -- the
+    # buffer objects were never buildable on Windows before this.
+    target_compile_definitions(mlmat_fft PRIVATE USE_BUILTIN_FFT=1)
 endif()
