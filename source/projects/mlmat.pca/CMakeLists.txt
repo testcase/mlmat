@@ -57,6 +57,17 @@ add_executable(${PROJECT_NAME}_docgen
 )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_docgen)
 
+if (WIN32)
+    # the mock kernel is a shared library (see the mock's CMakeLists);
+    # its dll lands in the build root while the docgen exe is
+    # per-project, so a copy must sit next to the exe or the launch
+    # fails with STATUS_DLL_NOT_FOUND (0xC0000135)
+    add_custom_command(TARGET ${PROJECT_NAME}_docgen POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:mock_kernel>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}_docgen>)
+endif ()
+
 target_include_directories(${PROJECT_NAME}_docgen PRIVATE
     "${C74_INCLUDES}"
     "${C74_MIN_API_DIR}/test"
