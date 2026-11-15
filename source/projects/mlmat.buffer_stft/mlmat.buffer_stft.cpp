@@ -43,6 +43,10 @@ public:
 
     max::t_buffer_ref *m_buffer_reference {nullptr};
 
+    // one-shot runtime diagnostic: report the first matrix processed
+    bool m_diag_reported { false };
+    bool m_diag_update { false };
+
 
     attribute<int, threadsafe::no, limit::clamp> channel {this, "channel", 1,
         description {"Channel to read from the buffer~. The channel number uses 1-based counting."},
@@ -76,6 +80,12 @@ public:
     attribute<bool> output_polar { this, "output_polar", false,
         description {
             "If set, output polar."
+        }
+    };
+
+    attribute<bool> resample { this, "resample", true,
+        description {
+            "If set, resample the buffer~ contents to match the current Max sample rate when the buffer~ reports a different one (for example when a loaded file's sample rate differs from the Max sample rate), so the transform output is pitch-correct at the Max rate."
         }
     };
     
@@ -133,7 +143,41 @@ public:
             max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
             size_t chan = std::min<size_t>(channel - 1, b_channel_count);
 
-            size_t num_fft_frames = (b_frame_count * overlap + fftsize - 1) / fftsize;
+            // buffer~s carry their own sample rate (for example, from a
+            // loaded file). when it differs from the Max sample rate and
+            // @resample is on, convert the input to the Max rate first so
+            // that the analysis output is pitch-correct at the Max rate.
+            const float buffer_sr = max::buffer_getsamplerate(buffer);
+            const float max_sr = max::sys_getsr();
+            const bool do_resample = resample
+                && buffer_sr > 0.0f && max_sr > 0.0f
+                && std::fabs(buffer_sr - max_sr) > 0.5f;
+
+            if (!m_diag_reported) {
+                m_diag_reported = true;
+                (cout << "stft first run: buffer SR " << buffer_sr
+                    << ", Max SR " << max_sr << ", " << b_frame_count
+                    << " samples in " << b_channel_count << " channel(s), reading channel "
+                    << (chan + 1)
+                    << (do_resample ? ", resampling to Max SR" : ", no resampling") << endl);
+            }
+
+            // scratch members, so a steady-state bang allocates nothing
+            if (do_resample) {
+                m_source.resize(b_frame_count);
+                for(size_t i=0;i<b_frame_count;i++) {
+                    m_source[i] = tab[i*b_channel_count + chan];
+                }
+                mlmat::resample(m_source, m_input, buffer_sr, max_sr);
+            } else {
+                m_input.resize(b_frame_count);
+                for(size_t i=0;i<b_frame_count;i++) {
+                    m_input[i] = tab[i*b_channel_count + chan];
+                }
+            }
+            const size_t input_length = m_input.size();
+
+            size_t num_fft_frames = (input_length * overlap + fftsize - 1) / fftsize;
             size_t spec_dim = full_spectrum ? fftsize : (fftsize / 2);
 
             out_minfo.type = max::_jit_sym_float64;
@@ -142,14 +186,8 @@ public:
             out_minfo.dim[0] = num_fft_frames;
             out_minfo.dim[1] = spec_dim;
 
-            // scratch members, so a steady-state bang allocates nothing
-            m_input.resize(b_frame_count);
             m_out_magnitudes.resize(num_fft_frames * spec_dim);
             m_out_phases.resize(num_fft_frames * spec_dim);
-
-            for(size_t i=0;i<b_frame_count;i++) {
-                m_input[i] = tab[i*b_channel_count + chan];
-            }
 
             const string window_string = window.get().c_str();
 
@@ -275,6 +313,7 @@ private:
     
     STFT stft;
     std::vector<float> m_input;
+    std::vector<float> m_source;
     std::vector<float> m_out_magnitudes;
     std::vector<float> m_out_phases;
 };

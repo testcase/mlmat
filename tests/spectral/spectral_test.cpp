@@ -325,9 +325,62 @@ static void run_parity()
     }
 }
 
+static void run_resample()
+{
+    // resample(): a 1 kHz sine at 44.1k must stay 1 kHz in the 48k world
+    // (checked through an STFT peak-bin lookup), and a same-rate resample
+    // must be the identity.
+    const double in_rate = 44100.0, out_rate = 48000.0, f0 = 1000.0;
+    const size_t n = 8192;
+    std::vector<float> x(n);
+    for (size_t i = 0; i < n; ++i)
+        x[i] = float(std::sin(2.0 * M_PI * f0 * i / in_rate));
+
+    std::vector<float> same;
+    NEW::mlmat::resample(x, same, in_rate, in_rate);
+    check(same.size() == n, "resample same-rate length", same.size());
+    bool identity = true;
+    for (size_t i = 0; i < n; ++i) {
+        if (std::fabs(same[i] - x[i]) > 1e-6) {
+            identity = false;
+            break;
+        }
+    }
+    check(identity, "resample same-rate is identity");
+
+    std::vector<float> y;
+    NEW::mlmat::resample(x, y, in_rate, out_rate);
+    check(y.size() == size_t(llround(n * out_rate / in_rate)), "resample output length", y.size());
+
+    // spectral peak of the resampled signal: middle frame. (the
+    // magnitudes/phases vectors are out-params and must be pre-sized by
+    // the caller, like the objects do)
+    const int fftsize = 1024;
+    const size_t bins = fftsize / 2;
+    const size_t step = fftsize / 1;
+    const size_t frames_expected = (y.size() + step - 1) / step;
+    STFT stft;
+    std::vector<float> mags(frames_expected * bins), phases(frames_expected * bins);
+    stft.process(y, mags, phases, fftsize, 1, "hanning", true, false);
+    const size_t frames = bins > 0 ? mags.size() / bins : 0;
+    check(frames == frames_expected, "resample stft frames", frames);
+    if (frames >= 3) {
+        const size_t mid = (frames / 2) * bins;
+        size_t peak = 0;
+        for (size_t k = 1; k < bins; ++k) {
+            if (mags[mid + k] > mags[mid + peak])
+                peak = k;
+        }
+        const double peak_hz = peak * out_rate / fftsize;
+        check(std::fabs(peak_hz - f0) <= 1.5 * out_rate / fftsize,
+              "resample keeps 1kHz peak", peak_hz - f0);
+    }
+}
+
 int main()
 {
     run_parity();
+    run_resample();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

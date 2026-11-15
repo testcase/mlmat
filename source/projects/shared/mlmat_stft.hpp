@@ -69,6 +69,44 @@ inline void make_window(std::vector<float>& window, int fftsize, const string& w
     }
 }
 
+/// Cubic Hermite (Catmull-Rom) resampling of `input` (sampled at
+/// `input_rate`) to `output_rate`. The output vector is resized to
+/// round(input.size() * output_rate / input_rate) and holds the signal
+/// resampled onto the output-rate sample grid.
+inline void resample(const std::vector<float>& input,
+                     std::vector<float>& output,
+                     double input_rate,
+                     double output_rate)
+{
+    if (input.empty() || input_rate <= 0.0 || output_rate <= 0.0) {
+        output.clear();
+        return;
+    }
+    const size_t in_size = input.size();
+    const size_t out_size = static_cast<size_t>(
+        std::llround(static_cast<double>(in_size) * output_rate / input_rate));
+    if (out_size == 0) {
+        output.clear();
+        return;
+    }
+    output.resize(out_size);
+    const double step = static_cast<double>(in_size) / static_cast<double>(out_size);
+    for (size_t i = 0; i < out_size; ++i) {
+        const double pos = std::min(static_cast<double>(i) * step,
+                                    static_cast<double>(in_size - 1));
+        const size_t p = static_cast<size_t>(pos);
+        const double t = pos - static_cast<double>(p);
+        const float p0 = input[p > 0 ? p - 1 : 0];
+        const float p1 = input[p];
+        const float p2 = input[p + 1 < in_size ? p + 1 : in_size - 1];
+        const float p3 = input[p + 2 < in_size ? p + 2 : in_size - 1];
+        output[i] = static_cast<float>(0.5 * ((2.0 * p1)
+            + (-static_cast<double>(p0) + p2) * t
+            + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t * t
+            + (-static_cast<double>(p0) + 3.0 * p1 - 3.0 * p2 + p3) * t * t * t));
+    }
+}
+
 } // namespace mlmat
 
 

@@ -47,6 +47,10 @@ public:
     MIN_RELATED        { "index~, buffer~, wave~" };
     
     max::t_buffer_ref *m_buffer_reference {nullptr};
+
+    // one-shot runtime diagnostic: report the first matrix processed
+    bool m_diag_reported { false };
+    bool m_diag_update { false };
         
     attribute<int, threadsafe::no, limit::clamp> channel {this, "channel", 1,
         description {"Channel to read from the buffer~. The channel number uses 1-based counting."},
@@ -149,6 +153,16 @@ public:
         size_t b_frame_count = full_spectrum ? (in_minfo.dim[0] * in_minfo.dim[1]) / 2 : (in_minfo.dim[0] * in_minfo.dim[1]);
         size_t output_length = (b_frame_count*2) / overlap;
 
+        const bool diag = !m_diag_reported;
+        m_diag_reported = true;
+        if (diag) {
+            (cout << "griffinlim first run: input matrix " << in_minfo.dim[0] << " x " << in_minfo.dim[1]
+                << ", " << in_minfo.planecount << " plane(s), fftsize " << fftsize
+                << ", overlap " << overlap << ", iters " << iters << ", momentum " << momentum
+                << (full_spectrum ? ", full_spectrum" : "")
+                << "; " << b_frame_count << " spectral values, output_length " << output_length << endl);
+        }
+
         max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
         
         max::object_method(static_cast<max::t_object*>(buffer), max::gensym("sizeinsamps"), (void*)output_length, 0);
@@ -178,6 +192,10 @@ public:
         }
 
         if (buffer && tab) {
+            if (diag) {
+                (cout << "  buffer SR " << max::buffer_getsamplerate(buffer)
+                    << ", Max SR " << max::sys_getsr() << ", tab locked" << endl);
+            }
 
             size_t step = fftsize / overlap;
             size_t num_bins = in_minfo.dim[1];
@@ -221,7 +239,19 @@ public:
             }
             float o = overlap;
             for (auto& s : m_samples) { s *= o; }
+            if (diag) {
+                float diag_max = 0.0f;
+                size_t diag_nonzero = 0;
+                for (size_t i = 0; i < m_samples.size(); ++i) {
+                    const float a = std::fabs(m_samples[i]);
+                    if (a > diag_max) diag_max = a;
+                    if (m_samples[i] != 0.0f) ++diag_nonzero;
+                }
+                (cout << "  griffinlim.process: m_samples max abs " << diag_max
+                    << ", non-zero " << diag_nonzero << " of " << m_samples.size() << endl);
+            }
             max::buffer_setdirty(buffer);
+            m_diag_update = diag;
             update_buffer.set();
         } else {
            cerr << "buffer specified is not valid" << endl;
@@ -263,6 +293,8 @@ private:
     
     message<> buffer_update {this, "buffer_update",
         MIN_FUNCTION {
+            const bool diag = m_diag_update;
+            m_diag_update = false;
             max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
             float *tab = buffer_locksamples(buffer);
             size_t b_frame_count = max::buffer_getframecount(buffer);
@@ -270,13 +302,20 @@ private:
             
             if (buffer && tab) {
                 auto chan = std::min<size_t>(channel - 1, b_channel_count);
+                size_t copied = 0;
                 for(auto i = 0;i<b_frame_count;i++) {
                     tab[(i*b_channel_count) + chan] = m_samples[i];
-                    
+                    ++copied;
                 }
                 max::buffer_setdirty(buffer);
-              
-                
+                if (diag) {
+                    (cout << "  buffer_update: wrote " << copied << " sample(s) to channel "
+                        << (chan + 1) << " of " << b_channel_count << ", buffer SR "
+                        << max::buffer_getsamplerate(buffer) << endl);
+                }
+            } else if (diag) {
+                (cout << "  buffer_update: buffer " << (buffer ? "found" : "NULL")
+                    << ", tab " << (tab ? "locked" : "NULL") << " - nothing written" << endl);
             }
             max::buffer_unlocksamples(buffer);
             return {};
