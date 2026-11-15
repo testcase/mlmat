@@ -50,7 +50,7 @@ endif ()
 #############################################################
 
 if (NOT TARGET mock_kernel)
-    set(C74_MOCK_TARGET_DIR "${CMAKE_BINARY_DIR}")
+    set(C74_MOCK_TARGET_DIR "${CMAKE_BINARY_DIR}/docgen")
     add_subdirectory(${C74_MIN_API_DIR}/test/mock ${CMAKE_BINARY_DIR}/mock)
 endif ()
 
@@ -61,16 +61,14 @@ add_executable(${PROJECT_NAME}_docgen
 )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_docgen)
 
-if (WIN32)
-    # the mock kernel is a shared library (see the mock's CMakeLists);
-    # its dll lands in the build root while the docgen exe is
-    # per-project, so a copy must sit next to the exe or the launch
-    # fails with STATUS_DLL_NOT_FOUND (0xC0000135)
-    add_custom_command(TARGET ${PROJECT_NAME}_docgen POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_FILE:mock_kernel>
-            $<TARGET_FILE_DIR:${PROJECT_NAME}_docgen>)
-endif ()
+# the mock kernel is a shared library, so its dll must sit next to the
+# docgen exe when the POST_BUILD step runs it: all docgen exes and the
+# mock dll share one output directory (the dll location is the
+# C74_MOCK_TARGET_DIR set below)
+set_target_properties(${PROJECT_NAME}_docgen PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/docgen"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/docgen"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/docgen")
 
 target_include_directories(${PROJECT_NAME}_docgen PRIVATE
     "${C74_INCLUDES}"
