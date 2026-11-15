@@ -27,6 +27,19 @@ endif()
 
 
 # Misc setup and subroutines
+
+# max-package.cmake only reads the version when package-info.json.in
+# exists; this repo configures package-info.json at release time
+# instead (see the release workflows), so supply the version here from
+# the single source of truth. Without it PACKAGE_VERSION is empty and
+# the Windows verinfo generation fails in max-package.cmake
+# (string REPLACE with a missing argument).
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/package-info.json" PKGINFOFILE)
+string(JSON PACKAGE_VERSION ERROR_VARIABLE PKG_ERROR GET ${PKGINFOFILE} "version")
+if (PACKAGE_VERSION MATCHES "-NOTFOUND")
+    set(PACKAGE_VERSION "0.0.0")
+endif ()
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/source/min-api/script/min-package.cmake)
 
 # Centralized third-party dependency targets (mlmat::deps, mlmat::fft)

@@ -13,6 +13,8 @@ on:
 jobs:
   build_macos:
     name: build macos externals (universal)
+    permissions:
+      contents: write    # create the release and upload zips
     runs-on: macos-latest
 
     steps:
@@ -67,4 +69,4 @@ jobs:
       with:
         tag_name: ${{ github.ref_name }}
         files: mlmat.zip
-        token: ${{ secrets.THIS_REPO }}
+        token: ${{ secrets.GITHUB_TOKEN }}
