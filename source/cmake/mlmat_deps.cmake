@@ -65,6 +65,16 @@ endif()
 
 # --- spectral objects (bqfft) ----------------------------------------------
 
+if (MSVC)
+    # max-pretarget.cmake compiles every project target with the static
+    # CRT (/MT), matching the vcpkg x64-windows-static ports (also
+    # built against the static CRT). Targets defined here at the top
+    # level see only CMake's default (/MD); match pretarget or the
+    # buffer externals/docgens fail with LNK2038 (RuntimeLibrary
+    # mismatch) linking mlmat::fft.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif ()
+
 add_library(mlmat_fft STATIC
     "${CMAKE_SOURCE_DIR}/source/bqfft/src/FFT.cpp"
     "${CMAKE_SOURCE_DIR}/source/bqvec/src/Allocators.cpp"
