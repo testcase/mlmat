@@ -24,17 +24,33 @@ jobs:
       with:
         submodules: recursive
 
+    # vcpkg binary caching through the GitHub Actions cache: the first
+    # run builds OpenBLAS/clapack and uploads the package binaries
+    # (~17 min); every later run restores them in a minute or two.
+    # The x-gha provider needs the runner's cache credentials exported
+    # into the environment first.
+    - name: export vcpkg cache credentials
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
     # GitHub runners ship vcpkg; the build consumes it in manifest mode
     # (vcpkg.json) through the toolchain file referenced by the preset.
     # VCPKG_INSTALLATION_ROOT is a runner process variable: read it in the
     # shell, not through the ${{ env.* }} context (which is expanded
     # before the runner image variables are visible and resolves empty).
     - name: configure
+      env:
+        VCPKG_BINARY_SOURCES: clear;x-gha,read,write
       run: |
         $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
         cmake --preset windows
 
     - name: build
+      env:
+        VCPKG_BINARY_SOURCES: clear;x-gha,read,write
       run: |
         $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
         cmake --build --preset windows-release

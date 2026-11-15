@@ -54,6 +54,8 @@ endif ()
 
 add_executable(${PROJECT_NAME}_docgen
     ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/mlmat.sparse_autoencoder_docgen.cpp
+    # headless link completion (see the file for why)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/docgen_win_stubs.cpp
     # the object wraps a custom mlpack extension; compile its
     # implementation like the external does
     ../shared/sparse_autoencoder_ext.cpp
@@ -78,10 +80,6 @@ if (APPLE)
     # min object unit tests do
     set_target_properties(${PROJECT_NAME}_docgen PROPERTIES
         LINK_FLAGS "-Wl,-F'${MAX_SDK_JIT_INCLUDES}', -weak_framework JitterAPI")
-elseif (WIN32)
-    # jit symbols come from the SDK stub library, as for the externals;
-    # the kernel (MaxAPI) side is provided by the mock kernel
-    target_link_libraries(${PROJECT_NAME}_docgen PRIVATE ${Jitter_LIB})
 endif ()
 
 

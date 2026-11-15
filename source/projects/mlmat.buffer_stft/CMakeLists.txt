@@ -56,6 +56,8 @@ endif ()
 
 add_executable(${PROJECT_NAME}_docgen
     ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/mlmat.buffer_stft_docgen.cpp
+    # headless link completion (see the file for why)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/docgen_win_stubs.cpp
 )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_docgen)
 
@@ -76,10 +78,6 @@ if (APPLE)
     # like the min object unit tests do
     set_target_properties(${PROJECT_NAME}_docgen PROPERTIES
         LINK_FLAGS "-Wl,-F'${MAX_SDK_JIT_INCLUDES}', -Wl,-F'${MAX_SDK_MSP_INCLUDES}', -weak_framework JitterAPI, -weak_framework MaxAudioAPI")
-elseif (WIN32)
-    # jit symbols come from the SDK stub library, as for the externals;
-    # the kernel (MaxAPI) side is provided by the mock kernel
-    target_link_libraries(${PROJECT_NAME}_docgen PRIVATE ${Jitter_LIB})
 endif ()
 
 
