@@ -53,3 +53,7 @@ source/armadillo
 source/projects/mlmat.buffer_stft/mlmat.buffer_stft copy.cpp
 source/projects/mlmat.buffer_griffinlim/mlmat.buffer_griffinlim copy.cpp
 source/projects/mlmat.buffer_istft/mlmat.buffer_istft copy.cpp
+
+# local-only agent notes (OpenCode reads it from the working tree;
+# not part of the package)
+AGENTS.md
