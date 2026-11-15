@@ -10,14 +10,21 @@
 /// than the .mxo: doc_update inside Max then leaves the enhanced page
 /// alone.
 
-#define MIN_TEST
 #include "c74_min.h"
 #include "mlmat_docgen.hpp"
 #include "../../projects/mlmat.mlp_classifier/mlmat.mlp_classifier.cpp"
 
+#include <filesystem>
+
 int main(int argc, char** argv)
 {
-    const std::string refpage = argc > 1 ? argv[1] : "docs/mlmat.mlp_classifier.maxref.xml";
+    std::string refpage = argc > 1 ? argv[1] : "docs/mlmat.mlp_classifier.maxref.xml";
+
+    // a fresh checkout has no docs/ (it is generated, not tracked)
+    if (const size_t slash = refpage.rfind('/'); slash != std::string::npos) {
+        std::error_code ec;
+        std::filesystem::create_directories(refpage.substr(0, slash), ec);
+    }
 
     mlmat_mlp_classifier instance;
 

@@ -42,6 +42,7 @@ jobs:
         mv ./examples ./mlmat
         mv ./extras ./mlmat
         mv ./externals ./mlmat
+        mv ./docs ./mlmat
         mv ./help ./mlmat
         mv ./init ./mlmat
         mv ./javascript ./mlmat

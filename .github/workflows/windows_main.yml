@@ -48,7 +48,7 @@ jobs:
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Name mlmat | Out-Null
-        $items = "examples", "extras", "externals", "help", "init",
+        $items = "examples", "extras", "externals", "docs", "help", "init",
                  "javascript", "misc", "patchers", "LICENSE", "README.md",
                  "BUILD.md", "package-info.json"
         foreach ($item in $items) {
