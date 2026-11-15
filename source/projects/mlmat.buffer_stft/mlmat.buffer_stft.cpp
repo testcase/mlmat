@@ -43,9 +43,6 @@ public:
 
     max::t_buffer_ref *m_buffer_reference {nullptr};
 
-    // one-shot runtime diagnostic: report the first matrix processed
-    bool m_diag_reported { false };
-    bool m_diag_update { false };
 
 
     attribute<int, threadsafe::no, limit::clamp> channel {this, "channel", 1,
@@ -152,15 +149,6 @@ public:
             const bool do_resample = resample
                 && buffer_sr > 0.0f && max_sr > 0.0f
                 && std::fabs(buffer_sr - max_sr) > 0.5f;
-
-            if (!m_diag_reported) {
-                m_diag_reported = true;
-                (cout << "stft first run: buffer SR " << buffer_sr
-                    << ", Max SR " << max_sr << ", " << b_frame_count
-                    << " samples in " << b_channel_count << " channel(s), reading channel "
-                    << (chan + 1)
-                    << (do_resample ? ", resampling to Max SR" : ", no resampling") << endl);
-            }
 
             // scratch members, so a steady-state bang allocates nothing
             if (do_resample) {
