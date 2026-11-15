@@ -12,6 +12,15 @@
 #ifndef MLPACK_METHODS_SPARSE_AUTOENCODER_SPARSE_AUTOENCODER_EXT_HPP
 #define MLPACK_METHODS_SPARSE_AUTOENCODER_SPARSE_AUTOENCODER_EXT_HPP
 
+// the Windows C74 SDK headers map hypot to the legacy CRT name _hypot.
+// mlmat.hpp and the docgen drivers neutralize this, but this header can
+// be included between c74_min.h and mlmat.hpp (as in
+// mlmat.sparse_autoencoder.cpp) -- the mlpack includes below would then
+// fail on armadillo's std::hypot.
+#ifdef _WIN32
+#undef hypot
+#endif
+
 #include <mlpack/prereqs.hpp>
 #include <mlpack/core/util/io.hpp>
 #include <mlpack/core.hpp>
