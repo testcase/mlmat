@@ -11,6 +11,9 @@ macOS and Windows. The build produces self-contained Max externals —
 
 ## Prerequisites
 
+
+
+
 | | macOS | Windows |
 |---|---|---|
 | Compiler | Xcode 12 or later (with command line tools) | Visual Studio 2022 (Desktop development with C++) |
