@@ -13,7 +13,9 @@ on:
 jobs:
   build_windows:
     name: build windows externals (x64)
-    runs-on: windows-latest
+    # windows-latest now ships Visual Studio 2025 only; the preset's
+    # generator is "Visual Studio 17 2022", so pin the image that has it
+    runs-on: windows-2022
 
     steps:
     - uses: actions/checkout@v4
@@ -22,15 +24,18 @@ jobs:
 
     # GitHub runners ship vcpkg; the build consumes it in manifest mode
     # (vcpkg.json) through the toolchain file referenced by the preset.
+    # VCPKG_INSTALLATION_ROOT is a runner process variable: read it in the
+    # shell, not through the ${{ env.* }} context (which is expanded
+    # before the runner image variables are visible and resolves empty).
     - name: configure
-      env:
-        VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
-      run: cmake --preset windows
+      run: |
+        $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
+        cmake --preset windows
 
     - name: build
-      env:
-        VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
-      run: cmake --build --preset windows-release
+      run: |
+        $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
+        cmake --build --preset windows-release
 
     - name: test
       run: ctest --test-dir build -C Release --output-on-failure
