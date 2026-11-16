@@ -54,7 +54,7 @@ jobs:
         mv ./README.md ./mlmat
         mv ./BUILD.md ./mlmat
         mv ./package-info.json ./mlmat
-        zip -r mlmat.zip mlmat
+        zip -r mlmat_mac.zip mlmat
 
     - name: upload artifact (manual runs)
       if: github.event_name == 'workflow_dispatch'
