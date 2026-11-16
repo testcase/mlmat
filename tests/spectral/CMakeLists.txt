@@ -17,6 +17,12 @@ target_include_directories(mlmat_spectral_test
 
 target_link_libraries(mlmat_spectral_test PRIVATE mlmat::fft)
 
+# MSVC's <cmath> only defines M_PI with _USE_MATH_DEFINES; this test
+# target sees neither the C74 pretarget's definitions (project targets
+# only) nor mlmat::fft's private ones.
+target_compile_definitions(mlmat_spectral_test PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:_USE_MATH_DEFINES>)
+
 set_property(TARGET mlmat_spectral_test PROPERTY CXX_STANDARD 17)
 set_property(TARGET mlmat_spectral_test PROPERTY CXX_STANDARD_REQUIRED ON)
 
