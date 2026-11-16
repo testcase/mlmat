@@ -53,24 +53,31 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 	
 
 	
+- [] mlmat.buffer_griffinlim.maxhelp
+- [] mlmat.buffer_istft.maxhelp
+- [] mlmat.buffer_stft.maxhelp
+- [x]mlmat.convert.maxhelp
+- [x]mlmat.gmm.maxhelp
+- [x]mlmat.hmm.maxhelp
+- [x]mlmat.hoeffding_tree.maxhelp
+- [x]mlmat.id3_tree.maxhelp
+- [x]mlmat.kfn.maxhelp
+- [x]mlmat.kmeans.maxhelp
+- [x]mlmat.knn.maxhelp
+- [x]mlmat.linear_regression.maxhelp
+- [x]mlmat.linear_svm.maxhelp
+- [x]mlmat.load.maxhelp
+- [x]mlmat.lookup.maxhelp
+- [x]mlmat.mean_shift.maxhelp
+- [x]mlmat.mlp_classifier.maxhelp
+- [x]mlmat.mlp_regressor.maxhelp
+- [] mlmat.nmf.maxhelp
+- [x]mlmat.pca.maxhelp
+- []mlmat.radical.maxhelp
+- [x]mlmat.scaling.maxhelp
+- [x]mlmat.som.maxhelp
+- [x]mlmat.sparse_autoencoder.maxhelp
+- [] mlmat.spectral_convolve
+- [] mlmat.spectral_peaks
+- [x]mlmat.split.maxhelp
 
-[x]mlmat.convert.maxhelp
-[x]mlmat.gmm.maxhelp
-[x]mlmat.hoeffding_tree.maxhelp
-[x]mlmat.id3_tree.maxhelp
-[x]mlmat.kfn.maxhelp
-[x]mlmat.kmeans.maxhelp
-[x]mlmat.knn.maxhelp
-[x]mlmat.linear_regression.maxhelp
-[x]mlmat.linear_svm.maxhelp
-[x]mlmat.load.maxhelp
-[x]mlmat.lookup.maxhelp
-[x]mlmat.mean_shift.maxhelp
-[x]mlmat.mlp_classifier.maxhelp
-[x]mlmat.mlp_regressor.maxhelp
-[x]mlmat.pca.maxhelp
-[x]mlmat.scaling.maxhelp
-[x]mlmat.som.maxhelp
-[x]mlmat.sparse_autoencoder.maxhelp
-[x]mlmat.split.maxhelp
-[x]mlmat.starter.maxhelp
