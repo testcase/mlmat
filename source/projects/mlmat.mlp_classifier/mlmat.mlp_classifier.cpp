@@ -69,6 +69,12 @@ public:
     attribute<double> tolerance { this, "tolerance", 1e-7,
         description { "Convergence tolerance for optimizer." }
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and predictions keep using the previous model until the new one is ready. A done message is sent out the dumpout outlet when training finishes (error, if it failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
@@ -97,6 +103,69 @@ public:
                 }
             }
 
+            if (background_in_progress()) {
+                return {};
+            }
+
+            if (background) {
+                // snapshot everything the worker touches
+                BgParams p;
+                p.training = *m_training;
+                p.labels = *m_labels;
+                p.hidden_layers = hidden_layers;
+                p.hidden_neurons = hidden_neurons;
+                p.activation = activation.get().c_str();
+                p.optimizer = optimizer.get().c_str();
+                p.step_size = step_size;
+                p.batch_size = batch_size;
+                p.max_iterations = max_iterations;
+                p.tolerance = tolerance;
+                p.autoscale = autoscale;
+                p.scaler_type = scaler.get().c_str();
+                p.scaler_min = scaler_min;
+                p.scaler_max = scaler_max;
+                p.scaler_epsilon = scaler_epsilon;
+
+                background_launch([p = std::move(p)]() mutable -> BgResult {
+                    BgResult r;
+                    r.model = std::make_unique<FFN<>>();
+                    r.model->Add<Linear>(p.training.n_rows);
+                    for (int i = 0; i < p.hidden_layers; ++i) {
+                        add_layer(*r.model, p.activation);
+                        r.model->Add<Linear>(p.hidden_neurons);
+                    }
+                    const size_t num_classes = size_t(p.labels.max()) + 1;
+                    r.model->Add<Linear>(num_classes);
+                    r.model->Add<LogSoftMax<>>();
+
+                    arma::mat out_data = p.training;
+                    if (p.autoscale) {
+                        r.scaler = mlmat::make_scaler(p.scaler_type, p.scaler_min, p.scaler_max, p.scaler_epsilon);
+                        r.scaler->Fit(p.training);
+                        r.scaler->Transform(p.training, out_data);
+                    }
+
+                    arma::Mat<double> labels(p.labels);
+                    if (p.optimizer == "rmsprop") {
+                        r.model->Train(out_data, labels);
+                    } else if (p.optimizer == "sgd") {
+                        ens::StandardSGD opt(p.step_size, p.batch_size, p.max_iterations, p.tolerance);
+                        r.model->Train(out_data, labels, opt);
+                    } else if (p.optimizer == "lbfgs") {
+                        ens::L_BFGS opt;
+                        opt.MaxIterations() = p.max_iterations;
+                        opt.MinGradientNorm() = p.tolerance;
+                        r.model->Train(out_data, labels, opt);
+                    } else if (p.optimizer == "adam") {
+                        ens::Adam opt(p.step_size, p.batch_size, 0.9, 0.999, 1e-8, p.max_iterations,
+                        p.tolerance);
+                        r.model->Train(out_data, labels, opt);
+                    }
+                    return r;
+                });
+                return {};
+            }
+
             arma::Mat<double> labels(*m_labels);
             arma::mat out_data;
             
@@ -107,7 +176,7 @@ public:
             m_model.model->Add<Linear>(m_training->n_rows);
             
             for(auto i = 0;i<hidden_layers;i++) {
-                add_layer(activation.get());
+                add_layer(*m_model.model, activation.get().c_str());
                 m_model.model->Add<Linear>(hidden_neurons.get());
                 //(std::cout << "hidden layer: " << hidden_neurons.get() << " inputs " << hidden_neurons.get() << " outputs" << std::endl);
             }
@@ -150,28 +219,55 @@ public:
     };
         
         
-    void add_layer(const c74::min::symbol& layer_type) {
-        const string layer_string = layer_type.c_str();
-        
+    static void add_layer(FFN<>& model, const std::string& layer_string) {
         if(layer_string == "sigmoid") {
-            m_model.model->Add<mlpack::Sigmoid<>>();
+            model.Add<mlpack::Sigmoid<>>();
 
         } else if(layer_string == "gaussian") {
-            m_model.model->Add<Gaussian<>>();
+            model.Add<Gaussian<>>();
 
         } else if(layer_string == "relu") {
-            m_model.model->Add<ReLU<>>();
+            model.Add<ReLU<>>();
 
         } else if(layer_string == "tanh") {
-            m_model.model->Add<TanH<>>();
+            model.Add<TanH<>>();
 
         } else if(layer_string == "soft_plus") {
-            m_model.model->Add<SoftPlus<>>();
+            model.Add<SoftPlus<>>();
 
         } else if(layer_string == "identity") {
-            m_model.model->Add<Identity<>>();
+            model.Add<Identity<>>();
         }
 
+    }
+
+    // background training: result installed on the main thread
+    struct BgResult {
+        std::unique_ptr<FFN<>> model;
+        std::unique_ptr<mlpack::ScalingModel> scaler;
+    };
+
+    struct BgParams {
+        arma::Mat<double> training;
+        arma::Mat<double> labels;
+        int hidden_layers;
+        int hidden_neurons;
+        std::string activation;
+        std::string optimizer;
+        double step_size;
+        double batch_size;
+        int max_iterations;
+        double tolerance;
+        bool autoscale;
+        std::string scaler_type;
+        double scaler_min;
+        double scaler_max;
+        double scaler_epsilon;
+    };
+
+    void bg_commit(BgResult&& r) {
+        m_model.model = std::move(r.model);
+        m_model.scaler = std::move(r.scaler);
     }
     
     message<> clear { this, "clear", "clear data and model",

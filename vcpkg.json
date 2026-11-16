@@ -4,6 +4,13 @@
     "version-string": "dev",
     "dependencies": [
         "blas",
-        "lapack"
+        "lapack",
+        {
+            "$comment": "threaded BLAS kernels: the feature unifies with the blas metaport's openblas, so BLAS (and the BLAS-dominated LAPACK level-3 calls) run on all cores",
+            "name": "openblas",
+            "features": [
+                "threads"
+            ]
+        }
     ]
 }

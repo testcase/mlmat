@@ -92,6 +92,12 @@ public:
             "Random seed if random basis being used. 0 indicates no seed."
         }
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and predictions keep using the previous model until the new one is ready. A done message is sent out the dumpout outlet when training finishes (error, if it failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     message<> train {this, "train", "Train model",
         MIN_FUNCTION {
@@ -114,6 +120,71 @@ public:
                 goto out;
             }
             
+            if (background_in_progress()) {
+                goto out;
+            }
+
+            if (background) {
+                BgParams p;
+                p.data = *m_data;
+                p.raw_labels = *m_labels;
+                p.lambda = lambda;
+                p.delta = delta;
+                p.num_classes = num_classes;
+                p.no_intercept = no_intercept;
+                p.optimizer = optimizer.get().c_str();
+                p.tolerance = tolerance;
+                p.max_iterations = max_iterations;
+                p.step_size = step_size;
+                p.shuffle = shuffle;
+                p.epochs = epochs;
+                p.seed = seed;
+                p.autoscale = autoscale;
+                p.scaler_type = scaler.get().c_str();
+                p.scaler_min = scaler_min;
+                p.scaler_max = scaler_max;
+                p.scaler_epsilon = scaler_epsilon;
+
+                background_launch([p = std::move(p)]() mutable -> BgResult {
+                    BgResult r;
+                    if (p.seed == 0) {
+                        mlpack::RandomSeed(time(NULL));
+                    } else {
+                        mlpack::RandomSeed((size_t) p.seed);
+                    }
+
+                    r.model = std::make_unique<LinearSVMModel>();
+                    arma::Row<size_t> labels;
+                    NormalizeLabels(p.raw_labels, labels, r.model->mappings);
+                    const size_t numClasses = (p.num_classes == 0) ? r.model->mappings.n_elem : size_t(p.num_classes);
+                    r.model->svm.Lambda() = p.lambda;
+                    r.model->svm.Delta() = p.delta;
+                    r.model->svm.NumClasses() = numClasses;
+                    r.model->svm.FitIntercept() = !p.no_intercept;
+
+                    arma::mat out_data = p.data;
+                    if (p.autoscale) {
+                        r.scaler = mlmat::make_scaler(p.scaler_type, p.scaler_min, p.scaler_max, p.scaler_epsilon);
+                        r.scaler->Fit(p.data);
+                        r.scaler->Transform(p.data, out_data);
+                    }
+
+                    if (p.optimizer == "lbfgs") {
+                        ens::L_BFGS lbfgsOpt;
+                        lbfgsOpt.MaxIterations() = p.max_iterations;
+                        lbfgsOpt.MinGradientNorm() = p.tolerance;
+                        r.model->svm.Train(std::move(out_data), labels, numClasses, lbfgsOpt);
+                    } else if (p.optimizer == "psgd") {
+                        const size_t maxIt = p.epochs * p.raw_labels.n_cols;
+                        ens::ConstantStep decayPolicy(p.step_size);
+                        ens::ParallelSGD<ens::ConstantStep> psgdOpt(maxIt, std::ceil((float) p.data.n_cols), p.tolerance, p.shuffle, decayPolicy);
+                        r.model->svm.Train(std::move(out_data), labels, numClasses, psgdOpt);
+                    }
+                    return r;
+                });
+                goto out;
+            }
+
             if (seed == 0) {
               mlpack::RandomSeed(time(NULL));
             } else {
@@ -163,6 +234,38 @@ public:
             return {};
         }
     };
+
+    // ---- background training -------------------------------------------
+    struct BgParams {
+        arma::Mat<double> data;
+        arma::Row<size_t> raw_labels;
+        double lambda;
+        double delta;
+        int num_classes;
+        bool no_intercept;
+        std::string optimizer;
+        double tolerance;
+        int max_iterations;
+        double step_size;
+        bool shuffle;
+        int epochs;
+        int seed;
+        bool autoscale;
+        std::string scaler_type;
+        double scaler_min;
+        double scaler_max;
+        double scaler_epsilon;
+    };
+
+    struct BgResult {
+        std::unique_ptr<LinearSVMModel> model;
+        std::unique_ptr<mlpack::ScalingModel> scaler;
+    };
+
+    void bg_commit(BgResult&& r) {
+        m_model.model = std::move(r.model);
+        m_model.scaler = std::move(r.scaler);
+    }
     
     
     t_jit_err matrix_calc(t_object* x, t_object* inputs, t_object* outputs) {

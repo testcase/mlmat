@@ -81,6 +81,12 @@ public:
             return args;
         }}
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately and the patcher stays responsive. When training finishes the trained map is written out (as the synchronous path does) and a done message is sent out the dumpout outlet (error, if training failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     message<> write {this, "write",
         MIN_FUNCTION {
@@ -171,6 +177,66 @@ public:
             
             if(!m_data) {
                 (cerr << "no data to train on." << endl);
+            } else if (background_in_progress()) {
+                (cerr << "a training is already in progress." << endl);
+            } else if (background) {
+                BgParams p;
+                p.data = *m_data;
+                p.num_epochs = num_epochs;
+                p.cols = cols;
+                p.rows = rows;
+                p.neighborhood = neighborhood;
+                p.learning_rate = learning_rate;
+                p.initialization = initialization.get().c_str();
+                p.batch_process = batch_process;
+                p.autoclear = autoclear;
+                p.reuse_model = (m_model.model != nullptr && !autoclear);
+                p.seed = seed;
+                p.autoscale = autoscale;
+                p.scaler_type = scaler.get().c_str();
+                p.scaler_min = scaler_min;
+                p.scaler_max = scaler_max;
+                p.scaler_epsilon = scaler_epsilon;
+
+                background_launch([p = std::move(p)]() mutable -> BgResult {
+                    BgResult r;
+                    if (p.seed == 0) {
+                        mlpack::RandomSeed(time(NULL));
+                    } else {
+                        mlpack::RandomSeed((size_t) p.seed);
+                    }
+
+                    SOM::initialization init_type = SOM::uniform;
+                    if(p.initialization == "uniform") {
+                        init_type = SOM::uniform;
+                    } else if(p.initialization == "gaussian") {
+                        init_type = SOM::gaussian;
+                    } else if(p.initialization == "sample") {
+                        init_type = SOM::sample;
+                    }
+
+                    if (p.reuse_model) {
+                        // training continues on a copy of the live model;
+                        // the trained copy is swapped in on the main thread
+                        r.model = std::make_unique<SOM>(p.cols, p.rows, p.data.n_rows, p.num_epochs, p.neighborhood, p.learning_rate, init_type);
+                    } else {
+                        r.model = std::make_unique<SOM>(p.cols, p.rows, p.data.n_rows, p.num_epochs, p.neighborhood, p.learning_rate, init_type);
+                    }
+
+                    arma::Mat<double> scaled_data = p.data;
+                    if (p.autoscale) {
+                        r.scaler = mlmat::make_scaler(p.scaler_type, p.scaler_min, p.scaler_max, p.scaler_epsilon);
+                        r.scaler->Fit(p.data);
+                        r.scaler->Transform(p.data, scaled_data);
+                    }
+
+                    if (p.batch_process) {
+                        r.model->run_batch_knn(scaled_data);
+                    } else {
+                        r.model->run_epochs(scaled_data);
+                    }
+                    return r;
+                });
             } else {
                 if (seed == 0) {
                   mlpack::RandomSeed(time(NULL));
@@ -327,6 +393,80 @@ public:
         
         
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
+
+    // ---- background training -------------------------------------------
+    struct BgParams {
+        arma::Mat<double> data;
+        long num_epochs;
+        int cols;
+        int rows;
+        int neighborhood;
+        double learning_rate;
+        std::string initialization;
+        bool batch_process;
+        bool autoclear;
+        bool reuse_model;
+        int seed;
+        bool autoscale;
+        std::string scaler_type;
+        double scaler_min;
+        double scaler_max;
+        double scaler_epsilon;
+    };
+
+    struct BgResult {
+        std::unique_ptr<SOM> model;
+        std::unique_ptr<mlpack::ScalingModel> scaler;
+    };
+
+    void bg_commit(BgResult&& r) {
+        m_model.model = std::move(r.model);
+        m_model.scaler = std::move(r.scaler);
+        if (autoclear) {
+            m_data.reset();
+        }
+        write_trained_map();
+    }
+
+    // the output half of the synchronous train path, factored so the
+    // background commit can run it on the main thread
+    void write_trained_map() {
+        if (!m_model.model) {
+            return;
+        }
+        void *o, *p;
+        t_atom a;
+
+        arma::Mat<double> dat = *m_model.model->m_nodes;
+        arma::Mat<double> rescaled_data;
+
+        auto* mob = maxob_from_jitob(maxobj());
+        auto* mop = static_cast<t_object*>(max_jit_obex_adornment_get(mob , _jit_sym_jit_mop));
+        auto* op = static_cast<t_linklist*>(object_method(mop,_jit_sym_getoutputlist));
+        auto* genmatrix = static_cast<t_object*>(linklist_getindex(op, 0));
+        genmatrix = static_cast<t_object*>(object_method(genmatrix, _jit_sym_getmatrix));
+
+        auto genmatrix_savelock = object_method(genmatrix, _jit_sym_lock, 1);
+
+        rescaled_data = scaler_inverse_transform(m_model, dat, rescaled_data);
+
+        t_jit_matrix_info minfo;
+        minfo.type = _jit_sym_float64;
+        minfo.flags = 0;
+        minfo.planecount = rescaled_data.n_rows;
+        minfo.dimcount = 2;
+        minfo.dim[0] = cols;
+        minfo.dim[1] = rows;
+
+        genmatrix = arma_to_jit(mode, rescaled_data, genmatrix, minfo);
+
+        if ((p=object_method((t_object*)mop,_jit_sym_getoutput,1)) && (o=max_jit_mop_io_getoutlet(p)))
+        {
+            atom_setsym(&a,object_attr_getsym(p,_jit_sym_matrixname));
+            outlet_anything(o,_jit_sym_jit_matrix,1,&a);
+        }
+        object_method(genmatrix,_jit_sym_lock,genmatrix_savelock);
+    }
 };
 
 MIN_EXTERNAL(mlmat_som);

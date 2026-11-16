@@ -152,6 +152,12 @@ public:
         },
         range {0.0, 1.0}
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and generation/probability keep using the previous model until the new one is ready. When training finishes the likelihood is sent out the dumpout outlet (as with synchronous training), followed by a done message (error, if training failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     message<> clear { this, "clear", "clear data and model",
         MIN_FUNCTION {
@@ -211,6 +217,46 @@ public:
             } else if(m_data->n_cols < gaussians) {
                 (cerr << "need more observations than gaussians. have " <<  m_data->n_cols << ", need at least " << gaussians << "." << endl );
                 
+            } else if (background_in_progress()) {
+                (cerr << "a training is already in progress." << endl);
+            } else if (background) {
+                BgParams p;
+                p.data = *m_data;
+                p.trial_count = trial_count;
+                p.gaussians = gaussians;
+                p.noise = noise;
+                p.refined_start = refined_start;
+                p.kmeans_max_iterations = kmeans_max_iterations;
+                p.samplings = samplings;
+                p.percentage = percentage;
+                p.diagonal_covariance = diagonal_covariance;
+                p.no_force_positive = no_force_positive;
+                p.max_iterations = max_iterations;
+                p.tolerance = tolerance;
+                p.autoscale = autoscale;
+                p.scaler_type = scaler.get().c_str();
+                p.scaler_min = scaler_min;
+                p.scaler_max = scaler_max;
+                p.scaler_epsilon = scaler_epsilon;
+
+                background_launch([p = std::move(p)]() mutable -> BgResult {
+                    BgResult r;
+                    r.likelihood = 0.0;
+                    // noise is applied to the worker's copy, exactly as
+                    // the synchronous path mutates its scaled_data
+                    if (p.noise > 0.) {
+                        p.data += p.noise * arma::randn(p.data.n_rows, p.data.n_cols);
+                    }
+                    r.model = std::make_unique<GMM>(p.gaussians, p.data.n_rows);
+                    arma::Mat<double> scaled_data = p.data;
+                    if (p.autoscale) {
+                        r.scaler = mlmat::make_scaler(p.scaler_type, p.scaler_min, p.scaler_max, p.scaler_epsilon);
+                        r.scaler->Fit(p.data);
+                        r.scaler->Transform(p.data, scaled_data);
+                    }
+                    train_gmm_static(scaled_data, p, *r.model, r.likelihood);
+                    return r;
+                });
             } else {
                 arma::Mat<double> scaled_data;
                 scaler_fit(m_model, *m_data);
@@ -721,6 +767,103 @@ private:
     
     std::unique_ptr<arma::Mat<double>> m_data { nullptr };
     std::unique_ptr<arma::vec> m_weights { nullptr };
+
+public:
+    // ---- background training -------------------------------------------
+    struct BgParams {
+        arma::Mat<double> data;
+        long trial_count;
+        int gaussians;
+        double noise;
+        bool refined_start;
+        int kmeans_max_iterations;
+        int samplings;
+        double percentage;
+        bool diagonal_covariance;
+        bool no_force_positive;
+        int max_iterations;
+        double tolerance;
+        bool autoscale;
+        std::string scaler_type;
+        double scaler_min;
+        double scaler_max;
+        double scaler_epsilon;
+    };
+
+    struct BgResult {
+        std::unique_ptr<GMM> model;
+        std::unique_ptr<mlpack::ScalingModel> scaler;
+        double likelihood;
+    };
+
+    void bg_commit(BgResult&& r) {
+        m_model.model = std::move(r.model);
+        m_model.scaler = std::move(r.scaler);
+        if (autoclear) {
+            m_data.reset();
+        }
+        // same dumpout output as the synchronous path, then the
+        // machinery posts done
+        t_atom a[1];
+        atom_setfloat(a, r.likelihood);
+        post_bg_dumpout("likelihood", 1, a);
+    }
+
+private:
+    // the training tree shared by the synchronous path and the worker:
+    // static so the background thread cannot touch object members
+    static void train_gmm_static(arma::Mat<double>& data, const BgParams& p, GMM& model, double& likelihood) {
+        typedef KMeans<mlpack::SquaredEuclideanDistance, RefinedStart> KMeansType;
+
+        if (p.refined_start) {
+            KMeansType k(p.kmeans_max_iterations, mlpack::SquaredEuclideanDistance(),
+                         RefinedStart(p.samplings, p.percentage));
+            if (p.diagonal_covariance) {
+                DiagonalGMM dgmm(model.Gaussians(), model.Dimensionality());
+                for (size_t i = 0; i < size_t(p.gaussians); ++i) {
+                    dgmm.Component(i).Mean() = model.Component(i).Mean();
+                    dgmm.Component(i).Covariance(std::move(arma::diagvec(model.Component(i).Covariance())));
+                }
+                dgmm.Weights() = model.Weights();
+                EMFit<KMeansType, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution<>> em(p.max_iterations, p.tolerance, k);
+                likelihood = dgmm.Train(data, p.trial_count, false, em);
+                for (size_t i = 0; i < size_t(p.gaussians); ++i) {
+                    model.Component(i).Mean() = dgmm.Component(i).Mean();
+                    model.Component(i).Covariance(arma::diagmat(dgmm.Component(i).Covariance()));
+                }
+                model.Weights() = dgmm.Weights();
+            } else if (p.no_force_positive) {
+                EMFit<KMeansType> em(p.max_iterations, p.tolerance, k);
+                likelihood = model.Train(data, p.trial_count, false, em);
+            } else {
+                EMFit<KMeansType, NoConstraint> em(p.max_iterations, p.tolerance, k);
+                likelihood = model.Train(data, p.trial_count, false, em);
+            }
+        } else {
+            if (p.diagonal_covariance) {
+                DiagonalGMM dgmm(model.Gaussians(), model.Dimensionality());
+                for (size_t i = 0; i < size_t(p.gaussians); ++i) {
+                    dgmm.Component(i).Mean() = model.Component(i).Mean();
+                    dgmm.Component(i).Covariance(std::move(arma::diagvec(model.Component(i).Covariance())));
+                }
+                dgmm.Weights() = model.Weights();
+                EMFit<KMeans<>, PositiveDefiniteConstraint, mlpack::DiagonalGaussianDistribution<>> em(p.max_iterations, p.tolerance, KMeans<>(p.kmeans_max_iterations));
+                likelihood = dgmm.Train(data, p.trial_count, false, em);
+                for (size_t i = 0; i < size_t(p.gaussians); ++i) {
+                    model.Component(i).Mean() = dgmm.Component(i).Mean();
+                    model.Component(i).Covariance(arma::diagmat(dgmm.Component(i).Covariance()));
+                }
+                model.Weights() = dgmm.Weights();
+            } else if (p.no_force_positive) {
+                EMFit<> em(p.max_iterations, p.tolerance, KMeans<>(p.kmeans_max_iterations));
+                likelihood = model.Train(data, p.trial_count, false, em);
+            } else {
+                KMeans<> k(p.kmeans_max_iterations);
+                EMFit<KMeans<>, NoConstraint> em(p.max_iterations, p.tolerance, k);
+                likelihood = model.Train(data, p.trial_count, false, em);
+            }
+        }
+    }
 };
 
 

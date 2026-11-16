@@ -56,6 +56,12 @@ public:
             "Clear training data after training is run."
         }
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and queries keep using the previous model until the new one is ready. A done message is sent out the dumpout outlet when training finishes (error, if it failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     attribute<c74::min::symbol> file {this, "file", k_sym__empty,
         description {
@@ -113,7 +119,38 @@ public:
     
     message<> train { this, "train", "train model.",
         MIN_FUNCTION {
+            if(background_in_progress()) {
+                return {};
+            }
+
             if(m_training) {
+                if (background) {
+                    BgParams p;
+                    p.training = *m_training;
+                    p.hidden_size = hidden_size;
+                    p.lambda = lambda;
+                    p.beta = beta;
+                    p.rho = rho;
+                    p.autoscale = autoscale;
+                    p.scaler_type = scaler.get().c_str();
+                    p.scaler_min = scaler_min;
+                    p.scaler_max = scaler_max;
+                    p.scaler_epsilon = scaler_epsilon;
+
+                    background_launch([p = std::move(p)]() mutable -> BgResult {
+                        BgResult r;
+                        arma::mat out_data = p.training;
+                        if (p.autoscale) {
+                            r.scaler = mlmat::make_scaler(p.scaler_type, p.scaler_min, p.scaler_max, p.scaler_epsilon);
+                            r.scaler->Fit(p.training);
+                            r.scaler->Transform(p.training, out_data);
+                        }
+                        // the ext constructor performs the training
+                        r.model = std::make_unique<SparseAutoencoderExt>(out_data, out_data.n_rows, p.hidden_size, p.lambda, p.beta, p.rho);
+                        return r;
+                    });
+                    return {};
+                }
                 arma::mat out_data;
                 scaler_fit(m_model, *m_training);
                 out_data = scaler_transform(m_model, *m_training, out_data);
@@ -136,6 +173,33 @@ public:
             return {};
         }
     };
+
+    // ---- background training -------------------------------------------
+    struct BgParams {
+        arma::Mat<double> training;
+        int hidden_size;
+        double lambda;
+        double beta;
+        double rho;
+        bool autoscale;
+        std::string scaler_type;
+        double scaler_min;
+        double scaler_max;
+        double scaler_epsilon;
+    };
+
+    struct BgResult {
+        std::unique_ptr<SparseAutoencoderExt> model;
+        std::unique_ptr<mlpack::ScalingModel> scaler;
+    };
+
+    void bg_commit(BgResult&& r) {
+        m_model.model = std::move(r.model);
+        m_model.scaler = std::move(r.scaler);
+        if (autoclear) {
+            m_training.reset();
+        }
+    }
     
     
     // post to max window == but only when the class is loaded the first time

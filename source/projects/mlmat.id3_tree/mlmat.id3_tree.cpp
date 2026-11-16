@@ -90,6 +90,12 @@ public:
             return {value};
         }}
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and predictions keep using the previous model until the new one is ready. When training finishes the training-set accuracy is sent out the dumpout outlet (as with synchronous training), followed by a done message (error, if training failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     
     message<> train {this, "train", "Train model.",
@@ -119,6 +125,54 @@ public:
                 goto out;
             }
             
+            if (background_in_progress()) {
+                goto out;
+            }
+
+            if (background) {
+                BgParams p;
+                p.data = *m_data;
+                p.labels = *m_labels;
+                p.minimum_leaf_size = minimum_leaf_size;
+                p.minimum_gain_split = minimum_gain_split;
+                p.maximum_depth = maximum_depth;
+                p.autoscale = autoscale;
+                p.scaler_type = scaler.get().c_str();
+                p.scaler_min = scaler_min;
+                p.scaler_max = scaler_max;
+                p.scaler_epsilon = scaler_epsilon;
+
+                background_launch([p = std::move(p)]() mutable -> BgResult {
+                    BgResult r;
+                    const size_t numClasses = arma::max(arma::max(p.labels)) + 1;
+                    r.model = std::make_unique<DecisionTreeModel>();
+
+                    arma::mat out_data = p.data;
+                    if (p.autoscale) {
+                        r.scaler = mlmat::make_scaler(p.scaler_type, p.scaler_min, p.scaler_max, p.scaler_epsilon);
+                        r.scaler->Fit(p.data);
+                        r.scaler->Transform(p.data, out_data);
+                    }
+
+                    r.model->tree = DecisionTree<>(out_data, p.labels, numClasses,
+                                                   p.minimum_leaf_size, p.minimum_gain_split,
+                                                   p.maximum_depth);
+
+                    arma::Row<size_t> predictions;
+                    arma::mat probabilities;
+                    r.model->tree.Classify(out_data, predictions, probabilities);
+                    size_t correct = 0;
+                    for (size_t i = 0; i < p.data.n_cols; ++i) {
+                        if (predictions[i] == p.labels[i]) {
+                            ++correct;
+                        }
+                    }
+                    r.accuracy = double(correct) / double(p.data.n_cols);
+                    return r;
+                });
+                goto out;
+            }
+
             numClasses = arma::max(arma::max(*m_labels)) + 1;
             
             m_model.model = std::make_unique<DecisionTreeModel>();
@@ -165,6 +219,39 @@ public:
         }
         
     };
+
+    // ---- background training -------------------------------------------
+    struct BgParams {
+        arma::Mat<double> data;
+        arma::Row<size_t> labels;
+        int minimum_leaf_size;
+        double minimum_gain_split;
+        int maximum_depth;
+        bool autoscale;
+        std::string scaler_type;
+        double scaler_min;
+        double scaler_max;
+        double scaler_epsilon;
+    };
+
+    struct BgResult {
+        std::unique_ptr<DecisionTreeModel> model;
+        std::unique_ptr<mlpack::ScalingModel> scaler;
+        double accuracy;
+    };
+
+    void bg_commit(BgResult&& r) {
+        m_model.model = std::move(r.model);
+        m_model.scaler = std::move(r.scaler);
+        if (autoclear) {
+            m_data.reset();
+            m_labels.reset();
+        }
+        t_atom a[1];
+        atom_setfloat(a, r.accuracy);
+        post_bg_dumpout("accuracy", 1, a);
+    }
+
     
     // post to max window == but only when the class is loaded the first time
     message<> maxclass_setup { this, "maxclass_setup",

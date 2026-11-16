@@ -50,25 +50,19 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 47.0, 152.0, 679.0, 624.0 ],
+                        "rect": [ 47.0, 126.0, 679.0, 650.0 ],
                         "default_fontsize": 13.0,
                         "gridsize": [ 5.0, 5.0 ],
                         "showontab": 1,
                         "boxes": [
                             {
                                 "box": {
-                                    "depthbuffer": 1,
-                                    "doublebuffer": 1,
-                                    "fsaa": 0,
                                     "id": "obj-3",
-                                    "maxclass": "jit.pwindow",
+                                    "maxclass": "newobj",
                                     "numinlets": 1,
-                                    "numoutlets": 2,
-                                    "outlettype": [ "jit_matrix", "" ],
-                                    "patching_rect": [ 503.0, 366.0, 80.0, 60.0 ],
-                                    "pwinoutlettype": 0,
-                                    "stereo": 0,
-                                    "sync": 1
+                                    "numoutlets": 0,
+                                    "patching_rect": [ 319.0, 503.0, 191.0, 23.0 ],
+                                    "text": "print mlmat.id3_tree: @popup 1"
                                 }
                             },
                             {
@@ -480,6 +474,12 @@
                             },
                             {
                                 "patchline": {
+                                    "destination": [ "obj-3", 0 ],
+                                    "source": [ "obj-1", 2 ]
+                                }
+                            },
+                            {
+                                "patchline": {
                                     "destination": [ "obj-1", 0 ],
                                     "source": [ "obj-100", 0 ]
                                 }
@@ -543,14 +543,6 @@
                             {
                                 "patchline": {
                                     "destination": [ "obj-28", 0 ],
-                                    "order": 1,
-                                    "source": [ "obj-27", 0 ]
-                                }
-                            },
-                            {
-                                "patchline": {
-                                    "destination": [ "obj-3", 0 ],
-                                    "order": 0,
                                     "source": [ "obj-27", 0 ]
                                 }
                             },
@@ -659,7 +651,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 0.0, 26.0, 679.0, 624.0 ],
+                        "rect": [ 0.0, 26.0, 679.0, 650.0 ],
                         "showontab": 1,
                         "boxes": [],
                         "lines": []

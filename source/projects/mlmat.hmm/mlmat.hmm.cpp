@@ -70,6 +70,12 @@ public:
         },
         range {"discrete", "gaussian", "diag_gmm", "gmm"}
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and queries keep using the previous model until the new one is ready. A done message is sent out the dumpout outlet when training finishes (error, if training failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     // respond to the bang message to do something
     message<> clear { this, "clear", "clear previous training input.",
@@ -93,6 +99,50 @@ public:
                 goto out;
             }
             
+            if (background_in_progress()) {
+                goto out;
+            }
+
+            if (background) {
+                BgParams p;
+                p.observations = m_observations;
+                p.labels = m_labels;
+                p.hmm_type = hmm_type.get().c_str();
+                p.states = states;
+                p.gaussians = gaussians;
+                p.tolerance = tolerance;
+                p.use_labels = use_labels;
+                p.autoclear = autoclear;
+
+                background_launch([p = std::move(p)]() mutable -> BgResult {
+                    BgResult r;
+                    HMMType typeId;
+                    if (p.hmm_type == "discrete") {
+                        typeId = HMMType::DiscreteHMM;
+                    } else if (p.hmm_type == "gaussian") {
+                        typeId = HMMType::GaussianHMM;
+                    } else if (p.hmm_type == "gmm") {
+                        typeId = HMMType::GaussianMixtureModelHMM;
+                    } else {
+                        typeId = HMMType::DiagonalGaussianMixtureModelHMM;
+                    }
+
+                    r.model = std::make_unique<HMMModel>(typeId);
+
+                    if (typeId == HMMType::DiscreteHMM) {
+                        init_hmm_bg(r.model->DiscreteHMM(), p, r);
+                    } else if (typeId == HMMType::GaussianHMM) {
+                        init_hmm_bg(r.model->GaussianHMM(), p, r);
+                    } else if (typeId == HMMType::GaussianMixtureModelHMM) {
+                        init_hmm_bg(r.model->GMMHMM(), p, r);
+                    } else {
+                        init_hmm_bg(r.model->DiagGMMHMM(), p, r);
+                    }
+                    return r;
+                });
+                goto out;
+            }
+
             HMMType typeId;
             if (type_string == "discrete") {
                 typeId = HMMType::DiscreteHMM;
@@ -383,6 +433,185 @@ public:
         
     }
     
+    // ---- background training -------------------------------------------
+    // The worker-side replicas of the init_hmm family: static, operating
+    // only on the snapshot, with validation failures thrown as
+    // std::runtime_error (the machinery reports them on the main thread).
+
+    struct BgParams {
+        std::vector<arma::Mat<double>> observations;
+        std::vector<arma::Row<size_t>> labels;
+        std::string hmm_type;
+        int states;
+        int gaussians;
+        double tolerance;
+        bool use_labels;
+        bool autoclear;
+    };
+
+    struct BgResult {
+        std::unique_ptr<HMMModel> model;
+        // a non-fatal note reported on the main thread (e.g. unlabeled
+        // GMM training is skipped, as in the synchronous path)
+        std::string warning;
+    };
+
+    void bg_commit(BgResult&& r) {
+        if (!r.warning.empty()) {
+            (cout << r.warning << endl);
+        }
+        m_model.model = std::move(r.model);
+        if (autoclear) {
+            m_observations.clear();
+            m_labels.clear();
+        }
+    }
+
+    static void check_observations_bg(const std::vector<arma::Mat<double>>& obs, const size_t s) {
+        for (size_t i = 0; i < obs.size(); ++i) {
+            if (obs[i].n_rows != s) {
+                std::stringstream ss;
+                ss << "Dimensionality of training sequence " << i << " (" << obs[i].n_rows
+                   << ") is not equal to the dimensionality of the HMM (" << s << ")!";
+                throw std::runtime_error(ss.str());
+            }
+        }
+    }
+
+    static void check_labels_bg(const std::vector<arma::Row<size_t>>& labels,
+                                const std::vector<arma::Mat<double>>& obs, int states) {
+        if (labels.size() != obs.size()) {
+            throw std::runtime_error("Label sequence does not have the same number of points as observation sequence!");
+        }
+        for (size_t i = 0; i < obs.size(); ++i) {
+            if (obs[i].n_cols != labels[i].n_cols) {
+                std::stringstream ss;
+                ss << "Label sequence " << i << " does not have the same number of points ("
+                   << labels[i].n_cols << ") as observation sequence " << obs[i].n_cols << "!";
+                throw std::runtime_error(ss.str());
+            }
+            for (size_t j = 0; j < labels[i].n_cols; ++j) {
+                if (labels[i][j] >= size_t(states)) {
+                    std::stringstream ss;
+                    ss << "HMM has " << states << " hidden states, but labels contain "
+                       << labels[i][j] << " (should be between 0 and " << states << ")!";
+                    throw std::runtime_error(ss.str());
+                }
+            }
+        }
+    }
+
+    static void init_hmm_bg(HMM<DiscreteDistribution<>>* hmm, const BgParams& p, BgResult& r) {
+        arma::Col<size_t> maxEmissions(p.observations[0].n_rows);
+        maxEmissions.zeros();
+        for (auto it = p.observations.begin(); it != p.observations.end(); ++it) {
+            arma::Col<size_t> maxSeqs = arma::conv_to<arma::Col<size_t>>::from(arma::max(*it, 1)) + 1;
+            maxEmissions = arma::max(maxEmissions, maxSeqs);
+        }
+        if (hmm != nullptr) {
+            *hmm = HMM<DiscreteDistribution<>>(size_t(p.states), DiscreteDistribution<>(maxEmissions), p.tolerance);
+            auto& e = hmm->Emission();
+            for (size_t i = 0; i < e.size(); ++i) {
+                e[i].Probabilities().randu();
+                e[i].Probabilities() /= arma::accu(e[i].Probabilities());
+            }
+        }
+        check_observations_bg(p.observations, hmm->Emission()[0].Dimensionality());
+        if (p.use_labels) {
+            check_labels_bg(p.labels, p.observations, p.states);
+            hmm->Train(p.observations, p.labels);
+        } else {
+            hmm->Train(p.observations);
+        }
+    }
+
+    static void init_hmm_bg(HMM<GaussianDistribution<>>* hmm, const BgParams& p, BgResult&) {
+        const size_t dimensionality = p.observations[0].n_rows;
+        for (size_t i = 0; i < p.observations.size(); ++i) {
+            if (p.observations[i].n_rows != dimensionality) {
+                std::stringstream ss;
+                ss << "Observation sequence " << i << " dimensionality ("
+                   << p.observations[i].n_rows << " is incorrect (should be "
+                   << dimensionality << ")!";
+                throw std::runtime_error(ss.str());
+            }
+        }
+        if (hmm != nullptr) {
+            *hmm = HMM<GaussianDistribution<>>(size_t(p.states), GaussianDistribution<>(dimensionality), p.tolerance);
+            auto& e = hmm->Emission();
+            for (size_t i = 0; i < e.size(); ++i) {
+                const size_t d = e[i].Mean().n_rows;
+                e[i].Mean().randu();
+                arma::mat rr = arma::randu<arma::mat>(d, d);
+                e[i].Covariance(rr * rr.t());
+            }
+        }
+        check_observations_bg(p.observations, hmm->Emission()[0].Dimensionality());
+        if (p.use_labels) {
+            check_labels_bg(p.labels, p.observations, p.states);
+            hmm->Train(p.observations, p.labels);
+        } else {
+            hmm->Train(p.observations);
+        }
+    }
+
+    static void init_hmm_bg(HMM<GMM>* hmm, const BgParams& p, BgResult& r) {
+        const size_t dimensionality = p.observations[0].n_rows;
+        if (p.gaussians == 0) {
+            throw std::runtime_error("Number of gaussians for each GMM must be specified when type = 'gmm'!");
+        }
+        if (hmm != nullptr) {
+            *hmm = HMM<GMM>(size_t(p.states), GMM(size_t(p.gaussians), dimensionality), p.tolerance);
+            auto& e = hmm->Emission();
+            for (size_t i = 0; i < e.size(); ++i) {
+                e[i].Weights().randu();
+                e[i].Weights() /= arma::accu(e[i].Weights());
+                for (int g = 0; g < p.gaussians; ++g) {
+                    const size_t d = e[i].Component(g).Mean().n_rows;
+                    e[i].Component(g).Mean().randu();
+                    arma::mat rr = arma::randu<arma::mat>(d, d);
+                    e[i].Component(g).Covariance(rr * rr.t());
+                }
+            }
+        }
+        check_observations_bg(p.observations, hmm->Emission()[0].Dimensionality());
+        if (p.use_labels) {
+            check_labels_bg(p.labels, p.observations, p.states);
+            hmm->Train(p.observations, p.labels);
+        } else {
+            // as in the synchronous path: warn, and skip training
+            r.warning = "Unlabeled training of GMM HMMs is almost certainly not going to produce good results! Training terminated. ";
+        }
+    }
+
+    static void init_hmm_bg(HMM<DiagonalGMM>* hmm, const BgParams& p, BgResult& r) {
+        const size_t dimensionality = p.observations[0].n_rows;
+        if (p.gaussians == 0) {
+            throw std::runtime_error("Number of gaussians for each GMM must be specified when type = 'diag_gmm'!");
+        }
+        if (hmm != nullptr) {
+            *hmm = HMM<DiagonalGMM>(size_t(p.states), DiagonalGMM(size_t(p.gaussians), dimensionality), p.tolerance);
+            auto& e = hmm->Emission();
+            for (size_t i = 0; i < e.size(); ++i) {
+                e[i].Weights().randu();
+                e[i].Weights() /= arma::accu(e[i].Weights());
+                for (int g = 0; g < p.gaussians; ++g) {
+                    const size_t d = e[i].Component(g).Mean().n_rows;
+                    e[i].Component(g).Mean().randu();
+                    arma::vec rv = arma::randu<arma::vec>(d);
+                    e[i].Component(g).Covariance(rv);
+                }
+            }
+        }
+        check_observations_bg(p.observations, hmm->Emission()[0].Dimensionality());
+        if (p.use_labels) {
+            check_labels_bg(p.labels, p.observations, p.states);
+            hmm->Train(p.observations, p.labels);
+        } else {
+            r.warning = "Unlabeled training of Diagonal GMM HMMs is almost certainly not going to produce good results! Training terminated. ";
+        }
+    }
+
     t_jit_err init_hmm(HMM<DiscreteDistribution<>>* hmm) {
         t_jit_err err = JIT_ERR_NONE;
         arma::Col<size_t> maxEmissions(m_observations[0].n_rows);

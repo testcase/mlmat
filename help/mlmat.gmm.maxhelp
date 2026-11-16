@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 100.0, 100.0, 606.0, 705.0 ],
+        "rect": [ 736.0, 310.0, 656.0, 705.0 ],
         "default_fontsize": 13.0,
         "gridsize": [ 5.0, 5.0 ],
         "showrootpatcherontab": 0,
@@ -31,7 +31,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 0.0, 26.0, 606.0, 679.0 ],
+                        "rect": [ 0.0, 26.0, 656.0, 679.0 ],
                         "showontab": 1,
                         "boxes": [
                             {
@@ -87,11 +87,21 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 100.0, 126.0, 606.0, 679.0 ],
+                        "rect": [ 736.0, 336.0, 656.0, 679.0 ],
                         "default_fontsize": 13.0,
                         "gridsize": [ 5.0, 5.0 ],
                         "showontab": 1,
                         "boxes": [
+                            {
+                                "box": {
+                                    "id": "obj-3",
+                                    "maxclass": "newobj",
+                                    "numinlets": 1,
+                                    "numoutlets": 0,
+                                    "patching_rect": [ 435.5, 431.0, 173.0, 23.0 ],
+                                    "text": "print mlmat.gmm: @popup 1"
+                                }
+                            },
                             {
                                 "box": {
                                     "bubble": 1,
@@ -375,6 +385,12 @@
                             },
                             {
                                 "patchline": {
+                                    "destination": [ "obj-3", 0 ],
+                                    "source": [ "obj-1", 4 ]
+                                }
+                            },
+                            {
+                                "patchline": {
                                     "destination": [ "obj-1", 0 ],
                                     "midpoints": [ 251.5, 384.5, 239.0, 384.5 ],
                                     "source": [ "obj-12", 0 ]
@@ -462,7 +478,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 0.0, 26.0, 606.0, 679.0 ],
+                        "rect": [ 0.0, 26.0, 656.0, 679.0 ],
                         "showontab": 1,
                         "boxes": [],
                         "lines": []

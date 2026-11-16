@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 100.0, 100.0, 635.0, 721.0 ],
+        "rect": [ 766.0, 303.0, 635.0, 721.0 ],
         "default_fontsize": 13.0,
         "gridsize": [ 5.0, 5.0 ],
         "showrootpatcherontab": 0,
@@ -50,11 +50,21 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 100.0, 126.0, 635.0, 695.0 ],
+                        "rect": [ 766.0, 329.0, 635.0, 695.0 ],
                         "default_fontsize": 13.0,
                         "gridsize": [ 5.0, 5.0 ],
                         "showontab": 1,
                         "boxes": [
+                            {
+                                "box": {
+                                    "id": "obj-1",
+                                    "maxclass": "newobj",
+                                    "numinlets": 1,
+                                    "numoutlets": 0,
+                                    "patching_rect": [ 446.0, 525.0, 227.0, 23.0 ],
+                                    "text": "print mlmat.hoeffding_tree: @popup 1"
+                                }
+                            },
                             {
                                 "box": {
                                     "id": "obj-4",
@@ -313,8 +323,8 @@
                                     "numinlets": 3,
                                     "numoutlets": 3,
                                     "outlettype": [ "jit_matrix", "jit_matrix", "" ],
-                                    "patching_rect": [ 208.5, 525.0, 130.0, 23.0 ],
-                                    "text": "mlmat.hoeffding_tree"
+                                    "patching_rect": [ 208.5, 525.0, 230.0, 23.0 ],
+                                    "text": "mlmat.hoeffding_tree @batch_mode 1"
                                 }
                             },
                             {
@@ -578,6 +588,12 @@
                                     "destination": [ "obj-28", 0 ],
                                     "order": 1,
                                     "source": [ "obj-45", 0 ]
+                                }
+                            },
+                            {
+                                "patchline": {
+                                    "destination": [ "obj-1", 0 ],
+                                    "source": [ "obj-5", 2 ]
                                 }
                             },
                             {

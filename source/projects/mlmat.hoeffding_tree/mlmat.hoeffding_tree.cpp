@@ -102,6 +102,12 @@ public:
             
         }
     };
+
+    attribute<bool> background { this, "background", true,
+        description {
+            "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and predictions keep using the previous tree until the new one is ready. When training finishes the training-set accuracy is sent out the dumpout outlet (as with synchronous training), followed by a done message (error, if training failed). If 0, training blocks the main thread as before."
+        }
+    };
     
     message<> clear { this, "clear", "clear model.",
         MIN_FUNCTION {
@@ -142,9 +148,109 @@ public:
                 goto out;
             }
             
+            if (background_in_progress()) {
+                goto out;
+            }
+
             //1. if model is null or type is different must remake
             if(reset_tree) {
                 m_model.model = nullptr;
+            }
+
+            if (background) {
+                BgParams p;
+                p.data = *m_data;
+                p.labels = *m_labels;
+                p.num_passes = num_passes;
+                p.batch_mode = batch_mode;
+                // decided on the main thread (model state read here);
+                // build_new controls the scaler-refit rule
+                p.build_new = batch_mode || (m_model.model == nullptr);
+                if (!p.build_new && m_model.model) {
+                    // continuing training on a copy of the existing tree;
+                    // swapped in on the main thread when finished
+                    p.model_snapshot = std::make_unique<HoeffdingTreeModel>(*m_model.model);
+                    if (m_model.scaler) {
+                        p.scaler_snapshot = std::make_unique<mlpack::ScalingModel>(*m_model.scaler);
+                    }
+                }
+                p.info_gain = info_gain;
+                p.strategy = numeric_split_strategy.get().c_str();
+                p.confidence = confidence;
+                p.max_samples = max_samples;
+                p.check_interval = check_interval;
+                p.min_samples = min_samples;
+                p.bins = bins;
+                p.observations_before_binning = observations_before_binning;
+                p.autoscale = autoscale;
+                p.scaler_type = scaler.get().c_str();
+                p.scaler_min = scaler_min;
+                p.scaler_max = scaler_max;
+                p.scaler_epsilon = scaler_epsilon;
+
+                background_launch([p = std::move(p)]() mutable -> BgResult {
+                    BgResult r;
+                    size_t numClasses = 0;
+                    arma::Row<size_t> predictions;
+                    arma::mat out_data = p.data;
+
+                    if (p.build_new) {
+                        if(!p.info_gain && (p.strategy == "domingos")) {
+                            r.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_HOEFFDING);
+                        } else if (p.info_gain && (p.strategy == "binary")) {
+                            r.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::GINI_BINARY);
+                        } else if (p.info_gain && (p.strategy == "domingos")) {
+                            r.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_HOEFFDING);
+                        } else {
+                            r.model = std::make_unique<HoeffdingTreeModel>(HoeffdingTreeModel::INFO_BINARY);
+                        }
+
+                        numClasses = arma::max(arma::max(p.labels)) + 1;
+
+                        if (p.autoscale) {
+                            r.scaler = mlmat::make_scaler(p.scaler_type, p.scaler_min, p.scaler_max, p.scaler_epsilon);
+                            r.scaler->Fit(p.data);
+                            r.scaler->Transform(p.data, out_data);
+                        }
+
+                        DatasetInfo dataset_info;
+                        dataset_info.SetDimensionality(p.data.n_rows);
+                        for (size_t i = 0; i < dataset_info.Dimensionality(); i++) {
+                            dataset_info.Type(i) = Datatype::numeric;
+                        }
+                        r.model->BuildModel(out_data, dataset_info, p.labels, numClasses,
+                                           p.batch_mode, p.confidence, p.max_samples,
+                                           p.check_interval, p.min_samples, p.bins,
+                                           p.observations_before_binning);
+                        if(!p.batch_mode) {
+                            for(int q = 0; q < p.num_passes - 1; q++) {
+                                r.model->Train(out_data, p.labels, false);
+                            }
+                        }
+                    } else {
+                        // continuing the existing tree: same scaling it was
+                        // trained under (the scaler is NOT refit)
+                        r.model = std::move(p.model_snapshot);
+                        r.scaler = std::move(p.scaler_snapshot);
+                        if (p.autoscale && r.scaler) {
+                            r.scaler->Transform(p.data, out_data);
+                        }
+                        for(int q = 0; q < p.num_passes; q++) {
+                            r.model->Train(out_data, p.labels, false);
+                        }
+                    }
+
+                    r.model->Classify(out_data, predictions);
+                    size_t correct = 0;
+                    for (size_t i = 0; i < p.data.n_cols; ++i) {
+                        if (predictions[i] == p.labels[i]) {
+                          ++correct;
+                        }
+                    }
+                    r.accuracy = double(correct) / double(p.labels.n_elem);
+                    return r;
+                });
+                goto out;
             }
 
             // the scaler must only be (re)fit when a new tree is built: the
@@ -210,6 +316,45 @@ public:
             return {};
         }
     };
+
+    // ---- background training -------------------------------------------
+    struct BgParams {
+        arma::Mat<double> data;
+        arma::Row<size_t> labels;
+        int num_passes;
+        bool batch_mode;
+        bool build_new;
+        std::unique_ptr<HoeffdingTreeModel> model_snapshot;
+        std::unique_ptr<mlpack::ScalingModel> scaler_snapshot;
+        bool info_gain;
+        std::string strategy;
+        double confidence;
+        int max_samples;
+        int check_interval;
+        int min_samples;
+        int bins;
+        int observations_before_binning;
+        bool autoscale;
+        std::string scaler_type;
+        double scaler_min;
+        double scaler_max;
+        double scaler_epsilon;
+    };
+
+    struct BgResult {
+        std::unique_ptr<HoeffdingTreeModel> model;
+        std::unique_ptr<mlpack::ScalingModel> scaler;
+        double accuracy;
+    };
+
+    void bg_commit(BgResult&& r) {
+        m_model.model = std::move(r.model);
+        m_model.scaler = std::move(r.scaler);
+        t_atom a[1];
+        atom_setfloat(a, r.accuracy);
+        post_bg_dumpout("accuracy", 1, a);
+    }
+
         
     // post to max window == but only when the class is loaded the first time
     message<> maxclass_setup { this, "maxclass_setup",
