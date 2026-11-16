@@ -12,8 +12,6 @@ macOS and Windows. The build produces self-contained Max externals —
 ## Prerequisites
 
 
-
-
 | | macOS | Windows |
 |---|---|---|
 | Compiler | Xcode 12 or later (with command line tools) | Visual Studio 2022 (Desktop development with C++) |
@@ -87,7 +85,7 @@ which defines two dependency targets shared by all objects:
   by the spectral objects (16, 32, 64, … 65536); other sizes will report an
   error.
 
-## Updating the dependency versions
+## Updating the dependency versions 
 
 The third-party dependencies are pinned git submodules. To update one,
 check out the desired release tag inside the submodule and commit the
@@ -109,7 +107,7 @@ releases) and bqfft/bqvec (master). Armadillo, mlpack, ensmallen and cereal
 are used header-only; the cereal and ensmallen directories do not need to be
 built.
 
-## Continuous integration
+## Continuous integration (for me or any forks)
 
 GitHub Actions workflows in `.github/workflows/` build both platforms and
 create the release packages automatically whenever a `v*` tag is pushed:
