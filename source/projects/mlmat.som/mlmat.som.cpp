@@ -82,7 +82,7 @@ public:
         }}
     };
 
-    attribute<bool> background { this, "background", true,
+    attribute<bool> background_thread { this, "background_thread", true,
         description {
             "If set (the default), training runs on a background thread: the train message returns immediately and the patcher stays responsive. When training finishes the trained map is written out (as the synchronous path does) and a done message is sent out the dumpout outlet (error, if training failed). If 0, training blocks the main thread as before."
         }
@@ -179,7 +179,7 @@ public:
                 (cerr << "no data to train on." << endl);
             } else if (background_in_progress()) {
                 (cerr << "a training is already in progress." << endl);
-            } else if (background) {
+            } else if (background_thread) {
                 BgParams p;
                 p.data = *m_data;
                 p.num_epochs = num_epochs;

@@ -377,10 +377,179 @@ static void run_resample()
     }
 }
 
+
+static void run_spectral_ops()
+{
+    // ------------------------------------------------------------------
+    // spectral_find_peaks
+    // ------------------------------------------------------------------
+
+    // a log-gaussian magnitude frame is exactly parabolic in log
+    // space, so the interpolation must recover the peak exactly
+    {
+        const size_t bins = 32;
+        const int fftsize = 64;
+        const double sr = 48000.0;
+        const double c_true = 15.4;
+        const double a_true = 0.7;
+        std::vector<float> m(bins);
+        for (size_t k = 0; k < bins; ++k)
+            m[k] = float(a_true * std::exp(-1.0 * (double(k) - c_true) * (double(k) - c_true)));
+
+        std::vector<NEW::mlmat::spectral_peak> peaks;
+        NEW::mlmat::spectral_find_peaks(m, sr, fftsize, -60.0f, 4, peaks);
+        check(peaks.size() == 1, "gaussian frame: one peak", peaks.size());
+        if (peaks.size() == 1) {
+            check(std::fabs(peaks[0].frequency - c_true * sr / fftsize) < 1e-3,
+                  "gaussian frame: exact frequency", peaks[0].frequency - c_true * sr / fftsize);
+            check(std::fabs(peaks[0].amplitude - a_true) < 1e-3,
+                  "gaussian frame: exact amplitude", peaks[0].amplitude - a_true);
+        }
+    }
+
+    // a real windowed 1 kHz sine analyzed by the stack's STFT: the peak
+    // must interpolate well below a bin
+    {
+        const int fftsize = 1024;
+        const double sr = 48000.0;
+        std::vector<float> x(fftsize);
+        for (int i = 0; i < fftsize; ++i)
+            x[i] = float(0.5 * std::sin(2.0 * M_PI * 1000.0 * i / sr));
+
+        STFT stft;
+        std::vector<float> mags(fftsize / 2), phases(fftsize / 2);
+        stft.process(x, mags, phases, fftsize, 1, "hanning", true, false);
+
+        std::vector<NEW::mlmat::spectral_peak> peaks;
+        NEW::mlmat::spectral_find_peaks(mags, sr, fftsize, -60.0f, 8, peaks);
+        check(peaks.size() >= 1, "sine frame: peaks found", peaks.size());
+        if (!peaks.empty()) {
+            check(std::fabs(peaks[0].frequency - 1000.0) <= 3.0,
+                  "sine frame: peak at 1kHz", peaks[0].frequency - 1000.0);
+            check(peaks[0].amplitude > 0.1, "sine frame: peak amplitude sane", peaks[0].amplitude);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // spectral_multiply: the half-spectrum packing (real DC in re[0],
+    // real Nyquist in im[0]) must agree with multiplying the true
+    // (full complex) spectra
+    // ------------------------------------------------------------------
+    {
+        const int N = 16;
+        const int half = N / 2;
+        std::vector<double> a(N), b(N);
+        for (int i = 0; i < N; ++i) {
+            a[i] = std::sin(2.0 * M_PI * (i + 1) / 5.3) + 0.3 * std::cos(2.0 * M_PI * i / 3.1);
+            b[i] = 0.6 * std::sin(2.0 * M_PI * (i + 2) / 7.7) + 0.2 * std::sin(2.0 * M_PI * i / 2.3);
+        }
+        // true spectra, k = 0..N/2
+        std::vector<double> ra(half + 1), ia(half + 1), rb(half + 1), ib(half + 1);
+        for (int k = 0; k <= half; ++k) {
+            for (int t = 0; t < N; ++t) {
+                const double c = std::cos(-2.0 * M_PI * double(k) * double(t) / N);
+                const double si = std::sin(-2.0 * M_PI * double(k) * double(t) / N);
+                ra[k] += a[t] * c; ia[k] += a[t] * si;
+                rb[k] += b[t] * c; ib[k] += b[t] * si;
+            }
+        }
+
+        // half-spectrum packing of the inputs
+        std::vector<float> re1(half), im1(half), re2(half), im2(half);
+        re1[0] = (float)ra[0]; im1[0] = (float)ra[half];
+        re2[0] = (float)rb[0]; im2[0] = (float)rb[half];
+        for (int k = 1; k < half; ++k) {
+            re1[k] = (float)ra[k]; im1[k] = (float)ia[k];
+            re2[k] = (float)rb[k]; im2[k] = (float)ib[k];
+        }
+
+        std::vector<float> re_out(half), im_out(half);
+        NEW::mlmat::spectral_multiply(re1.data(), im1.data(), re2.data(), im2.data(),
+                                     re_out.data(), im_out.data(), half, false, 1.0f);
+
+        double max_err = 0.0;
+        // index 0 packs product DC (re) and product Nyquist (im)
+        max_err = std::max(max_err, std::fabs(re_out[0] - ra[0] * rb[0]));
+        max_err = std::max(max_err, std::fabs(im_out[0] - ra[half] * rb[half]));
+        for (int k = 1; k < half; ++k) {
+            const double pr = ra[k] * rb[k] - ia[k] * ib[k];
+            const double pi = ra[k] * ib[k] + ia[k] * rb[k];
+            max_err = std::max(max_err, std::fabs(re_out[k] - pr));
+            max_err = std::max(max_err, std::fabs(im_out[k] - pi));
+        }
+        check(max_err < 1e-3, "half-spectrum multiply matches true spectra", max_err);
+
+        // full-spectrum multiply: conjugate-symmetric extension, all
+        // bins complex
+        std::vector<float> fre1(N), fim1(N), fre2(N), fim2(N), f_re_out(N), f_im_out(N);
+        for (int k = 0; k <= half; ++k) {
+            fre1[k] = (float)ra[k]; fim1[k] = (float)ia[k];
+            fre2[k] = (float)rb[k]; fim2[k] = (float)ib[k];
+        }
+        for (int k = 1; k < half; ++k) {
+            fre1[N - k] = (float)ra[k]; fim1[N - k] = (float)-ia[k];
+            fre2[N - k] = (float)rb[k]; fim2[N - k] = (float)-ib[k];
+        }
+        NEW::mlmat::spectral_multiply(fre1.data(), fim1.data(), fre2.data(), fim2.data(),
+                                     f_re_out.data(), f_im_out.data(), N, true, 1.0f);
+        double max_err_full = 0.0;
+        for (int k = 0; k <= half; ++k) {
+            const double pr = ra[k] * rb[k] - ia[k] * ib[k];
+            const double pi = ra[k] * ib[k] + ia[k] * rb[k];
+            max_err_full = std::max(max_err_full, std::fabs(f_re_out[k] - pr));
+            max_err_full = std::max(max_err_full, std::fabs(f_im_out[k] - pi));
+        }
+        check(max_err_full < 1e-3, "full-spectrum multiply matches true spectra", max_err_full);
+    }
+
+    // ------------------------------------------------------------------
+    // end to end smoke: STFT a, STFT b, spectral multiply, ISTFT
+    // ------------------------------------------------------------------
+    {
+        const int fftsize = 1024;
+        const int overlap = 4;
+        const size_t step = fftsize / overlap;
+        const size_t nsamples = 4096;
+        const size_t frames = (nsamples * overlap + fftsize - 1) / fftsize;
+        const size_t bins = fftsize / 2;
+
+        STFT stft_a, stft_b;
+        ISTFT istft;
+        std::vector<float> a(nsamples), b(nsamples);
+        for (size_t i = 0; i < nsamples; ++i) {
+            a[i] = float(0.4 * std::sin(2.0 * M_PI * 220.0 * i / 48000.0));
+            b[i] = float(0.4 * std::sin(2.0 * M_PI * 330.0 * i / 48000.0));
+        }
+        std::vector<float> re_a(frames * bins), im_a(frames * bins);
+        std::vector<float> re_b(frames * bins), im_b(frames * bins);
+        stft_a.process(a, re_a, im_a, fftsize, overlap, "hanning", false, false);
+        stft_b.process(b, re_b, im_b, fftsize, overlap, "hanning", false, false);
+
+        // frame-wise multiply (the object's core operation)
+        const size_t total = frames * bins;
+        std::vector<float> re_p(total + step, 0.0f), im_p(total + step, 0.0f);
+        for (size_t f = 0; f < frames; ++f) {
+            NEW::mlmat::spectral_multiply(re_a.data() + f * bins, im_a.data() + f * bins,
+                                          re_b.data() + f * bins, im_b.data() + f * bins,
+                                          re_p.data() + f * bins, im_p.data() + f * bins,
+                                          bins, false, 1.0f);
+        }
+
+        std::vector<float> samples(total + step, 0.0f);
+        istft.process(re_p, im_p, samples, fftsize, overlap, "hanning", false, false);
+
+        float mx = 0.0f;
+        for (float v : samples)
+            mx = std::max(mx, std::fabs(v));
+        check(mx > 1e-4f, "stft x stft -> istft produces signal", mx);
+    }
+}
+
 int main()
 {
     run_parity();
     run_resample();
+    run_spectral_ops();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

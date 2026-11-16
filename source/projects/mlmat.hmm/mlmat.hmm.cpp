@@ -71,7 +71,7 @@ public:
         range {"discrete", "gaussian", "diag_gmm", "gmm"}
     };
 
-    attribute<bool> background { this, "background", true,
+    attribute<bool> background_thread { this, "background_thread", true,
         description {
             "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and queries keep using the previous model until the new one is ready. A done message is sent out the dumpout outlet when training finishes (error, if training failed). If 0, training blocks the main thread as before."
         }
@@ -103,7 +103,7 @@ public:
                 goto out;
             }
 
-            if (background) {
+            if (background_thread) {
                 BgParams p;
                 p.observations = m_observations;
                 p.labels = m_labels;

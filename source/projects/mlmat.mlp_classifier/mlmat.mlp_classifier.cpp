@@ -70,7 +70,7 @@ public:
         description { "Convergence tolerance for optimizer." }
     };
 
-    attribute<bool> background { this, "background", true,
+    attribute<bool> background_thread { this, "background_thread", true,
         description {
             "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and predictions keep using the previous model until the new one is ready. A done message is sent out the dumpout outlet when training finishes (error, if it failed). If 0, training blocks the main thread as before."
         }
@@ -107,7 +107,7 @@ public:
                 return {};
             }
 
-            if (background) {
+            if (background_thread) {
                 // snapshot everything the worker touches
                 BgParams p;
                 p.training = *m_training;

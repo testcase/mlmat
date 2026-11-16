@@ -17,6 +17,13 @@
 
 #include "bqfft/FFT.h"
 
+// the MIN_DISCUSSION macro (consumed by the reference page generators
+// via the has_class_discussion trait). Also defined in mlmat.hpp; the
+// guard makes this header usable without the mlpack-heavy includes.
+#ifndef MIN_DISCUSSION
+#define MIN_DISCUSSION static constexpr const char* class_discussion
+#endif
+
 using namespace c74;
 using namespace c74::min;
 
@@ -104,6 +111,114 @@ inline void resample(const std::vector<float>& input,
             + (-static_cast<double>(p0) + p2) * t
             + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t * t
             + (-static_cast<double>(p0) + 3.0 * p1 - 3.0 * p2 + p3) * t * t * t));
+    }
+}
+
+/// dB to linear amplitude.
+inline float db_to_lin(float db)
+{
+    return static_cast<float>(std::pow(10.0, static_cast<double>(db) / 20.0));
+}
+
+/// One spectral peak: an amplitude with an (interpolated) frequency.
+struct spectral_peak {
+    float amplitude;
+    float frequency;
+};
+
+/// Center frequency of bin k (k may be fractional: an interpolated
+/// peak position).
+inline double bin_frequency(double k, double samplerate, int fftsize)
+{
+    return k * samplerate / fftsize;
+}
+
+/// Find the spectral peaks of one frame of magnitudes: bins that are
+/// local maxima above `threshold_db`, refined with parabolic
+/// interpolation over the (log) magnitudes of the neighboring bins.
+/// The result holds at most `max_peaks` peaks, sorted by descending
+/// amplitude. Edge bins (0 and bins-1) cannot be interpolated.
+inline void spectral_find_peaks(const std::vector<float>& magnitudes,
+                                double samplerate,
+                                int fftsize,
+                                float threshold_db,
+                                size_t max_peaks,
+                                std::vector<spectral_peak>& out)
+{
+    const size_t bins = magnitudes.size();
+    const float thr = db_to_lin(threshold_db);
+    out.clear();
+    for (size_t k = 0; k < bins; ++k) {
+        const float m = magnitudes[k];
+        if (m < thr) {
+            continue;
+        }
+        const float left = k > 0 ? magnitudes[k - 1] : m;
+        const float right = k + 1 < bins ? magnitudes[k + 1] : m;
+        if (m < left || m < right) {
+            continue; // not a local maximum
+        }
+
+        float delta = 0.0f;
+        float amp = m;
+        if (k > 0 && k + 1 < bins) {
+            const double la = std::log(static_cast<double>(magnitudes[k - 1]));
+            const double lb = std::log(static_cast<double>(m));
+            const double lc = std::log(static_cast<double>(magnitudes[k + 1]));
+            const double denom = la - 2.0 * lb + lc;
+            if (std::fabs(denom) > 1e-12) {
+                delta = static_cast<float>(0.5 * (la - lc) / denom);
+                if (delta > 0.5f) {
+                    delta = 0.5f;
+                }
+                if (delta < -0.5f) {
+                    delta = -0.5f;
+                }
+                amp = static_cast<float>(std::exp(lb - 0.25 * (la - lc) * delta));
+            }
+        }
+
+        spectral_peak p;
+        p.amplitude = amp;
+        p.frequency = static_cast<float>(bin_frequency(static_cast<long>(k) + delta,
+                                                      samplerate, fftsize));
+        out.push_back(p);
+    }
+
+    std::sort(out.begin(), out.end(), [](const spectral_peak& a, const spectral_peak& b) {
+        return a.amplitude > b.amplitude;
+    });
+    if (out.size() > max_peaks) {
+        out.resize(max_peaks);
+    }
+}
+
+/// Frame-wise multiply of two spectra (spectral convolution). re/im
+/// hold `bins` values each.
+///
+/// For the half-spectrum convention (bins == fftsize/2, as produced by
+/// the buffer_stft / buffer_istft stack) index 0 packs the real DC in
+/// re and the real Nyquist in im (the vDSP-era convention), so the two
+/// multiply as real x real. For the full spectrum all bins are complex
+/// pairs.
+inline void spectral_multiply(const float* re1, const float* im1,
+                              const float* re2, const float* im2,
+                              float* re_out, float* im_out,
+                              size_t bins,
+                              bool full_spectrum,
+                              float gain)
+{
+    for (size_t k = 1; k < bins; ++k) {
+        re_out[k] = (re1[k] * re2[k] - im1[k] * im2[k]) * gain;
+        im_out[k] = (re1[k] * im2[k] + im1[k] * re2[k]) * gain;
+    }
+    if (full_spectrum) {
+        re_out[0] = (re1[0] * re2[0] - im1[0] * im2[0]) * gain;
+        im_out[0] = (re1[0] * im2[0] + im1[0] * re2[0]) * gain;
+    }
+    else {
+        re_out[0] = re1[0] * re2[0] * gain;
+        im_out[0] = im1[0] * im2[0] * gain;
     }
 }
 

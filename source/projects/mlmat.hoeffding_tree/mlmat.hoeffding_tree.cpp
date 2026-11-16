@@ -103,7 +103,7 @@ public:
         }
     };
 
-    attribute<bool> background { this, "background", true,
+    attribute<bool> background_thread { this, "background_thread", true,
         description {
             "If set (the default), training runs on a background thread: the train message returns immediately, the object stays responsive, and predictions keep using the previous tree until the new one is ready. When training finishes the training-set accuracy is sent out the dumpout outlet (as with synchronous training), followed by a done message (error, if training failed). If 0, training blocks the main thread as before."
         }
@@ -157,7 +157,7 @@ public:
                 m_model.model = nullptr;
             }
 
-            if (background) {
+            if (background_thread) {
                 BgParams p;
                 p.data = *m_data;
                 p.labels = *m_labels;
