@@ -447,9 +447,40 @@ static void run_bench()
     delete src;
 }
 
+
+// is_coords with an unset coordinate width (x < 1) must not divide by
+// zero: it degenerates to plain values. On x86-64 integer division by
+// zero is a hardware fault (the Windows crashes in knn/kfn/hoeffding);
+// on ARM64 it silently yields zero, which hid the bug on Apple Silicon.
+static void run_coords_guard()
+{
+    arma::Row<double> vals = {3, 1, 4, 1, 5, 9};
+    auto* d = new_dest();
+    auto info = base_info(c74::max::jit_sym_float64, 1, 1, 1, 0, 6);
+
+    // must not crash, whatever the platform
+    NEW::arma_to_jit(0, vals, (c74::max::t_object*)d, info, true, 0);
+
+    // with the guard the values are emitted plainly (mode 0: one cell,
+    // six planes)
+    bool ok = d->data.size() == 6 * sizeof(double);
+    if (ok) {
+        const double* got = (const double*)d->data.data();
+        for (size_t i = 0; i < 6; ++i) {
+            if (got[i] != vals[i]) {
+                ok = false;
+                break;
+            }
+        }
+    }
+    check(ok, "coords with x=0 emits plain values, no division by zero");
+    delete d;
+}
+
 int main(int argc, char** argv)
 {
     run_parity();
+    run_coords_guard();
     printf("conversions parity: %d checks, %d failures\n", checks, failures);
 
     for (int i = 1; i < argc; ++i) {

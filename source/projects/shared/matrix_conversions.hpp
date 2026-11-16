@@ -85,6 +85,16 @@ c74::max::t_jit_err fill_matrix_data(const c74::max::t_jit_matrix_info& minfo,
     if (dataptr == nullptr)
         return c74::max::JIT_ERR_INVALID_PTR;
 
+    // coordinate output is meaningless without a coordinate width: with
+    // x < 1 (unset or degenerate -- e.g. knn/kfn with a 1d reference,
+    // whose dim0 is never set) emit the values themselves instead of
+    // dividing by zero. On x86-64 the division faults (the Windows
+    // crashes); on ARM64 it silently yields zeros, which hid the bug
+    // on Apple Silicon machines.
+    if (is_coords && x < 1) {
+        is_coords = false;
+    }
+
     const size_t stepsize = sizeof(M);
     const size_t d0 = size_t(minfo.dim[0]);
     const size_t d1 = size_t(minfo.dim[1]);

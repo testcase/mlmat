@@ -332,7 +332,7 @@ public:
             }
         }
 
-        out_predictions = arma_to_jit(mode, predictions, out_predictions, out_predictions_info, true);
+        out_predictions = arma_to_jit(mode, predictions, out_predictions, out_predictions_info);
         out_probabilities = arma_to_jit(mode, probabilities, out_probabilities, out_probabilities_info);
 
     out:

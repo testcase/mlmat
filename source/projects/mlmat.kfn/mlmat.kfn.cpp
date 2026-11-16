@@ -222,7 +222,7 @@ public:
         }
         
         
-        out_neighbors = arma_to_jit(mode, resulting_neighbors, static_cast<t_object*>(out_neighbors), out_neighbors_info, true, m_model.dim0);
+        out_neighbors = arma_to_jit(mode, resulting_neighbors, static_cast<t_object*>(out_neighbors), out_neighbors_info, m_model.dimcount == 2, m_model.dim0);
         out_distances = arma_to_jit(mode, resulting_distances, static_cast<t_object*>(out_distances), out_distances_info);
 
     out:
