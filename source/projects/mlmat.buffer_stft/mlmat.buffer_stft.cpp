@@ -36,7 +36,7 @@ void mlmat_notify(max::t_object* x, max::t_symbol *s, max::t_symbol *msg, void *
 class mlmat_buffer_stft : public object<mlmat_buffer_stft>, public matrix_operator<>
 {
 public:
-    MIN_DESCRIPTION    { "Run STFT on a channel of a buffer~." };
+    MIN_DESCRIPTION    { "Run STFT on a channel of a buffer~. Output a matrix" };
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "fft~, ifft~, pfft~, jit.fft" };

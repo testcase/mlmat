@@ -41,10 +41,10 @@ void mlmat_notify(max::t_object* x, max::t_symbol *s, max::t_symbol *msg, void *
 class mlmat_buffer_istft : public object<mlmat_buffer_istft>, public matrix_operator<>
 {
 public:
-    MIN_DESCRIPTION    { "Read from a buffer~." };
-    MIN_TAGS        { "audio, sampling" };
-    MIN_AUTHOR        { "Cycling '74" };
-    MIN_RELATED        { "index~, buffer~, wave~" };
+    MIN_DESCRIPTION    { "Run inverse STFT on a two plan input matrix and write to a buffer~" };
+    MIN_TAGS        { "audio, analysis" };
+    MIN_AUTHOR        { "Todd Ingalls" };
+    MIN_RELATED        { "fft~, ifft~, pfft~, jit.fft" };
     
     max::t_buffer_ref *m_buffer_reference {nullptr};
 
