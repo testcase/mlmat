@@ -1,5 +1,5 @@
 /// @file
-/// mlmat.spectral_convolve: frame-wise spectral convolution (complex
+/// mlmat.spectral_crosssynth: frame-wise spectral convolution (complex
 /// multiplication) of the spectral matrices produced by two
 /// mlmat.buffer_stft objects, for STFT cross-synthesis with
 /// mlmat.buffer_istft.
@@ -16,17 +16,17 @@
 using namespace c74;
 using namespace c74::min;
 
-void mlmat_spectral_convolve_assist(void* x, void* b, long m, long a, char* s);
-max::t_jit_err mlmat_spectral_convolve_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs);
+void mlmat_spectral_crosssynth_assist(void* x, void* b, long m, long a, char* s);
+max::t_jit_err mlmat_spectral_crosssynth_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs);
 
-class mlmat_spectral_convolve : public object<mlmat_spectral_convolve>, public matrix_operator<>
+class mlmat_spectral_crosssynth : public object<mlmat_spectral_crosssynth>, public matrix_operator<>
 {
 public:
-    MIN_DESCRIPTION    { "Convolve the spectral matrices of two mlmat.buffer_stft analyses (frame-wise complex multiplication of the spectra), for STFT cross-synthesis with mlmat.buffer_istft." };
+    MIN_DESCRIPTION    { "Spectral-domain cross-synthesis: frame-wise complex multiplication of the spectral matrices from two mlmat.buffer_stft analyses, resynthesized with mlmat.buffer_istft." };
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, mlmat.buffer_istft, jit.fft" };
-    MIN_DISCUSSION  {"Convolution in the STFT domain is multiplication of spectra: each output frame is the complex product of the corresponding input frames, computed with the same packing conventions as the rest of the spectral stack. The output feeds <o>mlmat.buffer_istft</o> directly. The two inputs must use the same fftsize; the number of output frames is the shorter of the two inputs. Because both inputs passed through the analysis windowing, the resynthesized result is scaled by the windowing of both; use <at>gain</at> to compensate to taste."};
+    MIN_DISCUSSION  {"Cross-synthesis in the STFT domain is frame-wise multiplication of spectra: each output frame is the complex product of the corresponding input frames, computed with the same packing conventions as the rest of the spectral stack. The output feeds <o>mlmat.buffer_istft</o> directly. The two inputs must use the same fftsize. The output frame count matches input 0 (the carrier); if input 1 has fewer frames it loops, so a short spectral envelope can be applied to a longer signal without truncating the output. Because both inputs passed through the analysis windowing, the resynthesized result is scaled by the windowing of both; use <at>gain</at> to compensate to taste."};
 
     attribute<bool> input_polar { this, "input_polar", false,
         description {
@@ -57,7 +57,7 @@ public:
         max::t_object* mop = static_cast<max::t_object*>(max::jit_object_new(max::_jit_sym_jit_mop, 2, 1));
         max::jit_mop_single_type(mop, max::_jit_sym_float64);
         max::jit_class_addadornment(c, mop);
-        max::jit_class_addmethod(c, (max::method)mlmat_spectral_convolve_matrix_calc, "matrix_calc", max::A_CANT, 0);
+        max::jit_class_addmethod(c, (max::method)mlmat_spectral_crosssynth_matrix_calc, "matrix_calc", max::A_CANT, 0);
         return {};
     }};
 
@@ -65,7 +65,7 @@ public:
         max::t_class* c = args[0];
         max::max_jit_class_mop_wrap(c, this_jit_class, 0);
         max::max_jit_class_wrap_standard(c, this_jit_class, 0);
-        max::class_addmethod(c, (max::method)mlmat_spectral_convolve_assist, "assist", max::A_CANT, 0);
+        max::class_addmethod(c, (max::method)mlmat_spectral_crosssynth_assist, "assist", max::A_CANT, 0);
         return {};
     }};
 
@@ -83,22 +83,22 @@ public:
         const bool is1_64 = (in1_minfo.type == max::_jit_sym_float64);
         if ((!is0_64 && in0_minfo.type != max::_jit_sym_float32)
             || (!is1_64 && in1_minfo.type != max::_jit_sym_float32)) {
-            cerr << "mlmat.spectral_convolve: input matrices must be float32 or float64." << endl;
+            cerr << "mlmat.spectral_crosssynth: input matrices must be float32 or float64." << endl;
             err = max::JIT_ERR_INVALID_INPUT;
             goto out;
         }
         if (in0_minfo.dimcount != 2 || in1_minfo.dimcount != 2) {
-            cerr << "mlmat.spectral_convolve: input matrices must be 2d (frames x bins)." << endl;
+            cerr << "mlmat.spectral_crosssynth: input matrices must be 2d (frames x bins)." << endl;
             err = max::JIT_ERR_INVALID_INPUT;
             goto out;
         }
         if (in0_minfo.planecount != 2 || in1_minfo.planecount != 2) {
-            cerr << "mlmat.spectral_convolve: input matrices must have 2 planes." << endl;
+            cerr << "mlmat.spectral_crosssynth: input matrices must have 2 planes." << endl;
             err = max::JIT_ERR_INVALID_INPUT;
             goto out;
         }
         if (in0_minfo.dim[1] != in1_minfo.dim[1]) {
-            cerr << "mlmat.spectral_convolve: input bin counts differ (" << in0_minfo.dim[1]
+            cerr << "mlmat.spectral_crosssynth: input bin counts differ (" << in0_minfo.dim[1]
                  << " and " << in1_minfo.dim[1] << "); both analyses must use the same fftsize."
                  << endl;
             err = max::JIT_ERR_INVALID_INPUT;
@@ -111,13 +111,12 @@ public:
 
         // all locals live in this block: no goto crosses an initialization
         {
-            const long frames = std::min(in0_minfo.dim[0], in1_minfo.dim[0]);
+            // output matches the carrier (input 0); input 1 loops if
+            // shorter, so a short spectral envelope applied to a longer
+            // signal doesn't truncate the output
+            const long frames = in0_minfo.dim[0];
+            const long frames_b = in1_minfo.dim[0];
             const size_t bins = static_cast<size_t>(in0_minfo.dim[1]);
-            if (in0_minfo.dim[0] != in1_minfo.dim[0]) {
-                cout << "mlmat.spectral_convolve: frame counts differ (" << in0_minfo.dim[0]
-                     << " and " << in1_minfo.dim[0] << "); outputting " << frames << " frames."
-                     << endl;
-            }
 
             max::uchar* in0_data = nullptr;
             max::uchar* in1_data = nullptr;
@@ -150,9 +149,10 @@ public:
 
             for (long f = 0; f < frames; ++f) {
                 // unpack both frames (converting polar input to rect)
+                const long fb = (frames_b > 0) ? (f % frames_b) : 0;
                 max::uchar* const rows[2] = {
                     in0_data + static_cast<size_t>(f) * in0_minfo.dimstride[0],
-                    in1_data + static_cast<size_t>(f) * in1_minfo.dimstride[0]
+                    in1_data + static_cast<size_t>(fb) * in1_minfo.dimstride[0]
                 };
                 const max::t_jit_matrix_info* const minfos[2] = { &in0_minfo, &in1_minfo };
                 const bool is64[2] = { is0_64, is1_64 };
@@ -215,7 +215,7 @@ public:
     }
 };
 
-max::t_jit_err mlmat_spectral_convolve_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs) {
+max::t_jit_err mlmat_spectral_crosssynth_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs) {
     max::t_jit_err err = max::JIT_ERR_NONE;
     if (!x || !inputs || !outputs)
         return max::JIT_ERR_INVALID_PTR;
@@ -224,12 +224,12 @@ max::t_jit_err mlmat_spectral_convolve_matrix_calc(max::t_object* x, max::t_obje
     auto out_matrix = (max::t_object*)max::object_method(outputs, max::_jit_sym_getindex, 0);
     if (!in0_matrix || !in1_matrix || !out_matrix)
         return max::JIT_ERR_INVALID_PTR;
-    minwrap<mlmat_spectral_convolve>* job = (minwrap<mlmat_spectral_convolve>*)(x);
+    minwrap<mlmat_spectral_crosssynth>* job = (minwrap<mlmat_spectral_crosssynth>*)(x);
     err = job->m_min_object.matrix_calc(x, in0_matrix, in1_matrix, out_matrix);
     return err;
 }
 
-void mlmat_spectral_convolve_assist(void* x, void* b, long io, long index, char* s) {
+void mlmat_spectral_crosssynth_assist(void* x, void* b, long io, long index, char* s) {
     switch (io) {
         case 1:
             switch (index) {
@@ -255,4 +255,4 @@ void mlmat_spectral_convolve_assist(void* x, void* b, long io, long index, char*
     }
 }
 
-MIN_EXTERNAL(mlmat_spectral_convolve);
+MIN_EXTERNAL(mlmat_spectral_crosssynth);

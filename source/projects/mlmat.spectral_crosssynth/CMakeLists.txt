@@ -37,7 +37,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE mlmat::fft)
 #############################################################
 # REFERENCE PAGE GENERATOR
 #
-# Regenerates docs/mlmat.spectral_convolve.maxref.xml at build time, outside of Max:
+# Regenerates docs/mlmat.spectral_crosssynth.maxref.xml at build time, outside of Max:
 # stock doc_generate against the min-api mock kernel, then the mlmat
 # enhancements (attribute defaults, enum lists for the Inspector,
 # list sizes, class discussion) -- the same output the old
@@ -53,10 +53,16 @@ if (NOT TARGET mock_kernel)
 endif ()
 
 add_executable(${PROJECT_NAME}_docgen
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/mlmat.spectral_convolve_docgen.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/mlmat.spectral_crosssynth_docgen.cpp
+    # the object source is a build dependency (included by the driver
+    # via #include) but must not be compiled separately: listed as
+    # header-only so the build system tracks its changes and rebuilds
+    # the docgen when the object's metadata changes
+    ${CMAKE_CURRENT_SOURCE_DIR}/mlmat.spectral_crosssynth.cpp
     # headless link completion (see the file for why)
     ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/docgen_win_stubs.cpp
 )
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/mlmat.spectral_crosssynth.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_docgen)
 
 # the mock kernel is a shared library, so its dll must sit next to the
@@ -95,7 +101,7 @@ include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 # external, so the page must be written after it to stay newer
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND $<TARGET_FILE:${PROJECT_NAME}_docgen> "${CMAKE_SOURCE_DIR}/docs/mlmat.spectral_convolve.maxref.xml"
-    COMMENT "generating enhanced reference page for mlmat.spectral_convolve"
+    COMMAND $<TARGET_FILE:${PROJECT_NAME}_docgen> "${CMAKE_SOURCE_DIR}/docs/mlmat.spectral_crosssynth.maxref.xml"
+    COMMENT "generating enhanced reference page for mlmat.spectral_crosssynth"
 )
 

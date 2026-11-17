@@ -193,6 +193,37 @@ inline void spectral_find_peaks(const std::vector<float>& magnitudes,
     }
 }
 
+/// Phase-based (reassigned) instantaneous frequency for bin k.
+/// prev_phase and curr_phase are the phases of the same bin in two
+/// consecutive STFT frames; overlap is the STFT overlap factor (so the
+/// hop is fftsize / overlap). Returns the precise frequency in Hz.
+///
+/// For a stable sinusoid this gives the exact frequency (not an
+/// approximation like the parabolic interpolation); for transient or
+/// broadband content it degrades gracefully.
+inline double reassigned_frequency(long k, double curr_phase, double prev_phase,
+                                   int fftsize, int overlap, double samplerate)
+{
+    const double hop = double(fftsize) / double(overlap);
+    if (hop < 1.0) {
+        return -1.0;
+    }
+
+    // expected phase advance for the bin center frequency
+    const double expected = 2.0 * M_PI * double(k) * hop / double(fftsize);
+
+    // actual phase difference minus the expected advance
+    double dphi = curr_phase - prev_phase - expected;
+
+    // unwrap to [-pi, pi]
+    dphi = dphi - 2.0 * M_PI * std::round(dphi / (2.0 * M_PI));
+
+    // frequency deviation from bin center, in bins
+    const double delta = dphi * double(fftsize) / (2.0 * M_PI * hop);
+
+    return (double(k) + delta) * samplerate / double(fftsize);
+}
+
 /// Frame-wise multiply of two spectra (spectral convolution). re/im
 /// hold `bins` values each.
 ///

@@ -24,7 +24,7 @@ public:
     MIN_DESCRIPTION	{"RADICAL, an algorithm for independent component analysis (ICA). Let X be a matrix where each column is a point and each row a dimension. The goal is to find a square unmixing matrix W such that Y = W X and the rows of Y are independent components."};
     MIN_TAGS		{"ML"};
     MIN_AUTHOR		{"Todd Ingalls"};
-    MIN_RELATED		{"mlmat.nmf"};
+    MIN_RELATED		{"mlmat.nmf, mlmat.pca"};
 
 
     attribute<double> std_dev { this, "std_dev", .175,

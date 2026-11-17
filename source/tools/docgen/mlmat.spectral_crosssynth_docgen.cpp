@@ -1,5 +1,5 @@
 /// @file
-/// Reference-page generator for mlmat.spectral_convolve.
+/// Reference-page generator for mlmat.spectral_crosssynth.
 ///
 /// Runs outside of Max against the min-api mock kernel (the object unit
 /// test pattern): constructs the object, calls stock
@@ -19,13 +19,13 @@
 #undef hypot
 #endif
 #include "mlmat_docgen.hpp"
-#include "../../projects/mlmat.spectral_convolve/mlmat.spectral_convolve.cpp"
+#include "../../projects/mlmat.spectral_crosssynth/mlmat.spectral_crosssynth.cpp"
 
 #include <filesystem>
 
 int main(int argc, char** argv)
 {
-    std::string refpage = argc > 1 ? argv[1] : "docs/mlmat.spectral_convolve.maxref.xml";
+    std::string refpage = argc > 1 ? argv[1] : "docs/mlmat.spectral_crosssynth.maxref.xml";
 
     // a fresh checkout has no docs/ (it is generated, not tracked)
     if (const size_t slash = refpage.rfind('/'); slash != std::string::npos) {
@@ -33,10 +33,10 @@ int main(int argc, char** argv)
         std::filesystem::create_directories(refpage.substr(0, slash), ec);
     }
 
-    mlmat_spectral_convolve instance;
+    mlmat_spectral_crosssynth instance;
 
     // stock generation writes the base page ...
-    c74::min::doc_generate(instance, refpage, "mlmat.spectral_convolve", "mlmat_spectral_convolve");
+    c74::min::doc_generate(instance, refpage, "mlmat.spectral_crosssynth", "mlmat_spectral_crosssynth");
 
     // ... and this adds the parts the old min-api patch used to emit
     mlmat::doc_enhance(instance, refpage);

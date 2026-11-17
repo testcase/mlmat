@@ -545,11 +545,97 @@ static void run_spectral_ops()
     }
 }
 
+static void run_reassignment()
+{
+    // ------------------------------------------------------------------
+    // reassigned_frequency: the phase-based instantaneous frequency
+    // estimate for a sinusoid at a non-bin-center frequency must give
+    // the exact frequency (not an approximation like the parabola)
+    // ------------------------------------------------------------------
+    {
+        const int fftsize = 1024;
+        const int overlap = 4;
+        const double sr = 48000.0;
+        const double hop = double(fftsize) / overlap;
+
+        // sinusoid at 1000.3 Hz: bin 21.335 (not a bin center)
+        const double f0 = 1000.3;
+
+        // generate two consecutive STFT frames and extract the phase
+        // of the nearest bin
+        std::vector<float> x1(fftsize), x2(fftsize);
+        for (int i = 0; i < fftsize; ++i) {
+            x1[i] = float(0.5 * std::sin(2.0 * M_PI * f0 * i / sr));
+            x2[i] = float(0.5 * std::sin(2.0 * M_PI * f0 * (i + hop) / sr));
+        }
+
+        // find the nearest bin
+        const long k = long(f0 * fftsize / sr);   // 21
+
+        // compute the phase of bin k in each frame using the DFT
+        auto bin_phase = [&](const std::vector<float>& sig) -> double {
+            double re = 0, im = 0;
+            for (int t = 0; t < fftsize; ++t) {
+                const double c = std::cos(-2.0 * M_PI * double(k) * double(t) / fftsize);
+                const double si = std::sin(-2.0 * M_PI * double(k) * double(t) / fftsize);
+                re += sig[t] * c;
+                im += sig[t] * si;
+            }
+            return std::atan2(im, re);
+        };
+
+        const double phi1 = bin_phase(x1);
+        const double phi2 = bin_phase(x2);
+
+        const double freq = NEW::mlmat::reassigned_frequency(
+            k, phi2, phi1, fftsize, overlap, sr);
+
+        // for a pure sinusoid the reassignment is exact (within
+        // float precision of the phase computation)
+        check(std::fabs(freq - f0) < 0.5,
+              "reassigned frequency of 1000.3Hz sine", freq - f0);
+    }
+
+    // a bin-center frequency should also be exact (zero phase deviation)
+    {
+        const int fftsize = 1024;
+        const int overlap = 4;
+        const double sr = 48000.0;
+        const double hop = double(fftsize) / overlap;
+        const long k = 21;   // bin 21 = 984.375 Hz exactly
+        const double f0 = double(k) * sr / fftsize;
+
+        std::vector<float> x1(fftsize), x2(fftsize);
+        for (int i = 0; i < fftsize; ++i) {
+            x1[i] = float(0.5 * std::sin(2.0 * M_PI * f0 * i / sr));
+            x2[i] = float(0.5 * std::sin(2.0 * M_PI * f0 * (i + hop) / sr));
+        }
+
+        auto bin_phase = [&](const std::vector<float>& sig) -> double {
+            double re = 0, im = 0;
+            for (int t = 0; t < fftsize; ++t) {
+                const double c = std::cos(-2.0 * M_PI * double(k) * double(t) / fftsize);
+                const double si = std::sin(-2.0 * M_PI * double(k) * double(t) / fftsize);
+                re += sig[t] * c;
+                im += sig[t] * si;
+            }
+            return std::atan2(im, re);
+        };
+
+        const double freq = NEW::mlmat::reassigned_frequency(
+            k, bin_phase(x2), bin_phase(x1), fftsize, overlap, sr);
+
+        check(std::fabs(freq - f0) < 0.1,
+              "reassigned frequency of bin-center sine", freq - f0);
+    }
+}
+
 int main()
 {
     run_parity();
     run_resample();
     run_spectral_ops();
+    run_reassignment();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

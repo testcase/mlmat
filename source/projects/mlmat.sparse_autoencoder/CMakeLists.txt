@@ -54,6 +54,11 @@ endif ()
 
 add_executable(${PROJECT_NAME}_docgen
     ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/mlmat.sparse_autoencoder_docgen.cpp
+    # the object source is a build dependency (included by the driver
+    # via #include) but must not be compiled separately: listed as
+    # header-only so the build system tracks its changes and rebuilds
+    # the docgen when the object's metadata changes
+    ${CMAKE_CURRENT_SOURCE_DIR}/mlmat.sparse_autoencoder.cpp
     # headless link completion (see the file for why)
     ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/docgen_win_stubs.cpp
     # the object wraps a custom mlpack extension; compile its
@@ -61,6 +66,7 @@ add_executable(${PROJECT_NAME}_docgen
     ../shared/sparse_autoencoder_ext.cpp
     ../shared/sparse_autoencoder_function.cpp
 )
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/mlmat.sparse_autoencoder.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_docgen)
 
 # the mock kernel is a shared library, so its dll must sit next to the
