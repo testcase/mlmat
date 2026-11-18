@@ -20,13 +20,6 @@
 // define this macro so can build without errors
 
 #ifndef MIN_DISCUSSION
-
-#ifdef WIN_VERSION
-#pragma message "source code for min-api has not been patched to generate better doc. this will not impact functionality of object. please see README for patching instructions"
-#else
-#warning "source code for min-api has not been patched to generate better doc. this will not impact functionality of object. please see README for patching instructions"
-#endif
-
 #define MIN_DISCUSSION static constexpr const char* class_discussion
 #endif
 
