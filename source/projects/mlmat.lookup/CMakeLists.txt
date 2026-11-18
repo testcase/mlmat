@@ -52,15 +52,16 @@ endif ()
 
 add_executable(${PROJECT_NAME}_docgen
     ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/mlmat.lookup_docgen.cpp
-    # the object source is a build dependency (included by the driver
-    # via #include) but must not be compiled separately: listed as
-    # header-only so the build system tracks its changes and rebuilds
-    # the docgen when the object's metadata changes
-    ${CMAKE_CURRENT_SOURCE_DIR}/mlmat.lookup.cpp
     # headless link completion (see the file for why)
     ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/docgen/docgen_win_stubs.cpp
 )
-set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/mlmat.lookup.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
+# the docgen includes the object source via #include: track it
+# for rebuilds without compiling it separately (a custom target with
+# SOURCES makes CMake watch the file but never build it)
+add_custom_target(${PROJECT_NAME}_docgen_src
+    SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/mlmat.lookup.cpp
+)
+add_dependencies(${PROJECT_NAME}_docgen ${PROJECT_NAME}_docgen_src)
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_docgen)
 
 # the mock kernel is a shared library, so its dll must sit next to the
