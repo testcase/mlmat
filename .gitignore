@@ -60,3 +60,6 @@ AGENTS.md
 
 # local-only build instructions for cloud-synced folders
 BUILD_DROPBOX.md
+
+# local-only notes on the spectral objects
+SPECTRAL_README.md

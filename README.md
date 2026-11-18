@@ -78,6 +78,8 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 - [x]mlmat.som.maxhelp
 - [x]mlmat.sparse_autoencoder.maxhelp
 - [] mlmat.spectral_crosssynth
+- [] mlmat.spectral_mask
+- [] mlmat.spectral_op
 - [] mlmat.spectral_peaks
 - [] mlmat.spectral_reassign
 - [x]mlmat.split.maxhelp

@@ -4,9 +4,10 @@
 /// window caching, the Griffin-Lim phase reconstruction (including
 /// the momentum formulation and a comparison against the pre-fix
 /// iteration scheme the object used to use), phase-based frequency
-/// reassignment (including through the STFT stack itself), and the
+/// reassignment (including through the STFT stack itself), the
 /// window coherent-gain amplitude correction used by
-/// mlmat.spectral_reassign.
+/// mlmat.spectral_reassign, and the two-input cores of
+/// mlmat.spectral_mask and mlmat.spectral_op.
 
 #include "c74_min.h"
 
@@ -750,6 +751,196 @@ static void run_amplitude_correction()
     }
 }
 
+// ---------------------------------------------------------------------------
+// spectral_mask (mlmat.spectral_mask's core)
+// ---------------------------------------------------------------------------
+static void run_spectral_mask()
+{
+    const size_t n = 5;
+    const float ml[5] = {0.5f, 0.3f, 0.7f, 0.8f, 0.0f};
+    const float pl[5] = {0.1f, 0.2f, 0.3f, 0.4f, 0.9f};
+    const float mr[5] = {0.6f, 0.05f, 0.9f, 0.8f, 0.0f};
+    const float pr[5] = {0.5f, 0.6f, 0.7f, 0.8f, 0.2f};
+    float m[5], p[5];
+
+    // mag_from: magnitude from the source, phase from the masker
+    NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
+                              NEW::mlmat::mask_mode::mag_from, -60.0f);
+    bool ok = true;
+    for (size_t k = 0; k < n; ++k)
+        ok = ok && std::fabs(m[k] - ml[k]) < 1e-6 && std::fabs(p[k] - pr[k]) < 1e-6;
+    check(ok, "mask mag_from: magnitude from left, phase from right");
+
+    // phase_from: the reverse
+    NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
+                              NEW::mlmat::mask_mode::phase_from, -60.0f);
+    ok = true;
+    for (size_t k = 0; k < n; ++k)
+        ok = ok && std::fabs(m[k] - mr[k]) < 1e-6 && std::fabs(p[k] - pl[k]) < 1e-6;
+    check(ok, "mask phase_from: magnitude from right, phase from left");
+
+    // hard: at -20 dB the threshold is 0.1 -- only bin 1 (masker 0.05)
+    // is gated; the zeroed bin is magnitude and phase 0
+    NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
+                              NEW::mlmat::mask_mode::hard, -20.0f);
+    ok = std::fabs(m[0] - 0.5f) < 1e-6 && std::fabs(p[0] - 0.1f) < 1e-6
+      && m[1] == 0.0f && p[1] == 0.0f
+      && std::fabs(m[2] - 0.7f) < 1e-6 && std::fabs(p[2] - 0.3f) < 1e-6
+      && std::fabs(m[3] - 0.8f) < 1e-6
+      && m[4] == 0.0f;
+    check(ok, "mask hard: gates bins whose masker is below the threshold");
+
+    // soft: the Wiener weight |r|^2 / (|l|^2 + |r|^2), phase from the
+    // source; both-zero bins give zero (no 0/0)
+    NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
+                              NEW::mlmat::mask_mode::soft, -60.0f);
+    ok = true;
+    for (size_t k = 0; k < 4; ++k) {
+        const double expect = double(ml[k]) * (double(mr[k]) * mr[k])
+            / (double(ml[k]) * ml[k] + double(mr[k]) * mr[k]);
+        ok = ok && std::fabs(double(m[k]) - expect) < 1e-5
+                  && std::fabs(p[k] - pl[k]) < 1e-6;
+    }
+    ok = ok && m[4] == 0.0f;
+    check(ok, "mask soft: Wiener weight, phase from the source");
+
+    // subtract: positive differences kept, negative floored at zero,
+    // phase from the source
+    NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
+                              NEW::mlmat::mask_mode::subtract, -60.0f);
+    ok = m[0] == 0.0f                                   // 0.5 - 0.6 < 0
+      && std::fabs(m[1] - 0.25f) < 1e-6 && std::fabs(p[1] - 0.2f) < 1e-6
+      && m[2] == 0.0f                                   // 0.7 - 0.9 < 0
+      && m[3] == 0.0f                                   // 0.8 - 0.8 == 0
+      && m[4] == 0.0f;
+    check(ok, "mask subtract: floors the difference at zero");
+}
+
+// ---------------------------------------------------------------------------
+// spectral_op (mlmat.spectral_op's core)
+// ---------------------------------------------------------------------------
+static void run_spectral_op()
+{
+    const size_t n = 4;
+    const float ml[4] = {0.5f, 0.3f, 0.0f, 0.8f};
+    const float pl[4] = {0.1f, 0.2f, 0.3f, 0.4f};
+    const float mr[4] = {0.6f, 0.05f, 0.9f, 0.8f};
+    const float pr[4] = {0.5f, 0.6f, 0.7f, 0.8f};
+    float m[4], p[4];
+
+    // mix endpoints: t=0 is the left input, t=1 the right. compared
+    // as complex values: a zero-magnitude bin carries no meaningful
+    // phase (the roundtrip yields atan2(0,0) = 0), but its complex
+    // value (zero) is exact
+    NEW::mlmat::spectral_op(ml, pl, mr, pr, m, p, n, NEW::mlmat::op_kind::mix, 0.0, 1.0f);
+    bool ok = true;
+    for (size_t k = 0; k < n; ++k)
+        ok = ok && std::fabs(double(m[k]) * std::cos(p[k]) - double(ml[k]) * std::cos(pl[k])) < 1e-6
+                  && std::fabs(double(m[k]) * std::sin(p[k]) - double(ml[k]) * std::sin(pl[k])) < 1e-6;
+    check(ok, "op mix at t=0 is the left input");
+
+    NEW::mlmat::spectral_op(ml, pl, mr, pr, m, p, n, NEW::mlmat::op_kind::mix, 1.0, 1.0f);
+    ok = true;
+    for (size_t k = 0; k < n; ++k)
+        ok = ok && std::fabs(double(m[k]) * std::cos(p[k]) - double(mr[k]) * std::cos(pr[k])) < 1e-6
+                  && std::fabs(double(m[k]) * std::sin(p[k]) - double(mr[k]) * std::sin(pr[k])) < 1e-6;
+    check(ok, "op mix at t=1 is the right input");
+
+    // max/min select the whole bin (magnitude and phase) of the
+    // larger/smaller input; ties go to the left
+    NEW::mlmat::spectral_op(ml, pl, mr, pr, m, p, n, NEW::mlmat::op_kind::max, 0.5, 1.0f);
+    ok = std::fabs(m[0] - 0.6f) < 1e-6 && std::fabs(p[0] - 0.5f) < 1e-6
+      && std::fabs(m[1] - 0.3f) < 1e-6 && std::fabs(p[1] - 0.2f) < 1e-6
+      && std::fabs(m[2] - 0.9f) < 1e-6 && std::fabs(p[2] - 0.7f) < 1e-6
+      && std::fabs(m[3] - 0.8f) < 1e-6 && std::fabs(p[3] - 0.4f) < 1e-6;
+    check(ok, "op max selects the larger bin's full content");
+
+    NEW::mlmat::spectral_op(ml, pl, mr, pr, m, p, n, NEW::mlmat::op_kind::min, 0.5, 1.0f);
+    ok = std::fabs(m[0] - 0.5f) < 1e-6 && std::fabs(p[0] - 0.1f) < 1e-6
+      && std::fabs(m[1] - 0.05f) < 1e-6 && std::fabs(p[1] - 0.6f) < 1e-6
+      && std::fabs(m[2] - 0.0f) < 1e-6 && std::fabs(p[2] - 0.3f) < 1e-6
+      && std::fabs(m[3] - 0.8f) < 1e-6 && std::fabs(p[3] - 0.4f) < 1e-6;
+    check(ok, "op min selects the smaller bin's full content");
+
+    // gain scales the output (max is magnitude-domain, so the mags
+    // scale directly)
+    NEW::mlmat::spectral_op(ml, pl, mr, pr, m, p, n, NEW::mlmat::op_kind::max, 0.5, 2.0f);
+    ok = std::fabs(m[0] - 1.2f) < 1e-5 && std::fabs(m[2] - 1.8f) < 1e-5;
+    check(ok, "op gain scales the output");
+
+    // ------------------------------------------------------------------
+    // add is linear in the STFT coefficients: the frame-wise complex
+    // sum of two analyses must equal the analysis of the summed
+    // signals, bin for bin
+    // ------------------------------------------------------------------
+    {
+        const int fftsize = 512;
+        const int overlap = 4;
+        const size_t nsig = 2048;
+        const size_t step = size_t(fftsize) / size_t(overlap);
+        const size_t frames = (nsig + step - 1) / step;
+        const size_t spec = size_t(fftsize) / 2;
+
+        std::vector<float> x = make_signal(nsig, 777);
+        std::vector<float> y = make_signal(nsig, 999);
+        std::vector<float> xy(nsig);
+        for (size_t i = 0; i < nsig; ++i)
+            xy[i] = x[i] + y[i];
+
+        STFT stft;
+        std::vector<float> mx(frames * spec, 0.0f), px(frames * spec, 0.0f);
+        std::vector<float> my(frames * spec, 0.0f), py(frames * spec, 0.0f);
+        std::vector<float> mxy(frames * spec, 0.0f), pxy(frames * spec, 0.0f);
+        stft.process(x, mx, px, fftsize, overlap, "hanning", true, false);
+        stft.process(y, my, py, fftsize, overlap, "hanning", true, false);
+        stft.process(xy, mxy, pxy, fftsize, overlap, "hanning", true, false);
+
+        std::vector<float> ma(spec), pa(spec);
+        double max_err = 0.0;
+        for (size_t f = 0; f < frames; ++f) {
+            NEW::mlmat::spectral_op(mx.data() + f * spec, px.data() + f * spec,
+                                    my.data() + f * spec, py.data() + f * spec,
+                                    ma.data(), pa.data(), spec,
+                                    NEW::mlmat::op_kind::add, 0.0, 1.0f);
+            for (size_t k = 0; k < spec; ++k) {
+                const double re_add = double(ma[k]) * std::cos(pa[k]);
+                const double im_add = double(ma[k]) * std::sin(pa[k]);
+                const double re_ref = double(mxy[f * spec + k]) * std::cos(pxy[f * spec + k]);
+                const double im_ref = double(mxy[f * spec + k]) * std::sin(pxy[f * spec + k]);
+                max_err = std::max(max_err, std::fabs(re_add - re_ref));
+                max_err = std::max(max_err, std::fabs(im_add - im_ref));
+            }
+        }
+        check(max_err < 1e-2, "op add: stft(x) + stft(y) == stft(x + y)", max_err);
+
+        // multiply must agree with spectral_multiply (the crosssynth
+        // core) on the same frame, bin for bin
+        {
+            std::vector<float> re1(spec), im1(spec), re2(spec), im2(spec);
+            for (size_t k = 0; k < spec; ++k) {
+                re1[k] = float(mx[k] * std::cos(px[k]));
+                im1[k] = float(mx[k] * std::sin(px[k]));
+                re2[k] = float(my[k] * std::cos(py[k]));
+                im2[k] = float(my[k] * std::sin(py[k]));
+            }
+            std::vector<float> re_p(spec), im_p(spec);
+            NEW::mlmat::spectral_multiply(re1.data(), im1.data(), re2.data(), im2.data(),
+                                          re_p.data(), im_p.data(), spec, false, 1.0f);
+            NEW::mlmat::spectral_op(mx.data(), px.data(), my.data(), py.data(),
+                                    ma.data(), pa.data(), spec,
+                                    NEW::mlmat::op_kind::multiply, 0.0, 1.0f);
+            double max_mul = 0.0;
+            for (size_t k = 0; k < spec; ++k) {
+                const double re_op = double(ma[k]) * std::cos(pa[k]);
+                const double im_op = double(ma[k]) * std::sin(pa[k]);
+                max_mul = std::max(max_mul, std::fabs(re_op - re_p[k]) / (1.0 + std::fabs(re_p[k])));
+                max_mul = std::max(max_mul, std::fabs(im_op - im_p[k]) / (1.0 + std::fabs(im_p[k])));
+            }
+            check(max_mul < 1e-3, "op multiply matches spectral_multiply", max_mul);
+        }
+    }
+}
+
 int main()
 {
     run_parity();
@@ -757,6 +948,8 @@ int main()
     run_spectral_ops();
     run_reassignment();
     run_amplitude_correction();
+    run_spectral_mask();
+    run_spectral_op();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

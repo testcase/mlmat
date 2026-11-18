@@ -280,6 +280,141 @@ inline void spectral_multiply(const float* re1, const float* im1,
     }
 }
 
+/// Bin-wise masking of one spectral matrix by another (the core of
+/// mlmat.spectral_mask). mag/phase hold `bins` values each; left is
+/// the source, right the masker. Real (sign-encoded) values -- the
+/// real DC, or the real Nyquist packed in im[0] by the half-spectrum
+/// convention -- can be run through the same core by giving their
+/// magnitude and a phase of 0 or pi.
+enum class mask_mode {
+    mag_from,    // magnitude from left, phase from right
+    phase_from,  // magnitude from right, phase from left
+    hard,        // left kept where right >= threshold_db, else zeroed
+    soft,        // Wiener: left * |right|^2 / (|left|^2 + |right|^2)
+    subtract     // max(|left| - |right|, 0), phase from left
+};
+
+inline void spectral_mask(const float* mag_l, const float* phase_l,
+                          const float* mag_r, const float* phase_r,
+                          float* mag_out, float* phase_out,
+                          size_t bins,
+                          mask_mode mode,
+                          float threshold_db)
+{
+    const float thr = db_to_lin(threshold_db);
+    for (size_t k = 0; k < bins; ++k) {
+        float m = 0.0f, p = 0.0f;
+        switch (mode) {
+            case mask_mode::mag_from:
+                m = mag_l[k];
+                p = phase_r[k];
+                break;
+            case mask_mode::phase_from:
+                m = mag_r[k];
+                p = phase_l[k];
+                break;
+            case mask_mode::hard:
+                if (mag_r[k] >= thr) {
+                    m = mag_l[k];
+                    p = phase_l[k];
+                }
+                break;
+            case mask_mode::soft: {
+                const float lr = mag_l[k] * mag_l[k];
+                const float rr = mag_r[k] * mag_r[k];
+                const float d = lr + rr;
+                m = (d > 0.0f) ? mag_l[k] * (rr / d) : 0.0f;
+                p = phase_l[k];
+                break;
+            }
+            case mask_mode::subtract: {
+                const float diff = mag_l[k] - mag_r[k];
+                m = (diff > 0.0f) ? diff : 0.0f;
+                p = phase_l[k];
+                break;
+            }
+        }
+        mag_out[k] = m;
+        phase_out[k] = p;
+    }
+}
+
+/// Bin-wise arithmetic on two spectral matrices (the core of
+/// mlmat.spectral_op). mag/phase hold `bins` values each. add,
+/// subtract and mix are complex-domain operations, linear in the STFT
+/// coefficients (add is exactly the analysis of the summed signals;
+/// mix is a true crossfade); multiply is the frame-wise complex
+/// product (the spectral_multiply operation); max and min select the
+/// whole bin (magnitude and phase) of whichever input has the
+/// larger (smaller) magnitude. gain scales the output; mix is the
+/// crossfade amount (0 = left, 1 = right).
+enum class op_kind { add, subtract, multiply, max, min, mix };
+
+inline void spectral_op(const float* mag_l, const float* phase_l,
+                        const float* mag_r, const float* phase_r,
+                        float* mag_out, float* phase_out,
+                        size_t bins,
+                        op_kind op,
+                        double mix,
+                        float gain)
+{
+    for (size_t k = 0; k < bins; ++k) {
+        float m = 0.0f, p = 0.0f;
+        switch (op) {
+            case op_kind::add:
+            case op_kind::subtract:
+            case op_kind::mix: {
+                const double rl = static_cast<double>(mag_l[k]) * std::cos(phase_l[k]);
+                const double il = static_cast<double>(mag_l[k]) * std::sin(phase_l[k]);
+                const double rr = static_cast<double>(mag_r[k]) * std::cos(phase_r[k]);
+                const double ir = static_cast<double>(mag_r[k]) * std::sin(phase_r[k]);
+                double re, im;
+                if (op == op_kind::add) {
+                    re = rl + rr;
+                    im = il + ir;
+                } else if (op == op_kind::subtract) {
+                    re = rl - rr;
+                    im = il - ir;
+                } else {
+                    re = (1.0 - mix) * rl + mix * rr;
+                    im = (1.0 - mix) * il + mix * ir;
+                }
+                re *= gain;
+                im *= gain;
+                m = static_cast<float>(std::sqrt(re * re + im * im));
+                p = static_cast<float>(std::atan2(im, re));
+                break;
+            }
+            case op_kind::multiply:
+                m = mag_l[k] * mag_r[k] * gain;
+                p = phase_l[k] + phase_r[k];
+                break;
+            case op_kind::max:
+                if (mag_l[k] >= mag_r[k]) {
+                    m = mag_l[k];
+                    p = phase_l[k];
+                } else {
+                    m = mag_r[k];
+                    p = phase_r[k];
+                }
+                m *= gain;
+                break;
+            case op_kind::min:
+                if (mag_l[k] <= mag_r[k]) {
+                    m = mag_l[k];
+                    p = phase_l[k];
+                } else {
+                    m = mag_r[k];
+                    p = phase_r[k];
+                }
+                m *= gain;
+                break;
+        }
+        mag_out[k] = m;
+        phase_out[k] = p;
+    }
+}
+
 } // namespace mlmat
 
 
