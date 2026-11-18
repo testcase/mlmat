@@ -57,3 +57,6 @@ source/projects/mlmat.buffer_istft/mlmat.buffer_istft copy.cpp
 # local-only agent notes (OpenCode reads it from the working tree;
 # not part of the package)
 AGENTS.md
+
+# local-only build instructions for cloud-synced folders
+BUILD_DROPBOX.md

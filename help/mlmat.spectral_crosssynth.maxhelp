@@ -29,7 +29,7 @@
                         "filename": "helpstarter",
                         "parameter_enable": 0
                     },
-                    "text": "js helpstarter mlmat.spectral_convolve"
+                    "text": "js helpstarter mlmat.spectral_crosssynth"
                 }
             },
             {
@@ -254,7 +254,7 @@
                                     "filename": "helpdetails.js",
                                     "id": "obj-2",
                                     "ignoreclick": 1,
-                                    "jsarguments": [ "mlmat.spectral_convolve" ],
+                                    "jsarguments": [ "mlmat.spectral_crosssynth" ],
                                     "maxclass": "jsui",
                                     "numinlets": 1,
                                     "numoutlets": 1,
@@ -320,10 +320,10 @@
                                     "id": "box-10-130",
                                     "maxclass": "newobj",
                                     "numinlets": 2,
-                                    "numoutlets": 2,
-                                    "outlettype": [ "jit_matrix", "" ],
+                                    "numoutlets": 1,
+                                    "outlettype": [ "" ],
                                     "patching_rect": [ 75.0, 475.0, 215.0, 23.0 ],
-                                    "text": "mlmat.spectral_convolve @gain 0.4"
+                                    "text": "mlmat.spectral_crosssynth @gain 0.4"
                                 }
                             },
                             {
@@ -631,13 +631,13 @@
                     "filename": "helpname.js",
                     "id": "obj-7",
                     "ignoreclick": 1,
-                    "jsarguments": [ "mlmat.spectral_convolve" ],
+                    "jsarguments": [ "mlmat.spectral_crosssynth" ],
                     "maxclass": "jsui",
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "parameter_enable": 0,
-                    "patching_rect": [ 10.0, 10.0, 522.89599609375, 57.599853515625 ]
+                    "patching_rect": [ 10.0, 10.0, 558.5599365234375, 57.599853515625 ]
                 }
             },
             {
