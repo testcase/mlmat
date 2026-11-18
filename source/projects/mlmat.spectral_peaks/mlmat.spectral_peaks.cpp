@@ -24,13 +24,13 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, sigmund~, jit.fft" };
-    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). In <at>mode</at> peaks, the object finds the spectral peaks of each frame -- bins that are local maxima above the <at>threshold</at>, refined with parabolic interpolation for the true amplitude and frequency -- and outputs the strongest <at>max_peaks</at> of them as a 2-plane matrix: plane 0 amplitudes, plane 1 frequencies in Hz. In <at>mode</at> reassigned, peaks are detected the same way but their frequencies are computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), which gives exact sub-bin precision for stable sinusoids. Set <at>overlap</at> to match the STFT analysis overlap for correct results. In <at>mode</at> bins every bin is output: plane 0 magnitudes, plane 1 the bin center frequencies. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate)."};
+    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). In <at>mode</at> peaks, the object finds the spectral peaks of each frame -- bins that are local maxima above the <at>threshold</at>, refined with parabolic interpolation for the true amplitude and frequency -- and outputs the strongest <at>max_peaks</at> of them as a 2-plane matrix: plane 0 amplitudes, plane 1 frequencies in Hz. In <at>mode</at> reassigned, peaks are detected the same way but their frequencies are computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), which gives exact sub-bin precision for stable sinusoids. Set <at>overlap</at> to match the STFT analysis overlap for correct results. For every-bin output with amplitude correction and reassigned frequencies use <o>mlmat.spectral_reassign</o> instead. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate)."};
 
     attribute<min::symbol> mode { this, "mode", "peaks",
         description {
-            "Output mode: peaks (amplitude and frequency of the spectral peaks, frequency via parabolic interpolation), reassigned (same as peaks, but frequency via phase difference for sub-bin precision), or bins (magnitude and center frequency of every bin)."
+            "Output mode: peaks (amplitude and frequency of the spectral peaks, frequency via parabolic interpolation) or reassigned (same as peaks, but frequency via phase difference for sub-bin precision)."
         },
-        range {"peaks", "bins", "reassigned"}
+        range {"peaks", "reassigned"}
     };
 
     attribute<double> samplerate { this, "samplerate", 0.0,
@@ -127,11 +127,8 @@ public:
                                               : static_cast<int>(bins) * 2;
             const double sr = (samplerate > 0.0) ? static_cast<double>(samplerate)
                                                 : static_cast<double>(max::sys_getsr());
-            const bool peaks_mode = (mode == min::symbol("peaks"));
             const bool reassigned_mode = (mode == min::symbol("reassigned"));
-            const bool peak_like = peaks_mode || reassigned_mode;
-            const size_t out_cols = peak_like ? static_cast<size_t>(max_peaks)
-                                             : bins;
+            const size_t out_cols = static_cast<size_t>(max_peaks);
 
             // reassigned mode: reset the phase state when the overlap
             // or samplerate changes (the expected phase advance changes)
@@ -208,79 +205,70 @@ public:
 
                 max::uchar* orow = dataptr + static_cast<size_t>(f) * dest_minfo.dimstride[0];
 
-                if (peak_like) {
-                    peaks.clear();
-                    // for a full spectrum only the first half (through the
-                    // Nyquist bin) is meaningful; the mirrored bins would
-                    // duplicate every peak
-                    if (full_spectrum) {
-                        const size_t half = static_cast<size_t>(fftsize) / 2;
-                        std::vector<float> half_mags(mags.begin(), mags.begin() + half + 1);
-                        mlmat::spectral_find_peaks(half_mags, sr, fftsize,
-                                                   static_cast<float>(threshold),
-                                                   static_cast<size_t>(max_peaks), peaks);
-                    } else {
-                        mlmat::spectral_find_peaks(mags, sr, fftsize,
-                                                   static_cast<float>(threshold),
-                                                   static_cast<size_t>(max_peaks), peaks);
-                        // half spectrum + rect input: the real Nyquist
-                        // (packed in im[0]) is a peak candidate at sr/2
-                        if (!input_polar) {
-                            max::uchar* ip = row; // bin 0
-                            const double p1 = is64
-                                ? reinterpret_cast<const double*>(ip)[1]
-                                : static_cast<double>(reinterpret_cast<const float*>(ip)[1]);
-                            const float nyq = static_cast<float>(std::fabs(p1));
-                            if (nyq >= mlmat::db_to_lin(static_cast<float>(threshold))) {
-                                mlmat::spectral_peak p;
-                                p.amplitude = nyq;
-                                p.frequency = static_cast<float>(sr / 2.0);
-                                if (peaks.size() < static_cast<size_t>(max_peaks)) {
-                                    peaks.push_back(p);
-                                }
-                            }
-                        }
-                    }
-                    // reassigned mode: refine each peak's frequency using
-                    // the phase difference from the previous frame
-                    if (reassigned_mode && m_have_prev_frame) {
-                        for (auto& pk : peaks) {
-                            // recover the peak's bin index from the
-                            // parabolic-interpolated frequency
-                            const long bin_k = static_cast<long>(std::lround(
-                                pk.frequency * double(fftsize) / sr));
-                            if (bin_k >= 0 && static_cast<size_t>(bin_k) < m_prev_phases.size()) {
-                                const double rf = mlmat::reassigned_frequency(
-                                    bin_k, phases[bin_k], m_prev_phases[bin_k],
-                                    fftsize, overlap, sr);
-                                if (rf >= 0.0) {
-                                    pk.frequency = static_cast<float>(rf);
-                                }
-                            }
-                        }
-                    }
-
-                    std::sort(peaks.begin(), peaks.end(),
-                              [](const mlmat::spectral_peak& a, const mlmat::spectral_peak& b) {
-                                  return a.amplitude > b.amplitude;
-                              });
-
-                    for (size_t k = 0; k < out_cols; ++k) {
-                        double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
-                        if (k < peaks.size()) {
-                            op[0] = peaks[k].amplitude;
-                            op[1] = peaks[k].frequency;
-                        } else {
-                            op[0] = 0.0;
-                            op[1] = 0.0;
-                        }
-                    }
+                peaks.clear();
+                // for a full spectrum only the first half (through the
+                // Nyquist bin) is meaningful; the mirrored bins would
+                // duplicate every peak
+                if (full_spectrum) {
+                    const size_t half = static_cast<size_t>(fftsize) / 2;
+                    std::vector<float> half_mags(mags.begin(), mags.begin() + half + 1);
+                    mlmat::spectral_find_peaks(half_mags, sr, fftsize,
+                                               static_cast<float>(threshold),
+                                               static_cast<size_t>(max_peaks), peaks);
                 } else {
-                    // bins mode: magnitudes and bin center frequencies
-                    for (size_t k = 0; k < bins; ++k) {
-                        double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
-                        op[0] = mags[k];
-                        op[1] = mlmat::bin_frequency(static_cast<long>(k), sr, fftsize);
+                    mlmat::spectral_find_peaks(mags, sr, fftsize,
+                                               static_cast<float>(threshold),
+                                               static_cast<size_t>(max_peaks), peaks);
+                    // half spectrum + rect input: the real Nyquist
+                    // (packed in im[0]) is a peak candidate at sr/2
+                    if (!input_polar) {
+                        max::uchar* ip = row; // bin 0
+                        const double p1 = is64
+                            ? reinterpret_cast<const double*>(ip)[1]
+                            : static_cast<double>(reinterpret_cast<const float*>(ip)[1]);
+                        const float nyq = static_cast<float>(std::fabs(p1));
+                        if (nyq >= mlmat::db_to_lin(static_cast<float>(threshold))) {
+                            mlmat::spectral_peak p;
+                            p.amplitude = nyq;
+                            p.frequency = static_cast<float>(sr / 2.0);
+                            if (peaks.size() < static_cast<size_t>(max_peaks)) {
+                                peaks.push_back(p);
+                            }
+                        }
+                    }
+                }
+                // reassigned mode: refine each peak's frequency using
+                // the phase difference from the previous frame
+                if (reassigned_mode && m_have_prev_frame) {
+                    for (auto& pk : peaks) {
+                        // recover the peak's bin index from the
+                        // parabolic-interpolated frequency
+                        const long bin_k = static_cast<long>(std::lround(
+                            pk.frequency * double(fftsize) / sr));
+                        if (bin_k >= 0 && static_cast<size_t>(bin_k) < m_prev_phases.size()) {
+                            const double rf = mlmat::reassigned_frequency(
+                                bin_k, phases[bin_k], m_prev_phases[bin_k],
+                                fftsize, overlap, sr);
+                            if (rf >= 0.0) {
+                                pk.frequency = static_cast<float>(rf);
+                            }
+                        }
+                    }
+                }
+
+                std::sort(peaks.begin(), peaks.end(),
+                          [](const mlmat::spectral_peak& a, const mlmat::spectral_peak& b) {
+                              return a.amplitude > b.amplitude;
+                          });
+
+                for (size_t k = 0; k < out_cols; ++k) {
+                    double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
+                    if (k < peaks.size()) {
+                        op[0] = peaks[k].amplitude;
+                        op[1] = peaks[k].frequency;
+                    } else {
+                        op[0] = 0.0;
+                        op[1] = 0.0;
                     }
                 }
 

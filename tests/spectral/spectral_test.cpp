@@ -1,9 +1,12 @@
 /// @file
 /// Regression tests for the spectral objects' shared core
 /// (source/projects/shared/mlmat_stft.hpp): STFT/ISTFT round trips,
-/// window caching, and the Griffin-Lim phase reconstruction (including
+/// window caching, the Griffin-Lim phase reconstruction (including
 /// the momentum formulation and a comparison against the pre-fix
-/// iteration scheme the object used to use).
+/// iteration scheme the object used to use), phase-based frequency
+/// reassignment (including through the STFT stack itself), and the
+/// window coherent-gain amplitude correction used by
+/// mlmat.spectral_reassign.
 
 #include "c74_min.h"
 
@@ -628,6 +631,123 @@ static void run_reassignment()
         check(std::fabs(freq - f0) < 0.1,
               "reassigned frequency of bin-center sine", freq - f0);
     }
+
+    // ------------------------------------------------------------------
+    // through the STFT stack: the phases of the same bin in consecutive
+    // frames of a full analysis give the exact frequency of a
+    // non-bin-center sinusoid (this is the path mlmat.spectral_reassign
+    // takes through mlmat.buffer_stft's output)
+    // ------------------------------------------------------------------
+    {
+        const int fftsize = 1024;
+        const int overlap = 4;
+        const double sr = 48000.0;
+        const size_t step = size_t(fftsize) / size_t(overlap);
+        const size_t spec_dim = size_t(fftsize) / 2;
+
+        const double f0 = 5.4 * sr / fftsize;   // 253.125 Hz: not a bin center
+        const long k = 5;                      // nearest bin
+
+        const size_t n = 8 * step + size_t(fftsize);
+        std::vector<float> x(n);
+        for (size_t i = 0; i < n; ++i)
+            x[i] = float(0.5 * std::sin(2.0 * M_PI * f0 * double(i) / sr));
+
+        const size_t frames = (n + step - 1) / step;
+        STFT stft;
+        std::vector<float> mags(frames * spec_dim, 0.0f), phases(frames * spec_dim, 0.0f);
+        stft.process(x, mags, phases, fftsize, overlap, "hanning", true, false);
+
+        // two consecutive frames from the middle of the analysis
+        const size_t f1 = frames / 2;
+        const double freq = NEW::mlmat::reassigned_frequency(
+            k, double(phases[(f1 + 1) * spec_dim + size_t(k)]),
+            double(phases[f1 * spec_dim + size_t(k)]),
+            fftsize, overlap, sr);
+
+        check(std::fabs(freq - f0) < 0.5,
+              "stack phases reassign the off-bin sine exactly", freq - f0);
+
+        // the peak magnitude of the bin-centered case is handled in
+        // run_amplitude_correction(); here sanity-check the raw
+        // magnitude is what the correction formula expects
+        check(mags[f1 * spec_dim + size_t(k)] > 0.1f,
+              "stack phases: peak magnitude sane", mags[f1 * spec_dim + size_t(k)]);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// amplitude correction (mlmat.spectral_reassign's plane 0)
+// ---------------------------------------------------------------------------
+static void run_amplitude_correction()
+{
+    const int fftsize = 1024;
+    const double sr = 48000.0;
+
+    // ------------------------------------------------------------------
+    // coherent gains of the five windows match their analytic values
+    // (make_window reproduces the vDSP conventions: hanning is the
+    // periodic Hann scaled by sqrt(8/3), so its gain is sqrt(8/3)/2)
+    // ------------------------------------------------------------------
+    {
+        struct { const char* name; double expected; } wins[] = {
+            {"square",   1.0},
+            {"triangle", 0.5},
+            {"hanning",  0.5 * std::sqrt(8.0 / 3.0)},
+            {"hamming",  0.54},
+            {"blackman", 0.42},
+        };
+        for (const auto& w : wins) {
+            const double cg = NEW::mlmat::window_coherent_gain(fftsize, w.name);
+            check(std::fabs(cg - w.expected) < 1e-3,
+                  "coherent gain of the analytic value", cg - w.expected);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // a bin-centered sinusoid of amplitude A, analyzed with each
+    // window and corrected by 2 * mag / (fftsize * cg), reads back as A
+    // (the correction the object applies to every complex bin)
+    // ------------------------------------------------------------------
+    {
+        const double A = 0.37;
+        const size_t k0 = 5;
+        const double f0 = double(k0) * sr / fftsize;
+        std::vector<float> x(static_cast<size_t>(fftsize), 0.0f);
+        for (int i = 0; i < fftsize; ++i)
+            x[size_t(i)] = float(A * std::sin(2.0 * M_PI * f0 * i / sr));
+
+        for (const char* wname : {"square", "triangle", "hanning", "hamming", "blackman"}) {
+            STFT stft;
+            std::vector<float> mags(size_t(fftsize) / 2, 0.0f), phases(size_t(fftsize) / 2, 0.0f);
+            stft.process(x, mags, phases, fftsize, 1, wname, true, false);
+
+            const double cg = NEW::mlmat::window_coherent_gain(fftsize, wname);
+            const double amp = 2.0 * double(mags[k0]) / (double(fftsize) * cg);
+            check(std::fabs(amp - A) < 5e-3,
+                  "corrected magnitude recovers the sinusoid amplitude", amp - A);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // DC: with the half-spectrum rect convention the real DC lives in
+    // re[0] with no factor 2 (all the energy in one real bin), so a
+    // constant of D corrects as D = mag / (fftsize * cg). through the
+    // polar output the bin 0 magnitude is |X[0]| -- the same value
+    // ------------------------------------------------------------------
+    {
+        const double D = 0.42;
+        std::vector<float> x(static_cast<size_t>(fftsize), static_cast<float>(D));
+
+        STFT stft;
+        std::vector<float> mags(size_t(fftsize) / 2, 0.0f), phases(size_t(fftsize) / 2, 0.0f);
+        stft.process(x, mags, phases, fftsize, 1, "hanning", true, false);
+
+        const double cg = NEW::mlmat::window_coherent_gain(fftsize, "hanning");
+        const double amp = double(mags[0]) / (double(fftsize) * cg);
+        check(std::fabs(amp - D) < 5e-3,
+              "corrected DC recovers the constant's amplitude", amp - D);
+    }
 }
 
 int main()
@@ -636,6 +756,7 @@ int main()
     run_resample();
     run_spectral_ops();
     run_reassignment();
+    run_amplitude_correction();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

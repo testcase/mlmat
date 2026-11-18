@@ -76,6 +76,33 @@ inline void make_window(std::vector<float>& window, int fftsize, const string& w
     }
 }
 
+/// Coherent gain (mean amplitude) of an analysis window: the factor by
+/// which windowing scales the DFT magnitude of a bin-centered
+/// sinusoid. The unscaled forward DFT (bqfft's convention) puts a
+/// sinusoid of amplitude A at A * fftsize * cg / 2 in the complex bins,
+/// so dividing by that recovers true signal amplitudes; the real DC (and
+/// Nyquist) bin holds all its energy in one bin, so it is A * fftsize *
+/// cg there (no factor 2). "square" is the implicit all-ones window
+/// (make_window leaves it empty, the STFT skips the multiply).
+///
+///   square   1.0     triangle 0.5
+///   hanning  sqrt(8/3) / 2 (the sqrt(8/3) scale is the vDSP_HANN_NORM
+///                        convention reproduced by make_window)
+///   hamming  0.54    blackman 0.42
+inline double window_coherent_gain(int fftsize, const string& window_string)
+{
+    if (window_string == "square") {
+        return 1.0;
+    }
+    std::vector<float> window(static_cast<size_t>(fftsize), 0.0f);
+    make_window(window, fftsize, window_string);
+    double sum = 0.0;
+    for (float w : window) {
+        sum += static_cast<double>(w);
+    }
+    return sum / static_cast<double>(fftsize);
+}
+
 /// Cubic Hermite (Catmull-Rom) resampling of `input` (sampled at
 /// `input_rate`) to `output_rate`. The output vector is resized to
 /// round(input.size() * output_rate / input_rate) and holds the signal

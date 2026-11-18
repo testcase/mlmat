@@ -161,18 +161,6 @@
                             },
                             {
                                 "box": {
-                                    "fontname": "Arial",
-                                    "fontsize": 13.0,
-                                    "id": "c-10-290",
-                                    "maxclass": "comment",
-                                    "numinlets": 1,
-                                    "numoutlets": 0,
-                                    "patching_rect": [ 43.0, 529.0, 380.0, 21.0 ],
-                                    "text": "bins mode: plane 0 = magnitudes, plane 1 = center frequency"
-                                }
-                            },
-                            {
-                                "box": {
                                     "attr": "mode",
                                     "fontname": "Arial",
                                     "fontsize": 13.0,
