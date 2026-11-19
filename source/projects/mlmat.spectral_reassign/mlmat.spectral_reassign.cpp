@@ -25,13 +25,20 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, mlmat.spectral_peaks, sigmund~, jit.fft" };
-    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). The output has the same dimensions, with plane 0 holding the amplitude and plane 1 the frequency in Hz of every bin. Amplitudes are corrected with the coherent gain of the <at>window</at>, so a sinusoid of amplitude A reads back as A regardless of the window or fftsize -- set <at>window</at> to match the analysis window of mlmat.buffer_stft (raw windowed magnitudes would instead show, e.g., half amplitude for a hanning). Frequencies are reassigned: computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), giving exact sub-bin precision for stable sinusoids; the first frame (and any frame after an <at>overlap</at> or <at>samplerate</at> change) falls back to the bin center frequencies. Set <at>overlap</at> to match the STFT analysis overlap. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate). For <at>full_spectrum</at> input only the first half of the bins is meaningful (mlmat.buffer_stft's full-spectrum output mirrors the half spectrum, so the mirrored bins repeat the first half's data with the wrong bin indices). Use <o>mlmat.spectral_peaks</o> instead when only the strongest peaks are wanted."};
+    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). The output has the same dimensions, with plane 0 holding the amplitude and plane 1 the frequency in Hz of every bin. By default (<at>output</at> amplitudes) plane 0 is corrected with the coherent gain of the <at>window</at>, so a sinusoid of amplitude A reads back as A regardless of the window or fftsize -- set <at>window</at> to match the analysis window of mlmat.buffer_stft (raw windowed magnitudes would instead show, e.g., half amplitude for a hanning). <at>output</at> magnitudes returns the raw magnitudes instead. Frequencies are reassigned: computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), giving exact sub-bin precision for stable sinusoids; the first frame (and any frame after an <at>overlap</at> or <at>samplerate</at> change) falls back to the bin center frequencies. Set <at>overlap</at> to match the STFT analysis overlap. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate). For <at>full_spectrum</at> input only the first half of the bins is meaningful (mlmat.buffer_stft's full-spectrum output mirrors the half spectrum, so the mirrored bins repeat the first half's data with the wrong bin indices). Use <o>mlmat.spectral_peaks</o> instead when only the strongest peaks are wanted."};
 
     attribute<min::symbol> window { this, "window", "hanning",
         description {
             "The analysis window used by the STFT whose output is being corrected. Must match mlmat.buffer_stft's window: the window's coherent gain is what turns raw magnitudes into true amplitudes."
         },
         range{"square", "triangle", "hanning", "hamming", "blackman"}
+    };
+
+    attribute<min::symbol> output { this, "output", "amplitudes",
+        description {
+            "Plane 0 output scaling: amplitudes (the default) corrects the raw magnitudes with the coherent gain of the analysis window, so a sinusoid of amplitude A reads as A; magnitudes returns the raw windowed magnitudes of the analysis."
+        },
+        range {"magnitudes", "amplitudes"}
     };
 
     attribute<double> samplerate { this, "samplerate", 0.0,
@@ -53,7 +60,7 @@ public:
         }
     };
 
-    attribute<int, threadsafe::no, limit::clamp> overlap { this, "overlap", 1,
+    attribute<int, threadsafe::no, limit::clamp> overlap { this, "overlap", 4,
         description {
             "The STFT overlap factor used in the analysis. Must match mlmat.buffer_stft's overlap setting for correct frequency reassignment."
         },
@@ -161,10 +168,12 @@ public:
             // bin-centered sinusoid of amplitude A at A * fftsize * cg / 2
             // in the complex bins; the real DC bin (half spectrum, bin 0:
             // re holds the real DC) is the exception -- all its energy is
-            // in one real bin, so there is no factor 2
+            // in one real bin, so there is no factor 2. magnitudes
+            // output skips the correction entirely.
+            const bool amplitudes_output = (output != min::symbol("magnitudes"));
             const double denom = double(fftsize) * m_gain;
-            const double scale_complex = 2.0 / denom;
-            const double scale_real = 1.0 / denom;
+            const double scale_complex = amplitudes_output ? 2.0 / denom : 1.0;
+            const double scale_real = amplitudes_output ? 1.0 / denom : 1.0;
 
             // per-frame scratch
             std::vector<double> phases(bins);

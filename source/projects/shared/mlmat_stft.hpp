@@ -228,28 +228,214 @@ inline void spectral_find_peaks(const std::vector<float>& magnitudes,
 /// For a stable sinusoid this gives the exact frequency (not an
 /// approximation like the parabolic interpolation); for transient or
 /// broadband content it degrades gracefully.
+// inline double reassigned_frequency(long k, double curr_phase, double prev_phase,
+//                                    int fftsize, int overlap, double samplerate)
+// {
+//     const double hop = double(fftsize) / double(overlap);
+//     if (hop < 1.0) {
+//         return -1.0;
+//     }
+// 
+//     // expected phase advance for the bin center frequency
+//     const double expected = 2.0 * M_PI * double(k) * hop / double(fftsize);
+// 
+//     // actual phase difference minus the expected advance
+//     double dphi = curr_phase - prev_phase - expected;
+// 
+//     // unwrap to [-pi, pi]
+//     dphi = dphi - 2.0 * M_PI * std::round(dphi / (2.0 * M_PI));
+// 
+//     // frequency deviation from bin center, in bins
+//     const double delta = dphi * double(fftsize) / (2.0 * M_PI * hop);
+// 
+//     return (double(k) + delta) * samplerate / double(fftsize);
+// }
+
 inline double reassigned_frequency(long k, double curr_phase, double prev_phase,
                                    int fftsize, int overlap, double samplerate)
 {
-    const double hop = double(fftsize) / double(overlap);
+    const double hop = double(fftsize) / double(overlap); //stepsize
     if (hop < 1.0) {
         return -1.0;
     }
 
     // expected phase advance for the bin center frequency
-    const double expected = 2.0 * M_PI * double(k) * hop / double(fftsize);
+    const double expected = 2.0 * M_PI * double(k) * (hop / double(fftsize));
 
     // actual phase difference minus the expected advance
     double dphi = curr_phase - prev_phase - expected;
 
     // unwrap to [-pi, pi]
-    dphi = dphi - 2.0 * M_PI * std::round(dphi / (2.0 * M_PI));
+    
+    long qpd = dphi / M_PI;
+    
+    if(qpd >= 0) {
+	    qpd += qpd&1;
+	} else {
+    	qpd -= qpd&1;
+    }
+    
+    dphi -= M_PI*(double)qpd;
 
     // frequency deviation from bin center, in bins
     const double delta = dphi * double(fftsize) / (2.0 * M_PI * hop);
 
     return (double(k) + delta) * samplerate / double(fftsize);
 }
+
+/// Side-lobe pruning of a peak list (spectral_peaks' @spacing /
+/// @spacing_db). Walks the peaks strongest-first and rejects any
+/// peak that sits within `min_spacing_bins` bins of an already-kept
+/// peak AND is more than `spacing_db` below it (a hanning side-lobe
+/// is at most -31 dB; a genuine nearby partial is usually far above
+/// that, so the gate protects it). spacing_db of 0 gives the
+/// distance-only rule (any weaker near neighbor dies); min_spacing_bins
+/// of 1 never rejects anything (integer bin indices of distinct local
+/// maxima differ by at least 1).
+inline void spectral_prune_peaks(std::vector<spectral_peak>& peaks,
+                                 int fftsize, double samplerate,
+                                 int min_spacing_bins,
+                                 double spacing_db)
+{
+    if (peaks.empty() || min_spacing_bins <= 1) {
+        return;
+    }
+
+    // strongest first: the main peak is always kept, its neighbors
+    // are judged against it
+    std::sort(peaks.begin(), peaks.end(),
+              [](const spectral_peak& a, const spectral_peak& b) {
+                  return a.amplitude > b.amplitude;
+              });
+    const double gate = static_cast<double>(db_to_lin(static_cast<float>(spacing_db)));
+
+    std::vector<spectral_peak> kept;
+    kept.reserve(peaks.size());
+    std::vector<long> kept_bins;
+    for (const auto& pk : peaks) {
+        const long b = static_cast<long>(std::llround(
+            static_cast<double>(pk.frequency) * double(fftsize) / samplerate));
+        bool reject = false;
+        for (size_t i = 0; i < kept.size(); ++i) {
+            const long d = (b > kept_bins[i]) ? (b - kept_bins[i]) : (kept_bins[i] - b);
+            if (d < static_cast<long>(min_spacing_bins)
+                && static_cast<double>(pk.amplitude) < static_cast<double>(kept[i].amplitude) * gate) {
+                reject = true;
+                break;
+            }
+        }
+        if (!reject) {
+            kept.push_back(pk);
+            kept_bins.push_back(b);
+        }
+    }
+    peaks = std::move(kept);
+}
+
+/// McAulay-Quatieri style partial tracking (spectral_peaks' @track):
+/// matches each frame's peaks to the partials seen in previous frames
+/// so that output slot k always holds the same partial. A peak matches
+/// the nearest live partial within `delta_hz` (strongest peaks claim
+/// their matches first); unmatched peaks are births into the lowest
+/// free slot; a partial that goes unmatched coasts for `hold_frames`
+/// frames (zero amplitude, holding its frequency, so it can
+/// reacquire) and then dies, freeing its slot. Peaks beyond
+/// max_slots are dropped (the same truncation spectral_peaks applies
+/// without tracking).
+class peak_tracker {
+public:
+    peak_tracker() = default;
+
+    void reset() {
+        m_partials.clear();
+    }
+
+    void process(const std::vector<spectral_peak>& frame_peaks,
+                 size_t max_slots,
+                 double delta_hz,
+                 int hold_frames,
+                 std::vector<spectral_peak>& out)
+    {
+        out.assign(max_slots, spectral_peak{0.0f, 0.0f});
+
+        // strongest peaks claim their partials first
+        std::vector<spectral_peak> peaks(frame_peaks);
+        std::sort(peaks.begin(), peaks.end(),
+                  [](const spectral_peak& a, const spectral_peak& b) {
+                      return a.amplitude > b.amplitude;
+                  });
+
+        std::vector<bool> matched(m_partials.size(), false);
+        for (const auto& pk : peaks) {
+            // nearest live (or coasting) partial within delta
+            double best = delta_hz;
+            size_t best_i = static_cast<size_t>(-1);
+            for (size_t i = 0; i < m_partials.size(); ++i) {
+                if (!m_partials[i].alive || matched[i]) {
+                    continue;
+                }
+                const double d = std::fabs(static_cast<double>(pk.frequency)
+                                           - m_partials[i].frequency);
+                if (d <= best) {
+                    best = d;
+                    best_i = i;
+                }
+            }
+            if (best_i != static_cast<size_t>(-1)) {
+                matched[best_i] = true;
+                m_partials[best_i].frequency = static_cast<double>(pk.frequency);
+                m_partials[best_i].coast = 0;
+                out[best_i] = pk;
+            } else {
+                // birth: lowest free (dead or never-used) slot
+                bool born = false;
+                for (size_t i = 0; i < m_partials.size(); ++i) {
+                    if (!m_partials[i].alive) {
+                        m_partials[i].alive = true;
+                        m_partials[i].coast = 0;
+                        m_partials[i].frequency = static_cast<double>(pk.frequency);
+                        out[i] = pk;
+                        matched[i] = true;
+                        born = true;
+                        break;
+                    }
+                }
+                if (!born && m_partials.size() < max_slots) {
+                    partial p;
+                    p.alive = true;
+                    p.frequency = static_cast<double>(pk.frequency);
+                    m_partials.push_back(p);
+                    out[m_partials.size() - 1] = pk;
+                    matched.push_back(true);
+                }
+            }
+        }
+
+        // unmatched partials coast (zero amplitude, frequency held
+        // so they can reacquire) and die after hold_frames
+        for (size_t i = 0; i < m_partials.size(); ++i) {
+            if (!m_partials[i].alive || matched[i]) {
+                continue;
+            }
+            if (m_partials[i].coast >= hold_frames) {
+                m_partials[i].alive = false;
+                m_partials[i].coast = 0;
+            } else {
+                ++m_partials[i].coast;
+                out[i] = spectral_peak{0.0f, static_cast<float>(m_partials[i].frequency)};
+            }
+        }
+    }
+
+private:
+    struct partial {
+        double frequency = 0.0;
+        int coast = 0;
+        bool alive = false;
+    };
+    std::vector<partial> m_partials;
+};
+
 
 /// Frame-wise multiply of two spectra (spectral convolution). re/im
 /// hold `bins` values each.

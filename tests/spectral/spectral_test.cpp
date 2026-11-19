@@ -749,6 +749,39 @@ static void run_amplitude_correction()
         check(std::fabs(amp - D) < 5e-3,
               "corrected DC recovers the constant's amplitude", amp - D);
     }
+
+    // ------------------------------------------------------------------
+    // the same correction applied to spectral_find_peaks' interpolated
+    // peak amplitudes (what mlmat.spectral_peaks outputs in its
+    // default amplitudes mode): a bin-centered sinusoid's peak reads
+    // back at A through every window
+    // ------------------------------------------------------------------
+    {
+        const double A = 0.5;
+        const size_t k0 = 5;
+        const double f0 = double(k0) * sr / fftsize;
+        std::vector<float> x(static_cast<size_t>(fftsize), 0.0f);
+        for (int i = 0; i < fftsize; ++i)
+            x[static_cast<size_t>(i)] = float(A * std::sin(2.0 * M_PI * f0 * i / sr));
+
+        for (const char* wname : {"square", "triangle", "hanning", "hamming", "blackman"}) {
+            STFT stft;
+            std::vector<float> mags(static_cast<size_t>(fftsize) / 2, 0.0f),
+                              phases(static_cast<size_t>(fftsize) / 2, 0.0f);
+            stft.process(x, mags, phases, fftsize, 1, wname, true, false);
+
+            std::vector<NEW::mlmat::spectral_peak> frame_peaks;
+            NEW::mlmat::spectral_find_peaks(mags, sr, fftsize, -60.0f, 4, frame_peaks);
+            check(!frame_peaks.empty(), "peak correction: peak found", 0.0);
+            if (!frame_peaks.empty()) {
+                const double cg = NEW::mlmat::window_coherent_gain(fftsize, wname);
+                const double pkamp = 2.0 * double(frame_peaks[0].amplitude)
+                                   / (double(fftsize) * cg);
+                check(std::fabs(pkamp - A) < 5e-3,
+                      "corrected peak amplitude recovers the sinusoid", pkamp - A);
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -941,6 +974,286 @@ static void run_spectral_op()
     }
 }
 
+// ---------------------------------------------------------------------------
+// peak pruning (spectral_peaks' @spacing / @spacing_db core)
+// ---------------------------------------------------------------------------
+static void run_peak_pruning()
+{
+    const int fftsize = 64;
+    const double sr = 48000.0;
+
+    auto peak = [&](double bin, double amp) {
+        NEW::mlmat::spectral_peak p;
+        p.amplitude = static_cast<float>(amp);
+        p.frequency = static_cast<float>(bin * sr / fftsize);
+        return p;
+    };
+    auto prune = [&](std::vector<NEW::mlmat::spectral_peak>& peaks,
+                     int spacing, double spacing_db) {
+        NEW::mlmat::spectral_prune_peaks(peaks, fftsize, sr, spacing, spacing_db);
+    };
+
+    // spacing 1 (the default): never prunes, even a tiny neighbor
+    {
+        std::vector<NEW::mlmat::spectral_peak> peaks = { peak(10, 0.8), peak(11, 0.01) };
+        prune(peaks, 1, -31.0);
+        check(peaks.size() == 2, "pruning off at spacing 1");
+    }
+
+    // a side-lobe-level neighbor within spacing, below the gate: pruned
+    // (0.01 / 0.8 = -38 dB < -31 dB)
+    {
+        std::vector<NEW::mlmat::spectral_peak> peaks = { peak(10, 0.8), peak(11, 0.01) };
+        prune(peaks, 3, -31.0);
+        check(peaks.size() == 1 && std::fabs(peaks[0].amplitude - 0.8f) < 1e-6,
+              "side-lobe-level neighbor is pruned");
+    }
+
+    // a genuine partial within spacing but above the gate: survives
+    // (0.4 / 0.8 = -6 dB > -31 dB)
+    {
+        std::vector<NEW::mlmat::spectral_peak> peaks = { peak(10, 0.8), peak(11, 0.4) };
+        prune(peaks, 3, -31.0);
+        check(peaks.size() == 2, "genuine nearby partial survives the gate");
+    }
+
+    // gate 0 (off): the distance rule alone prunes the weaker neighbor
+    {
+        std::vector<NEW::mlmat::spectral_peak> peaks = { peak(10, 0.8), peak(11, 0.4) };
+        prune(peaks, 3, 0.0);
+        check(peaks.size() == 1, "gate 0 prunes on distance alone");
+    }
+
+    // farther than spacing: survives every setting
+    {
+        std::vector<NEW::mlmat::spectral_peak> peaks = { peak(10, 0.8), peak(14, 0.01) };
+        prune(peaks, 3, -31.0);
+        bool ok = peaks.size() == 2;
+        prune(peaks, 3, 0.0);
+        ok = ok && peaks.size() == 2;
+        check(ok, "peaks farther than spacing are untouched");
+    }
+
+    // unsorted input: the strongest survives even when it comes last
+    {
+        std::vector<NEW::mlmat::spectral_peak> peaks = { peak(11, 0.01), peak(10, 0.8) };
+        prune(peaks, 3, -31.0);
+        const double f10 = 10.0 * sr / fftsize;
+        check(peaks.size() == 1 && std::fabs(peaks[0].frequency - f10) < 1e-3,
+              "unsorted input: strongest peak is kept");
+    }
+
+    // the strongest peak itself is never pruned
+    {
+        std::vector<NEW::mlmat::spectral_peak> peaks = { peak(10, 0.8) };
+        prune(peaks, 3, -31.0);
+        check(peaks.size() == 1 && std::fabs(peaks[0].amplitude - 0.8f) < 1e-6,
+              "the main peak is never pruned");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// partial tracking (spectral_peaks' @track core, McAulay-Quatieri matching)
+// ---------------------------------------------------------------------------
+static void run_partial_tracking()
+{
+    const size_t slots = 4;
+    const double delta = 20.0;   // Hz matching tolerance
+    NEW::mlmat::peak_tracker tr;
+    std::vector<NEW::mlmat::spectral_peak> out;
+
+    auto pk = [](double f, double a) {
+        return NEW::mlmat::spectral_peak{static_cast<float>(a), static_cast<float>(f)};
+    };
+
+    // a stable sinusoid stays in slot 0 for every frame
+    {
+        tr.reset();
+        bool ok = true;
+        for (int f = 0; f < 20; ++f) {
+            tr.process({pk(440.0, 0.5)}, slots, delta, 0, out);
+            ok = ok && out.size() == slots
+                  && std::fabs(out[0].frequency - 440.0f) < 1e-6
+                  && std::fabs(out[0].amplitude - 0.5f) < 1e-6
+                  && out[1].amplitude == 0.0f;
+        }
+        check(ok, "tracking: a stable sinusoid holds slot 0");
+    }
+
+    // two partials hold slots 0 and 1 even when their amplitudes swap
+    // (birth order is by amplitude, so whichever is stronger in frame
+    // 0 takes slot 0 -- what matters is that the assignment holds)
+    {
+        tr.reset();
+        bool ok = true;
+        double slot0_freq = 0.0;
+        for (int f = 0; f < 20; ++f) {
+            const double a0 = (f % 2) ? 0.5 : 0.3;
+            const double a1 = (f % 2) ? 0.3 : 0.5;
+            tr.process({pk(440.0, a0), pk(880.0, a1)}, slots, delta, 0, out);
+            const double f0 = out[0].frequency;
+            const double f1 = out[1].frequency;
+            const bool pair = (std::fabs(f0 - 440.0) < 1e-6 && std::fabs(f1 - 880.0) < 1e-6)
+                          || (std::fabs(f0 - 880.0) < 1e-6 && std::fabs(f1 - 440.0) < 1e-6);
+            ok = ok && pair && (f == 0 || std::fabs(f0 - slot0_freq) < 1e-6);
+            slot0_freq = f0;
+        }
+        check(ok, "tracking: slots are amplitude-swap invariant");
+    }
+
+    // a partial appearing mid-stream is born into the next free slot
+    {
+        tr.reset();
+        bool ok = true;
+        for (int f = 0; f < 15; ++f) {
+            if (f < 10) {
+                tr.process({pk(440.0, 0.5)}, slots, delta, 0, out);
+                ok = ok && out[1].amplitude == 0.0f;
+            } else {
+                tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 0, out);
+                ok = ok && std::fabs(out[1].frequency - 880.0f) < 1e-6;
+            }
+        }
+        check(ok, "tracking: a new partial is born into the next free slot");
+    }
+
+    // hold 0: a vanishing partial dies immediately (zeros), and the
+    // slot is free for a rebirth
+    {
+        tr.reset();
+        tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 0, out);
+        tr.process({pk(440.0, 0.5)}, slots, delta, 0, out);
+        bool ok = out[1].amplitude == 0.0f && out[1].frequency == 0.0f;
+        tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 0, out);
+        ok = ok && std::fabs(out[1].frequency - 880.0f) < 1e-6;
+        check(ok, "tracking: hold 0 dies immediately and rebirths into the slot");
+    }
+
+    // hold 2: a vanishing partial coasts at zero amplitude holding its
+    // frequency, and reacquires the same slot (no rebirth churn)
+    {
+        tr.reset();
+        tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 2, out);
+        bool ok = true;
+        for (int f = 0; f < 2; ++f) {
+            tr.process({pk(440.0, 0.5)}, slots, delta, 2, out);
+            ok = ok && out[1].amplitude == 0.0f
+                  && std::fabs(out[1].frequency - 880.0f) < 1e-6;
+        }
+        tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 2, out);
+        ok = ok && std::fabs(out[1].amplitude - 0.4f) < 1e-6
+              && std::fabs(out[1].frequency - 880.0f) < 1e-6
+              && out[2].amplitude == 0.0f && out[3].amplitude == 0.0f;
+        check(ok, "tracking: hold 2 coasts and reacquires the same slot");
+    }
+
+    // after the coast is exhausted the partial dies and its slot is
+    // reused for the next birth
+    {
+        tr.reset();
+        tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 1, out);
+        tr.process({pk(440.0, 0.5)}, slots, delta, 1, out);   // coasting
+        tr.process({pk(440.0, 0.5)}, slots, delta, 1, out);   // dies
+        bool ok = out[1].amplitude == 0.0f && out[1].frequency == 0.0f;
+        tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 1, out);
+        ok = ok && std::fabs(out[1].frequency - 880.0f) < 1e-6
+              && out[2].amplitude == 0.0f;
+        check(ok, "tracking: death after the coast frees the slot");
+    }
+
+    // matching is bounded by delta: a partial 30 Hz away is a birth,
+    // not a match (the old partial dies in the same frame at hold 0,
+    // after the new peak has birthed into the next slot)
+    {
+        tr.reset();
+        tr.process({pk(440.0, 0.5)}, slots, delta, 0, out);
+        tr.process({pk(470.0, 0.5)}, slots, delta, 0, out);
+        bool ok = out[1].amplitude == 0.5f
+                  && std::fabs(out[1].frequency - 470.0f) < 1e-6
+                  && out[0].amplitude == 0.0f && out[0].frequency == 0.0f;
+        check(ok, "tracking: beyond-delta peaks are births, not matches");
+    }
+
+    // more partials than slots: the extras are dropped, the slots stay full
+    {
+        tr.reset();
+        tr.process({pk(100.0, 0.5), pk(200.0, 0.4), pk(300.0, 0.3)},
+                   2, delta, 0, out);
+        bool ok = out.size() == 2
+                  && std::fabs(out[0].frequency - 100.0f) < 1e-6
+                  && std::fabs(out[1].frequency - 200.0f) < 1e-6;
+        check(ok, "tracking: extra partials are dropped beyond max slots");
+    }
+
+    // reset() empties the state: the next partial starts over
+    {
+        tr.reset();
+        tr.process({pk(440.0, 0.5), pk(880.0, 0.4)}, slots, delta, 0, out);
+        tr.reset();
+        tr.process({pk(1320.0, 0.5)}, slots, delta, 0, out);
+        check(std::fabs(out[0].frequency - 1320.0f) < 1e-6,
+              "tracking: reset() restarts slot assignment");
+    }
+
+    // end to end: two steady sinusoids through the STFT stack, found
+    // per frame and tracked -- the columns hold the same partials for
+    // the whole analysis
+    {
+        const int fftsize = 1024;
+        const int overlap = 4;
+        const double sr = 48000.0;
+        const size_t step = size_t(fftsize) / size_t(overlap);
+        const size_t n = 4096;
+        const size_t frames = (n + step - 1) / step;
+        const size_t spec = size_t(fftsize) / 2;
+
+        std::vector<float> x(n);
+        for (size_t i = 0; i < n; ++i)
+            x[i] = float(0.5 * std::sin(2.0 * M_PI * 1000.0 * i / sr)
+                       + 0.5 * std::sin(2.0 * M_PI * 1500.0 * i / sr));
+
+        STFT stft;
+        std::vector<float> mags(frames * spec, 0.0f), phases(frames * spec, 0.0f);
+        stft.process(x, mags, phases, fftsize, overlap, "hanning", true, false);
+
+        NEW::mlmat::peak_tracker tracker;
+        std::vector<NEW::mlmat::spectral_peak> frame_peaks, tracked_out;
+        bool ok = true;
+        // the STFT fills floor((n-1)/step)+1 frames; the over-allocated
+        // last frame of the output vectors stays all-zero
+        const size_t filled = (n - 1) / step + 1;
+        for (size_t f = 0; f < filled; ++f) {
+            std::vector<float> frame(mags.begin() + f * spec,
+                                     mags.begin() + (f + 1) * spec);
+            // the two strongest peaks of every frame are the two
+            // sinusoids (their side-lobes are far weaker); track into
+            // exactly two slots
+            NEW::mlmat::spectral_find_peaks(frame, sr, fftsize, -60.0f, 2, frame_peaks);
+            tracker.process(frame_peaks, 2, sr / fftsize, 0, tracked_out);
+
+            // the first two frames establish the partials; every later
+            // frame must keep the two sinusoids in the same slots
+            // (either assignment order -- which one leads depends on
+            // the bin-centeredness of each sinusoid)
+            // assert only on full-window frames: the parabolic
+            // interpolation carries a few Hz of bias for the off-center
+            // 1 kHz sinusoid (bin 21.33), and frames whose window
+            // extends past the signal end (zero-padded) smear much
+            // more -- the tracker still holds the slots there
+            if (f >= 2 && f * step + size_t(fftsize) <= n) {
+                const bool s0_1k = std::fabs(tracked_out[0].frequency - 1000.0) < 10.0;
+                const bool s0_1k5 = std::fabs(tracked_out[0].frequency - 1500.0) < 10.0;
+                const bool s1_1k = std::fabs(tracked_out[1].frequency - 1000.0) < 10.0;
+                const bool s1_1k5 = std::fabs(tracked_out[1].frequency - 1500.0) < 10.0;
+                ok = ok && ((s0_1k && s1_1k5) || (s0_1k5 && s1_1k))
+                          && tracked_out[0].amplitude > 0.1
+                          && tracked_out[1].amplitude > 0.1;
+            }
+        }
+        check(ok, "tracking end to end: two sinusoids hold stable columns");
+    }
+}
+
 int main()
 {
     run_parity();
@@ -950,6 +1263,8 @@ int main()
     run_amplitude_correction();
     run_spectral_mask();
     run_spectral_op();
+    run_peak_pruning();
+    run_partial_tracking();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 #include <vector>
 
 using namespace c74;
@@ -24,13 +25,61 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, sigmund~, jit.fft" };
-    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). In <at>mode</at> peaks, the object finds the spectral peaks of each frame -- bins that are local maxima above the <at>threshold</at>, refined with parabolic interpolation for the true amplitude and frequency -- and outputs the strongest <at>max_peaks</at> of them as a 2-plane matrix: plane 0 amplitudes, plane 1 frequencies in Hz. In <at>mode</at> reassigned, peaks are detected the same way but their frequencies are computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), which gives exact sub-bin precision for stable sinusoids. Set <at>overlap</at> to match the STFT analysis overlap for correct results. For every-bin output with amplitude correction and reassigned frequencies use <o>mlmat.spectral_reassign</o> instead. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate)."};
+    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). In <at>mode</at> peaks, the object finds the spectral peaks of each frame -- bins that are local maxima above the <at>threshold</at>, refined with parabolic interpolation for the true amplitude and frequency -- and outputs the strongest <at>max_peaks</at> of them as a 2-plane matrix: plane 0 amplitudes, plane 1 frequencies in Hz. In <at>mode</at> reassigned, peaks are detected the same way but their frequencies are computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), which gives exact sub-bin precision for stable sinusoids. Set <at>overlap</at> to match the STFT analysis overlap for correct results. For every-bin output with amplitudes and reassigned frequencies use <o>mlmat.spectral_reassign</o> instead. By default (<at>output</at> amplitudes) plane 0 holds true signal amplitudes, corrected with the coherent gain of the analysis <at>window</at> (set <at>window</at> to match mlmat.buffer_stft's window): a sinusoid of amplitude A reads as A regardless of fftsize and window. <at>output</at> magnitudes returns the raw windowed magnitudes of the analysis instead. <at>threshold</at> always gates on those raw magnitudes, regardless of <at>output</at>. Without tracking, the columns hold the per-frame amplitude ranking: column k is the k-th loudest peak of that frame, so peaks reorder or vanish between frames. Set <at>track</at> for stable identities: peaks are matched across frames (McAulay-Quatieri matching, within <at>track_delta</at> Hz), so each column holds one partial's trajectory -- new partials are born into the next free column, and a partial that vanishes zeroes out and frees its column after <at>track_hold</at> coast frames. Noise and window side-lobes can produce tiny false peaks right next to a strong peak; set <at>spacing</at> to prune them: a peak within spacing bins of a stronger kept peak is rejected as an artifact when it is also more than <at>spacing_db</at> below it (the hanning side-lobe floor is -31 dB, the default; 0 prunes on distance alone). Main-lobe widths: square 2, hanning and hamming 4, blackman 6 bins -- so a good spacing is 3 for hanning and 5 for blackman. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate)."};
 
     attribute<min::symbol> mode { this, "mode", "peaks",
         description {
             "Output mode: peaks (amplitude and frequency of the spectral peaks, frequency via parabolic interpolation) or reassigned (same as peaks, but frequency via phase difference for sub-bin precision)."
         },
         range {"peaks", "reassigned"}
+    };
+
+    attribute<min::symbol> window { this, "window", "hanning",
+        description {
+            "The analysis window used by the STFT whose output is being corrected. Must match mlmat.buffer_stft's window: the window's coherent gain is what turns raw magnitudes into true amplitudes for the amplitudes output."
+        },
+        range{"square", "triangle", "hanning", "hamming", "blackman"}
+    };
+
+    attribute<min::symbol> output { this, "output", "amplitudes",
+        description {
+            "Plane 0 output scaling: amplitudes (the default) corrects the raw magnitudes with the coherent gain of the analysis window, so a sinusoid of amplitude A reads as A; magnitudes returns the raw windowed magnitudes of the analysis. threshold always gates on the raw magnitudes either way."
+        },
+        range {"magnitudes", "amplitudes"}
+    };
+
+    attribute<int, threadsafe::no, limit::clamp> spacing { this, "spacing", 1,
+        description {
+            "Minimum peak separation in bins, to prune window side-lobe artifacts: a peak within this many bins of a stronger kept peak is rejected when it is also below spacing_db relative to it. 1 (the default) disables pruning. Main-lobe widths: square 2, hanning and hamming 4, blackman 6 bins -- so 3 (hanning) or 5 (blackman) are good values."
+        },
+        range {1, 32}
+    };
+
+    attribute<double> spacing_db { this, "spacing_db", -31.0,
+        description {
+            "Relative amplitude gate for spacing: a near peak is pruned only if it is also more than this many dB below the stronger kept peak (the hanning side-lobe floor is -31 dB, the default). 0 prunes on distance alone regardless of level."
+        },
+        range {-120.0, 0.0}
+    };
+
+    attribute<bool> track { this, "track", false,
+        description {
+            "If set, track partials across frames (McAulay-Quatieri matching): each output column holds one partial's trajectory, with births taking the next free column and deaths zero-filling after track_hold coast frames, instead of the per-frame amplitude ranking."
+        }
+    };
+
+    attribute<double> track_delta { this, "track_delta", 0.0,
+        description {
+            "Matching tolerance in Hz for partial tracking. 0 (the default) auto-selects one bin (samplerate / fftsize)."
+        },
+        range {0.0, 192000.0}
+    };
+
+    attribute<int, threadsafe::no, limit::clamp> track_hold { this, "track_hold", 0,
+        description {
+            "Frames an unmatched partial coasts (zero amplitude, holding its frequency so it can reacquire) before it dies and frees its column. 0 kills immediately; 1 or 2 bridge brief dropouts."
+        },
+        range {0, 64}
     };
 
     attribute<double> samplerate { this, "samplerate", 0.0,
@@ -52,7 +101,7 @@ public:
         }
     };
 
-    attribute<int, threadsafe::no, limit::clamp> overlap { this, "overlap", 1,
+    attribute<int, threadsafe::no, limit::clamp> overlap { this, "overlap", 4,
         description {
             "The STFT overlap factor used in the analysis. Must match mlmat.buffer_stft's overlap setting for correct reassigned-mode frequency estimation."
         },
@@ -130,14 +179,33 @@ public:
             const bool reassigned_mode = (mode == min::symbol("reassigned"));
             const size_t out_cols = static_cast<size_t>(max_peaks);
 
-            // reassigned mode: reset the phase state when the overlap
-            // or samplerate changes (the expected phase advance changes)
-            if (reassigned_mode) {
+            // amplitude correction: coherent gain of the analysis
+            // window, cached per (fftsize, window)
+            const bool amplitudes_output = (output != min::symbol("magnitudes"));
+            const string window_string = window.get().c_str();
+            if (m_gain_fftsize != fftsize || m_gain_window != window_string) {
+                m_gain = mlmat::window_coherent_gain(fftsize, window_string);
+                m_gain_fftsize = fftsize;
+                m_gain_window = window_string;
+            }
+            // the unscaled forward DFT puts a bin-centered sinusoid of
+            // amplitude A at A * fftsize * cg / 2 in the complex bins;
+            // the packed real Nyquist is the exception (one real bin,
+            // no factor 2)
+            const double denom = double(fftsize) * m_gain;
+            const double scale_complex = amplitudes_output ? 2.0 / denom : 1.0;
+            const double scale_real = amplitudes_output ? 1.0 / denom : 1.0;
+
+            // reassigned mode / tracking: reset the phase and tracker
+            // state when the overlap or samplerate changes (the
+            // expected phase advance and the auto track_delta change)
+            if (reassigned_mode || track) {
                 if (m_prev_overlap != overlap || m_prev_samplerate != sr) {
                     m_have_prev_frame = false;
                     m_prev_phases.clear();
                     m_prev_overlap = overlap;
                     m_prev_samplerate = sr;
+                    m_tracker.reset();
                 }
             }
 
@@ -168,6 +236,7 @@ public:
             std::vector<float> mags(bins);
             std::vector<double> phases(bins);
             std::vector<mlmat::spectral_peak> peaks;
+            std::vector<mlmat::spectral_peak> tracked;
 
             for (long f = 0; f < frames; ++f) {
                 max::uchar* row = in_data + static_cast<size_t>(f) * in_minfo.dimstride[0];
@@ -227,9 +296,10 @@ public:
                             ? reinterpret_cast<const double*>(ip)[1]
                             : static_cast<double>(reinterpret_cast<const float*>(ip)[1]);
                         const float nyq = static_cast<float>(std::fabs(p1));
+                        // threshold always gates on the raw magnitudes
                         if (nyq >= mlmat::db_to_lin(static_cast<float>(threshold))) {
                             mlmat::spectral_peak p;
-                            p.amplitude = nyq;
+                            p.amplitude = static_cast<float>(double(nyq) * scale_real);
                             p.frequency = static_cast<float>(sr / 2.0);
                             if (peaks.size() < static_cast<size_t>(max_peaks)) {
                                 peaks.push_back(p);
@@ -237,6 +307,13 @@ public:
                         }
                     }
                 }
+                // prune side-lobe artifacts next to strong peaks
+                // (before the reassignment refinement so the tracker
+                // and the output both see the cleaned list)
+                if (spacing > 1) {
+                    mlmat::spectral_prune_peaks(peaks, fftsize, sr, spacing, spacing_db);
+                }
+
                 // reassigned mode: refine each peak's frequency using
                 // the phase difference from the previous frame
                 if (reassigned_mode && m_have_prev_frame) {
@@ -256,19 +333,47 @@ public:
                     }
                 }
 
+                // amplitudes output: convert the raw windowed
+                // magnitudes to true signal amplitudes. the Nyquist
+                // candidate (exactly sr/2, never touched by the
+                // reassignment refine) was already scaled with the
+                // single-real-bin factor at append time
+                if (amplitudes_output) {
+                    const float nyq = static_cast<float>(sr / 2.0);
+                    for (auto& pk : peaks) {
+                        if (pk.frequency != nyq) {
+                            pk.amplitude = static_cast<float>(pk.amplitude * scale_complex);
+                        }
+                    }
+                }
+
                 std::sort(peaks.begin(), peaks.end(),
                           [](const mlmat::spectral_peak& a, const mlmat::spectral_peak& b) {
                               return a.amplitude > b.amplitude;
                           });
 
-                for (size_t k = 0; k < out_cols; ++k) {
-                    double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
-                    if (k < peaks.size()) {
-                        op[0] = peaks[k].amplitude;
-                        op[1] = peaks[k].frequency;
-                    } else {
-                        op[0] = 0.0;
-                        op[1] = 0.0;
+                if (track) {
+                    // partial tracking: stable identity columns
+                    // (delta auto = one bin)
+                    const double delta = (track_delta > 0.0)
+                        ? static_cast<double>(track_delta)
+                        : sr / double(fftsize);
+                    m_tracker.process(peaks, out_cols, delta, track_hold, tracked);
+                    for (size_t k = 0; k < out_cols; ++k) {
+                        double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
+                        op[0] = tracked[k].amplitude;
+                        op[1] = tracked[k].frequency;
+                    }
+                } else {
+                    for (size_t k = 0; k < out_cols; ++k) {
+                        double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
+                        if (k < peaks.size()) {
+                            op[0] = peaks[k].amplitude;
+                            op[1] = peaks[k].frequency;
+                        } else {
+                            op[0] = 0.0;
+                            op[1] = 0.0;
+                        }
                     }
                 }
 
@@ -300,6 +405,17 @@ public:
     int m_prev_overlap = 0;
     double m_prev_samplerate = 0.0;
     bool m_have_prev_frame = false;
+
+    // track mode: the partial tracker (identity-stable columns).
+    // reset alongside the phase state (the auto track_delta depends
+    // on the samplerate and fftsize).
+    mlmat::peak_tracker m_tracker;
+
+    // amplitudes output: coherent gain of the analysis window,
+    // cached per (fftsize, window)
+    double m_gain = 1.0;
+    int m_gain_fftsize = 0;
+    string m_gain_window;
 };
 
 max::t_jit_err mlmat_spectral_peaks_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs) {
