@@ -54,6 +54,7 @@ Have been working on examples and helpfiles. Will be going back and adding more 
 
 	
 - [] mlmat.buffer_griffinlim.maxhelp
+- [] mlmat.buffer_mqsynth.maxhelp
 - [] mlmat.buffer_istft.maxhelp
 - [] mlmat.buffer_stft.maxhelp
 - [x]mlmat.convert.maxhelp

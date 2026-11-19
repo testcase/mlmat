@@ -6,8 +6,10 @@
 /// iteration scheme the object used to use), phase-based frequency
 /// reassignment (including through the STFT stack itself), the
 /// window coherent-gain amplitude correction used by
-/// mlmat.spectral_reassign, and the two-input cores of
-/// mlmat.spectral_mask and mlmat.spectral_op.
+/// mlmat.spectral_peaks and mlmat.spectral_reassign, the two-input
+/// cores of mlmat.spectral_mask and mlmat.spectral_op, peak pruning
+/// and partial tracking, and the McAulay-Quatieri synthesis core of
+/// mlmat.buffer_mqsynth.
 
 #include "c74_min.h"
 
@@ -1254,6 +1256,184 @@ static void run_partial_tracking()
     }
 }
 
+// ---------------------------------------------------------------------------
+// MQ synthesis (mlmat.buffer_mqsynth's core)
+// ---------------------------------------------------------------------------
+static void run_mq_synth()
+{
+    const int fftsize = 512;
+    const int overlap = 4;
+    const double sr = 48000.0;
+    const size_t step = size_t(fftsize) / size_t(overlap);
+    const size_t n = 8192;
+    const size_t frames = (n - 1) / step + 1;
+    const size_t bins = size_t(fftsize) / 2;
+    const size_t slots = 4;
+
+    // the objects' pipeline for one frame: find peaks, prune the
+    // window side-lobes (spacing 9, distance-only gate), amplitude-
+    // correct with the hanning coherent gain, track into identity
+    // columns, and emit the (amplitude, frequency, phase) partial
+    // data that the synth consumes
+    NEW::mlmat::peak_tracker tracker;
+    std::vector<NEW::mlmat::spectral_peak> frame_peaks, tracked;
+    std::vector<float> pk_amps(frames * slots, 0.0f), pk_freqs(frames * slots, 0.0f);
+    std::vector<float> pk_phases(frames * slots, 0.0f);
+    const double cg = NEW::mlmat::window_coherent_gain(fftsize, "hanning");
+    auto analyze_frame = [&](size_t f, const std::vector<float>& mags,
+                             const std::vector<float>& phases) {
+        frame_peaks.clear();
+        std::vector<float> frame(mags.begin() + f * bins, mags.begin() + (f + 1) * bins);
+        NEW::mlmat::spectral_find_peaks(frame, sr, fftsize, -60.0f, 8, frame_peaks);
+        NEW::mlmat::spectral_prune_peaks(frame_peaks, fftsize, sr, 9, 0.0);
+        for (auto& pk : frame_peaks)
+            pk.amplitude = static_cast<float>(double(pk.amplitude) * 2.0 / (double(fftsize) * cg));
+        tracker.process(frame_peaks, slots, sr / fftsize, 0, tracked);
+        for (size_t s = 0; s < slots; ++s) {
+            const float a = tracked[s].amplitude;
+            const float fr = tracked[s].frequency;
+            pk_amps[f * slots + s] = a;
+            pk_freqs[f * slots + s] = fr;
+            // the analysis phase at the partial's bin (plane 2)
+            if (a == 0.0f && fr == 0.0f) {
+                pk_phases[f * slots + s] = 0.0f;
+            } else {
+                long k = std::lround(double(fr) * double(fftsize) / sr);
+                k = std::max(0L, std::min(k, long(bins) - 1));
+                pk_phases[f * slots + s] = phases[f * bins + size_t(k)];
+            }
+        }
+    };
+    auto reset_pipeline = [&]() {
+        tracker.reset();
+        std::fill(pk_amps.begin(), pk_amps.end(), 0.0f);
+        std::fill(pk_freqs.begin(), pk_freqs.end(), 0.0f);
+        std::fill(pk_phases.begin(), pk_phases.end(), 0.0f);
+    };
+
+    // -------- identity: one steady bin-centered sinusoid reconstructed
+    // near-sample-exact (the cubic phase makes this hold) --------
+    {
+        const double A = 0.5;
+        const double f0 = 20.0 * sr / fftsize;   // bin 20 exactly
+        std::vector<float> x(n);
+        for (size_t i = 0; i < n; ++i)
+            x[i] = float(A * std::sin(2.0 * M_PI * f0 * double(i) / sr));
+
+        STFT stft;
+        std::vector<float> mags(frames * bins, 0.0f), phases(frames * bins, 0.0f);
+        stft.process(x, mags, phases, fftsize, overlap, "hanning", true, false);
+
+        reset_pipeline();
+        for (size_t f = 0; f < frames; ++f)
+            analyze_frame(f, mags, phases);
+
+        NEW::MQSynth mq;
+        std::vector<float> out;
+        mq.process(pk_amps, pk_freqs, pk_phases, frames, slots, fftsize, overlap, sr, out);
+
+        check(out.size() == frames * step, "mq synth output length",
+              double(out.size()) - double(frames * step));
+        double max_err = 0.0;
+        for (size_t i = 2 * step; i < (frames - 5) * step; ++i)
+            max_err = std::max(max_err, std::fabs(double(out[i]) - double(x[i])));
+        check(max_err < 5e-3, "mq synth identity: steady sinusoid reconstructed", max_err);
+    }
+
+    // -------- identity: two partials --------
+    {
+        const double A0 = 0.4, A1 = 0.3;
+        const double f0 = 5.0 * sr / fftsize;    // bin 5
+        const double f1 = 20.0 * sr / fftsize;   // bin 20
+        std::vector<float> x(n);
+        for (size_t i = 0; i < n; ++i)
+            x[i] = float(A0 * std::sin(2.0 * M_PI * f0 * double(i) / sr)
+                       + A1 * std::sin(2.0 * M_PI * f1 * double(i) / sr));
+
+        STFT stft;
+        std::vector<float> mags(frames * bins, 0.0f), phases(frames * bins, 0.0f);
+        stft.process(x, mags, phases, fftsize, overlap, "hanning", true, false);
+
+        reset_pipeline();
+        for (size_t f = 0; f < frames; ++f)
+            analyze_frame(f, mags, phases);
+
+        NEW::MQSynth mq;
+        std::vector<float> out;
+        mq.process(pk_amps, pk_freqs, pk_phases, frames, slots, fftsize, overlap, sr, out);
+
+        double max_err = 0.0;
+        for (size_t i = 2 * step; i < (frames - 5) * step; ++i)
+            max_err = std::max(max_err, std::fabs(double(out[i]) - double(x[i])));
+        check(max_err < 5e-3, "mq synth identity: two partials reconstructed", max_err);
+    }
+
+    // -------- death envelope (direct core): the partial fades out
+    // over the frame after its last frame, then the output is silent
+    // -- and the run interior is phase-exact --------
+    {
+        const size_t t_frames = 10;
+        const double f0 = 20.0 * sr / fftsize;
+        std::vector<float> amps(t_frames, 0.0f), freqs(t_frames, 0.0f), phases(t_frames, 0.0f);
+        for (size_t f = 0; f < 6; ++f) {
+            amps[f] = 0.5f;
+            freqs[f] = static_cast<float>(f0);
+            // consistent analysis phases: 2*pi*f0*f*hop/sr
+            phases[f] = float(std::fmod(2.0 * M_PI * f0 * double(f) * step / sr, 2.0 * M_PI));
+        }
+
+        NEW::MQSynth mq;
+        std::vector<float> out;
+        mq.process(amps, freqs, phases, t_frames, 1, fftsize, overlap, sr, out);
+
+        check(out.size() == t_frames * step, "mq synth death: output length",
+              double(out.size()) - double(t_frames * step));
+        // the run interior matches the pure sinusoid
+        double max_err = 0.0;
+        for (size_t i = step; i < 5 * step; ++i)
+            max_err = std::max(max_err, std::fabs(double(out[i])
+                - 0.5 * std::cos(2.0 * M_PI * f0 * double(i) / sr)));
+        check(max_err < 1e-2, "mq synth death: run interior is phase-exact", max_err);
+        // after the fade frame, silence
+        double tail = 0.0;
+        for (size_t i = 6 * step; i < out.size(); ++i)
+            tail = std::max(tail, std::fabs(double(out[i])));
+        check(tail == 0.0, "mq synth death: silence after the fade", tail);
+    }
+
+    // -------- coast gap (direct core): zero-amplitude coast frames
+    // with the frequency held fade down and back up within one run
+    // (no death, no rebirth) --------
+    {
+        const size_t t_frames = 10;
+        const double f0 = 20.0 * sr / fftsize;
+        std::vector<float> amps(t_frames, 0.0f), freqs(t_frames, 0.0f), phases(t_frames, 0.0f);
+        for (size_t f = 0; f < t_frames; ++f) {
+            freqs[f] = static_cast<float>(f0);   // held through the gap
+            phases[f] = float(std::fmod(2.0 * M_PI * f0 * double(f) * step / sr, 2.0 * M_PI));
+        }
+        for (size_t f = 0; f < 4; ++f) amps[f] = 0.5f;
+        for (size_t f = 6; f < t_frames; ++f) amps[f] = 0.5f;
+        // frames 4 and 5 coast at zero amplitude
+
+        NEW::MQSynth mq;
+        std::vector<float> out;
+        mq.process(amps, freqs, phases, t_frames, 1, fftsize, overlap, sr, out);
+
+        // the gap center is near silent (the fades span the whole
+        // frame, so only the middle of the gap is at zero)
+        double gap_peak = 0.0;
+        for (size_t i = 5 * step - 8; i < 5 * step + 8; ++i)
+            gap_peak = std::max(gap_peak, std::fabs(double(out[i])));
+        check(gap_peak < 0.05, "mq synth coast: gap fades to silence", gap_peak);
+        // ... and the partial recovers full amplitude after the gap
+        double end_peak = 0.0;
+        for (size_t i = 7 * step; i + 1 < out.size(); ++i)
+            end_peak = std::max(end_peak, std::fabs(double(out[i])));
+        check(end_peak > 0.4, "mq synth coast: partial recovers after the gap", end_peak);
+    }
+}
+
 int main()
 {
     run_parity();
@@ -1265,6 +1445,7 @@ int main()
     run_spectral_op();
     run_peak_pruning();
     run_partial_tracking();
+    run_mq_synth();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

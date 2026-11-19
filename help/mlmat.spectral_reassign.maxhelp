@@ -148,7 +148,7 @@
                                         380.0,
                                         21.0
                                     ],
-                                    "text": "plane 0 = amplitudes, plane 1 = reassigned frequencies (Hz)"
+                                    "text": "planes: 0 = amplitudes, 1 = reassigned frequencies (Hz), 2 = phases (radians)"
                                 }
                             },
                             {

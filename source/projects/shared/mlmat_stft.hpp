@@ -950,3 +950,145 @@ private:
     std::vector<float> m_consistent_real;
     std::vector<float> m_consistent_imag;
 };
+
+/// McAulay-Quatieri sinusoidal synthesis from a tracked partial
+/// matrix (mlmat.buffer_mqsynth's core): each tracked partial becomes
+/// one continuous sinusoid, interpolated frame to frame with linear
+/// amplitude and a cubic phase polynomial that matches the measured
+/// phase AND the frequency (its own derivative) at both frame
+/// boundaries -- the construction that makes the partial glide
+/// smoothly instead of clicking at every frame boundary.
+///
+/// The partial inputs hold `slots` amplitudes, frequencies and phases
+/// per frame (frames * slots values each), as output by
+/// mlmat.spectral_peaks with @track 1: a slot with zero amplitude AND
+/// zero frequency is dead; zero amplitude with the frequency held is a
+/// coasting partial (it fades down and back within one run). The
+/// phases are the analysis phases at each partial's bin -- they anchor
+/// the cubic interpolation, and because they travel inside the matrix,
+/// frequency edits (transposition) never detach a partial from its
+/// phase data.
+///
+/// Births fade in over the frame before the run, deaths fade out over
+/// the frame after; a partial alive at the buffer edges simply starts
+/// and ends there. out_samples is resized to frames * hop.
+class MQSynth
+{
+public:
+    MQSynth() = default;
+    ~MQSynth() = default;
+
+    void process(const std::vector<float>& peak_amps,
+                 const std::vector<float>& peak_freqs,
+                 const std::vector<float>& peak_phases,
+                 size_t frames, size_t slots,
+                 int fftsize, int overlap,
+                 double samplerate,
+                 std::vector<float>& out_samples)
+    {
+        m_sr = samplerate;
+        const size_t hop = size_t(fftsize) / size_t(overlap);
+        out_samples.assign(frames * hop, 0.0f);
+        if (frames == 0 || slots == 0 || hop == 0 || samplerate <= 0.0) {
+            return;
+        }
+
+        for (size_t s = 0; s < slots; ++s) {
+            // one partial trajectory = a maximal run of frames where
+            // the slot is not dead (dead = zero amplitude and zero
+            // frequency; coasting frames keep the frequency)
+            size_t f = 0;
+            while (f < frames) {
+                if (slot_dead(peak_amps, peak_freqs, f, s, slots)) {
+                    ++f;
+                    continue;
+                }
+                size_t end = f;
+                while (end + 1 < frames
+                       && !slot_dead(peak_amps, peak_freqs, end + 1, s, slots)) {
+                    ++end;
+                }
+                synth_run(peak_amps, peak_freqs, peak_phases, s, f, end,
+                          slots, frames, hop, out_samples);
+                f = end + 1;
+            }
+        }
+    }
+
+private:
+    static bool slot_dead(const std::vector<float>& amps, const std::vector<float>& freqs,
+                          size_t frame, size_t slot, size_t slots)
+    {
+        return amps[frame * slots + slot] == 0.0f
+            && freqs[frame * slots + slot] == 0.0f;
+    }
+
+    // synthesize one partial run, frames f0..f1 (inclusive)
+    void synth_run(const std::vector<float>& amps, const std::vector<float>& freqs,
+                   const std::vector<float>& phases,
+                   size_t s, size_t f0, size_t f1, size_t slots, size_t frames,
+                   size_t hop, std::vector<float>& out)
+    {
+        const double T = double(hop);
+
+        // birth: fade in over the frame before the run, at constant
+        // frequency, landing exactly on the run's first phase
+        if (f0 > 0) {
+            const double a1 = double(amps[f0 * slots + s]);
+            const double w = 2.0 * M_PI * double(freqs[f0 * slots + s]) / m_sr;
+            const double th1 = double(phases[f0 * slots + s]);
+            for (size_t n = 0; n < hop; ++n) {
+                const double a = a1 * double(n) / T;
+                const double th = th1 - w * T + w * double(n);
+                out[(f0 - 1) * hop + n] += static_cast<float>(a * std::cos(th));
+            }
+        }
+
+        // MQ cubic-phase segments between consecutive points
+        for (size_t f = f0; f < f1; ++f) {
+            const double a0 = double(amps[f * slots + s]);
+            const double a1 = double(amps[(f + 1) * slots + s]);
+            if (a0 == 0.0 && a1 == 0.0) {
+                continue;   // inaudible gap segment
+            }
+            const double fr0 = double(freqs[f * slots + s]);
+            const double fr1 = double(freqs[(f + 1) * slots + s]);
+            const double w0 = 2.0 * M_PI * fr0 / m_sr;
+            const double w1 = 2.0 * M_PI * fr1 / m_sr;
+            const double th0 = double(phases[f * slots + s]);
+            const double th1 = double(phases[(f + 1) * slots + s]);
+
+            // phase the partial would reach by continuing at fr0, and
+            // the measured deviation from it, unwrapped to (-pi, pi]
+            const double dev = th1 - (th0 + w0 * T);
+            const double dphi = dev - 2.0 * M_PI * std::round(dev / (2.0 * M_PI));
+
+            // cubic theta(n) = th0 + w0*n + c*n^2 + d*n^3 with
+            // theta(T) = th0 + w0*T + dphi and theta'(T) = w1
+            const double c = 3.0 * dphi / (T * T) - (w1 - w0) / T;
+            const double d = (w1 - w0) / (T * T) - 2.0 * dphi / (T * T * T);
+
+            for (size_t n = 0; n < hop; ++n) {
+                const double nn = double(n);
+                const double a = a0 + (a1 - a0) * nn / T;
+                const double th = th0 + w0 * nn + c * nn * nn + d * nn * nn * nn;
+                out[f * hop + n] += static_cast<float>(a * std::cos(th));
+            }
+        }
+
+        // death: fade out over the frame after the run, at constant
+        // frequency, continuing from the run's last phase
+        if (f1 + 1 < frames) {
+            const double a0 = double(amps[f1 * slots + s]);
+            const double w = 2.0 * M_PI * double(freqs[f1 * slots + s]) / m_sr;
+            const double th0 = double(phases[f1 * slots + s]);
+            for (size_t n = 0; n < hop; ++n) {
+                const double a = a0 * (1.0 - double(n) / T);
+                const double th = th0 + w * double(n);
+                out[f1 * hop + n] += static_cast<float>(a * std::cos(th));
+            }
+        }
+    }
+
+    double m_sr = 48000.0;
+};

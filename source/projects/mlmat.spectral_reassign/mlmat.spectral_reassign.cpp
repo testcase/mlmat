@@ -25,7 +25,7 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, mlmat.spectral_peaks, sigmund~, jit.fft" };
-    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). The output has the same dimensions, with plane 0 holding the amplitude and plane 1 the frequency in Hz of every bin. By default (<at>output</at> amplitudes) plane 0 is corrected with the coherent gain of the <at>window</at>, so a sinusoid of amplitude A reads back as A regardless of the window or fftsize -- set <at>window</at> to match the analysis window of mlmat.buffer_stft (raw windowed magnitudes would instead show, e.g., half amplitude for a hanning). <at>output</at> magnitudes returns the raw magnitudes instead. Frequencies are reassigned: computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), giving exact sub-bin precision for stable sinusoids; the first frame (and any frame after an <at>overlap</at> or <at>samplerate</at> change) falls back to the bin center frequencies. Set <at>overlap</at> to match the STFT analysis overlap. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate). For <at>full_spectrum</at> input only the first half of the bins is meaningful (mlmat.buffer_stft's full-spectrum output mirrors the half spectrum, so the mirrored bins repeat the first half's data with the wrong bin indices). Use <o>mlmat.spectral_peaks</o> instead when only the strongest peaks are wanted."};
+    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). The output has the same dimensions, with plane 0 holding the amplitude, plane 1 the reassigned frequency in Hz, and plane 2 the input's phase in radians of every bin. By default (<at>output</at> amplitudes) plane 0 is corrected with the coherent gain of the <at>window</at>, so a sinusoid of amplitude A reads back as A regardless of the window or fftsize -- set <at>window</at> to match the analysis window of mlmat.buffer_stft (raw windowed magnitudes would instead show, e.g., half amplitude for a hanning). <at>output</at> magnitudes returns the raw magnitudes instead. Frequencies are reassigned: computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), giving exact sub-bin precision for stable sinusoids; the first frame (and any frame after an <at>overlap</at> or <at>samplerate</at> change) falls back to the bin center frequencies. Set <at>overlap</at> to match the STFT analysis overlap. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate). For <at>full_spectrum</at> input only the first half of the bins is meaningful (mlmat.buffer_stft's full-spectrum output mirrors the half spectrum, so the mirrored bins repeat the first half's data with the wrong bin indices). Use <o>mlmat.spectral_peaks</o> instead when only the strongest peaks are wanted."};
 
     attribute<min::symbol> window { this, "window", "hanning",
         description {
@@ -131,14 +131,15 @@ public:
                 m_gain_window = window_string;
             }
 
-            // reset the phase state when the overlap or samplerate
-            // changes (the expected phase advance changes)
-            if (m_prev_overlap != overlap || m_prev_samplerate != sr) {
-                m_have_prev_frame = false;
-                m_prev_phases.clear();
-                m_prev_overlap = overlap;
-                m_prev_samplerate = sr;
-            }
+            // each arriving matrix is a complete, self-contained
+            // analysis: start the phase state fresh on every matrix,
+            // so re-sending a matrix reproduces the same output
+            // (state never carries across matrix_calc calls --
+            // leftover end-state from a previous matrix would shift
+            // frame 0's reassigned frequencies away from the
+            // documented bin-center fallback)
+            m_have_prev_frame = false;
+            m_prev_phases.clear();
 
             max::uchar* in_data = nullptr;
             max::object_method(in_matrix, max::_jit_sym_getdata, &in_data);
@@ -150,7 +151,7 @@ public:
             // the output mirrors the input's dimensions, one bin per row
             max::t_jit_matrix_info out_minfo;
             out_minfo.type = max::_jit_sym_float64;
-            out_minfo.planecount = 2;
+            out_minfo.planecount = 3;
             out_minfo.dimcount = 2;
             out_minfo.dim[0] = frames;
             out_minfo.dim[1] = static_cast<long>(bins);
@@ -226,6 +227,7 @@ public:
                     double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
                     op[0] = amp;
                     op[1] = freq;
+                    op[2] = phases[k];
                 }
 
                 m_prev_phases = phases;
@@ -254,8 +256,6 @@ public:
     // instantaneous frequency via phase difference. reset when the
     // overlap or samplerate changes.
     std::vector<double> m_prev_phases;
-    int m_prev_overlap = 0;
-    double m_prev_samplerate = 0.0;
     bool m_have_prev_frame = false;
 };
 
@@ -286,7 +286,7 @@ void mlmat_spectral_reassign_assist(void* x, void* b, long io, long index, char*
         case 2:
             switch (index) {
                 case 0:
-                    snprintf(s, 64, "(matrix) amplitudes (plane 0), reassigned frequencies in Hz (plane 1)");
+                    snprintf(s, 64, "(matrix) amplitudes (plane 0), reassigned frequencies in Hz (plane 1), phases in radians (plane 2)");
                     break;
                 default:
                     snprintf(s, 64, "dumpout");

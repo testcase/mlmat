@@ -148,7 +148,7 @@
                                         380.0,
                                         21.0
                                     ],
-                                    "text": "peaks mode: plane 0 = amplitudes, plane 1 = frequencies (Hz)"
+                                    "text": "planes: 0 = amplitudes, 1 = frequencies (Hz), 2 = phases (radians)"
                                 }
                             },
                             {

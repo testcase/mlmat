@@ -25,7 +25,7 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, sigmund~, jit.fft" };
-    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). In <at>mode</at> peaks, the object finds the spectral peaks of each frame -- bins that are local maxima above the <at>threshold</at>, refined with parabolic interpolation for the true amplitude and frequency -- and outputs the strongest <at>max_peaks</at> of them as a 2-plane matrix: plane 0 amplitudes, plane 1 frequencies in Hz. In <at>mode</at> reassigned, peaks are detected the same way but their frequencies are computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), which gives exact sub-bin precision for stable sinusoids. Set <at>overlap</at> to match the STFT analysis overlap for correct results. For every-bin output with amplitudes and reassigned frequencies use <o>mlmat.spectral_reassign</o> instead. By default (<at>output</at> amplitudes) plane 0 holds true signal amplitudes, corrected with the coherent gain of the analysis <at>window</at> (set <at>window</at> to match mlmat.buffer_stft's window): a sinusoid of amplitude A reads as A regardless of fftsize and window. <at>output</at> magnitudes returns the raw windowed magnitudes of the analysis instead. <at>threshold</at> always gates on those raw magnitudes, regardless of <at>output</at>. Without tracking, the columns hold the per-frame amplitude ranking: column k is the k-th loudest peak of that frame, so peaks reorder or vanish between frames. Set <at>track</at> for stable identities: peaks are matched across frames (McAulay-Quatieri matching, within <at>track_delta</at> Hz), so each column holds one partial's trajectory -- new partials are born into the next free column, and a partial that vanishes zeroes out and frees its column after <at>track_hold</at> coast frames. Noise and window side-lobes can produce tiny false peaks right next to a strong peak; set <at>spacing</at> to prune them: a peak within spacing bins of a stronger kept peak is rejected as an artifact when it is also more than <at>spacing_db</at> below it (the hanning side-lobe floor is -31 dB, the default; 0 prunes on distance alone). Main-lobe widths: square 2, hanning and hamming 4, blackman 6 bins -- so a good spacing is 3 for hanning and 5 for blackman. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate)."};
+    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). In <at>mode</at> peaks, the object finds the spectral peaks of each frame -- bins that are local maxima above the <at>threshold</at>, refined with parabolic interpolation for the true amplitude and frequency -- and outputs the strongest <at>max_peaks</at> of them as a 3-plane matrix: plane 0 amplitudes, plane 1 frequencies in Hz, plane 2 the analysis phases in radians at each peak's bin -- the complete (amplitude, frequency, phase) partial data that <o>mlmat.buffer_mqsynth</o> synthesizes from. In <at>mode</at> reassigned, peaks are detected the same way but their frequencies are computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), which gives exact sub-bin precision for stable sinusoids. Set <at>overlap</at> to match the STFT analysis overlap for correct results. For every-bin output with amplitudes and reassigned frequencies use <o>mlmat.spectral_reassign</o> instead. By default (<at>output</at> amplitudes) plane 0 holds true signal amplitudes, corrected with the coherent gain of the analysis <at>window</at> (set <at>window</at> to match mlmat.buffer_stft's window): a sinusoid of amplitude A reads as A regardless of fftsize and window. <at>output</at> magnitudes returns the raw windowed magnitudes of the analysis instead. <at>threshold</at> always gates on those raw magnitudes, regardless of <at>output</at>. Without tracking, the columns hold the per-frame amplitude ranking: column k is the k-th loudest peak of that frame, so peaks reorder or vanish between frames. Set <at>track</at> for stable identities: peaks are matched across frames (McAulay-Quatieri matching, within <at>track_delta</at> Hz), so each column holds one partial's trajectory -- new partials are born into the next free column, and a partial that vanishes zeroes out and frees its column after <at>track_hold</at> coast frames. Noise and window side-lobes can produce tiny false peaks right next to a strong peak; set <at>spacing</at> to prune them: a peak within spacing bins of a stronger kept peak is rejected as an artifact when it is also more than <at>spacing_db</at> below it (the hanning side-lobe floor is -31 dB, the default; 0 prunes on distance alone). Main-lobe widths: square 2, hanning and hamming 4, blackman 6 bins -- so a good spacing is 3 for hanning and 5 for blackman. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate)."};
 
     attribute<min::symbol> mode { this, "mode", "peaks",
         description {
@@ -77,7 +77,7 @@ public:
 
     attribute<int, threadsafe::no, limit::clamp> track_hold { this, "track_hold", 0,
         description {
-            "Frames an unmatched partial coasts (zero amplitude, holding its frequency so it can reacquire) before it dies and frees its column. 0 kills immediately; 1 or 2 bridge brief dropouts."
+            "Frames an unmatched partial coasts (zero amplitude, holding its frequency so it can reacquire) before it dies and frees its column. 0 kills immediately; 1-64 bridge brief dropouts or that number of frames."
         },
         range {0, 64}
     };
@@ -196,18 +196,16 @@ public:
             const double scale_complex = amplitudes_output ? 2.0 / denom : 1.0;
             const double scale_real = amplitudes_output ? 1.0 / denom : 1.0;
 
-            // reassigned mode / tracking: reset the phase and tracker
-            // state when the overlap or samplerate changes (the
-            // expected phase advance and the auto track_delta change)
-            if (reassigned_mode || track) {
-                if (m_prev_overlap != overlap || m_prev_samplerate != sr) {
-                    m_have_prev_frame = false;
-                    m_prev_phases.clear();
-                    m_prev_overlap = overlap;
-                    m_prev_samplerate = sr;
-                    m_tracker.reset();
-                }
-            }
+            // each arriving matrix is a complete, self-contained
+            // analysis: start the reassigned-mode phase state and the
+            // partial tracker fresh on every matrix, so re-sending a
+            // matrix reproduces the same output (state never carries
+            // across matrix_calc calls -- leftover end-state from a
+            // previous matrix would permute the tracker's column
+            // assignments and shift frame 0's reassigned frequencies)
+            m_have_prev_frame = false;
+            m_prev_phases.clear();
+            m_tracker.reset();
 
             max::uchar* in_data = nullptr;
             max::object_method(in_matrix, max::_jit_sym_getdata, &in_data);
@@ -218,7 +216,7 @@ public:
 
             max::t_jit_matrix_info out_minfo;
             out_minfo.type = max::_jit_sym_float64;
-            out_minfo.planecount = 2;
+            out_minfo.planecount = 3;
             out_minfo.dimcount = 2;
             out_minfo.dim[0] = frames;
             out_minfo.dim[1] = static_cast<long>(out_cols);
@@ -256,19 +254,13 @@ public:
                     }
                     if (input_polar) {
                         mags[k] = static_cast<float>(p0);
-                        if (reassigned_mode) {
-                            phases[k] = p1;
-                        }
+                        phases[k] = p1;
                     } else if (k == 0 && !full_spectrum) {
                         mags[k] = static_cast<float>(std::fabs(p0));
-                        if (reassigned_mode) {
-                            phases[k] = (p0 >= 0.0) ? 0.0 : M_PI;
-                        }
+                        phases[k] = (p0 >= 0.0) ? 0.0 : M_PI;
                     } else {
                         mags[k] = static_cast<float>(std::sqrt(p0 * p0 + p1 * p1));
-                        if (reassigned_mode) {
-                            phases[k] = std::atan2(p1, p0);
-                        }
+                        phases[k] = std::atan2(p1, p0);
                     }
                 }
 
@@ -352,6 +344,20 @@ public:
                               return a.amplitude > b.amplitude;
                           });
 
+                // plane 2: the analysis phase at the peak's bin, the
+                // phase anchor for MQ synthesis. dead slots give 0;
+                // the packed Nyquist candidate is a real value, so
+                // its phase is 0 or pi
+                auto phase_of = [&](double frequency, double amplitude) -> double {
+                    if (frequency == 0.0 && amplitude == 0.0)
+                        return 0.0;
+                    if (frequency == static_cast<double>(sr) / 2.0)
+                        return (amplitude >= 0.0) ? 0.0 : M_PI;
+                    long k = static_cast<long>(std::lround(frequency * double(fftsize) / sr));
+                    k = std::max(0L, std::min(k, static_cast<long>(bins) - 1));
+                    return phases[static_cast<size_t>(k)];
+                };
+
                 if (track) {
                     // partial tracking: stable identity columns
                     // (delta auto = one bin)
@@ -363,6 +369,7 @@ public:
                         double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
                         op[0] = tracked[k].amplitude;
                         op[1] = tracked[k].frequency;
+                        op[2] = phase_of(tracked[k].frequency, tracked[k].amplitude);
                     }
                 } else {
                     for (size_t k = 0; k < out_cols; ++k) {
@@ -370,9 +377,11 @@ public:
                         if (k < peaks.size()) {
                             op[0] = peaks[k].amplitude;
                             op[1] = peaks[k].frequency;
+                            op[2] = phase_of(peaks[k].frequency, peaks[k].amplitude);
                         } else {
                             op[0] = 0.0;
                             op[1] = 0.0;
+                            op[2] = 0.0;
                         }
                     }
                 }
@@ -402,8 +411,6 @@ public:
     // compute instantaneous frequency via phase difference. reset when
     // the overlap or samplerate changes.
     std::vector<double> m_prev_phases;
-    int m_prev_overlap = 0;
-    double m_prev_samplerate = 0.0;
     bool m_have_prev_frame = false;
 
     // track mode: the partial tracker (identity-stable columns).
@@ -445,7 +452,7 @@ void mlmat_spectral_peaks_assist(void* x, void* b, long io, long index, char* s)
         case 2:
             switch (index) {
                 case 0:
-                    snprintf(s, 64, "(matrix) amplitudes (plane 0), frequencies in Hz (plane 1)");
+                    snprintf(s, 64, "(matrix) amplitudes (plane 0), frequencies in Hz (plane 1), phases in radians (plane 2)");
                     break;
                 default:
                     snprintf(s, 64, "dumpout");
