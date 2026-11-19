@@ -402,9 +402,13 @@ public:
         out_features = arma_to_jit(mode, features, static_cast<t_object*>(out_features), out_features_info);
         
     out:
+        // free the conversion matrix (convert_to_float64 returns the
+        // input itself when no conversion was needed -- the sibling
+        // objects' pattern)
+        if(query_matrix != nullptr && query_matrix != in_matrix) { jit_object_free(query_matrix); }
         object_method(in_matrix,_jit_sym_lock,in_matrix_savelock);
         object_method(out_features,_jit_sym_lock,out_features_savelock);
-        
+
         return err;
     }
     

@@ -133,7 +133,10 @@ public:
         auto out_savelock = max::object_method(out_matrix, max::_jit_sym_lock, (void*)1);
 
         max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
-        float *tab = buffer_locksamples(buffer);
+        float *tab = nullptr;
+        if (buffer) {
+            tab = buffer_locksamples(buffer);
+        }
 
         if (buffer && tab) {
             size_t b_frame_count = max::buffer_getframecount(buffer);
@@ -209,7 +212,9 @@ public:
             }
         }
     out:
-        buffer_unlocksamples(buffer);
+        if (buffer) {
+            buffer_unlocksamples(buffer);
+        }
         max::object_method(out_matrix, max::_jit_sym_lock, out_savelock);
 
         return err;

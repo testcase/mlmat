@@ -222,6 +222,9 @@ private:
     message<> buffer_update {this, "buffer_update",
         MIN_FUNCTION {
             max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
+            if (!(buffer && m_buffer_reference)) {
+                return {};
+            }
             float *tab = buffer_locksamples(buffer);
             size_t b_frame_count = max::buffer_getframecount(buffer);
             max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);

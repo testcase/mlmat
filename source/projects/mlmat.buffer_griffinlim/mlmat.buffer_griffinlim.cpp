@@ -151,15 +151,23 @@ public:
         size_t output_length = (b_frame_count*2) / overlap;
 
         max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
-        
+        max::t_object* in_matrix32 = nullptr;
+
+        // a missing or invalid buffer must not reach sizeinsamps or the
+        // sample lock (they dereference it). return directly: nothing
+        // but the input matrix is locked at this point
+        if (!(buffer && m_buffer_reference)) {
+            cerr << "mlmat.buffer_griffinlim: buffer specified is not valid" << endl;
+            max::object_method(in_matrix, c74::max::_jit_sym_lock, in_savelock);
+            return max::JIT_ERR_INVALID_PTR;
+        }
         max::object_method(static_cast<max::t_object*>(buffer), max::gensym("sizeinsamps"), (void*)output_length, 0);
-    
+
         float *tab = buffer_locksamples(buffer);
-    
+
         // float32 and float64 inputs are unpacked directly; other types go
         // through a conversion matrix first
         err = (max::t_jit_err)max::object_method(in_matrix, max::_jit_sym_getinfo, &in_minfo);
-        max::t_object* in_matrix32 = nullptr;
         max::t_object* src_matrix = static_cast<max::t_object*>(in_matrix);
         if(in_minfo.type != max::_jit_sym_float32 && in_minfo.type != max::_jit_sym_float64) {
             in_matrix32 = convert_to_float32(static_cast<max::t_object*>(in_matrix), in_minfo);
@@ -230,7 +238,9 @@ public:
         }
 
     out:
-        buffer_unlocksamples(buffer);
+        if (buffer) {
+            buffer_unlocksamples(buffer);
+        }
         max::object_method(in_matrix, c74::max::_jit_sym_lock, in_savelock);
         if(in_matrix != in_matrix32) { jit_object_free(in_matrix32); }
         return err;
@@ -265,6 +275,9 @@ private:
     message<> buffer_update {this, "buffer_update",
         MIN_FUNCTION {
             max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
+            if (!(buffer && m_buffer_reference)) {
+                return {};
+            }
             float *tab = buffer_locksamples(buffer);
             size_t b_frame_count = max::buffer_getframecount(buffer);
             max::t_atom_long b_channel_count = max::buffer_getchannelcount(buffer);
