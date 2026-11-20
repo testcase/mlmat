@@ -1434,6 +1434,49 @@ static void run_mq_synth()
     }
 }
 
+// ---------------------------------------------------------------------------
+// Griffin-Lim input seeding: an input seeded with the true analysis
+// phases is already consistent, so a single iteration reproduces the
+// istft result (this is the warm start a rectangular input gives via
+// the hypot/atan2 conversion)
+// ---------------------------------------------------------------------------
+static void run_gl_seeding()
+{
+    const int fftsize = 512;
+    const int overlap = 4;
+    const size_t n = 4096;
+    const size_t step = size_t(fftsize) / size_t(overlap);
+    const size_t frames = (n + step - 1) / step;
+    const size_t spec = size_t(fftsize) / 2;
+    const size_t total = frames * spec;
+
+    auto signal = make_signal(n, 4242);
+
+    STFT stft;
+    ISTFT istft;
+    std::vector<float> mags(total, 0.0f), phases(total, 0.0f);
+    stft.process(signal, mags, phases, fftsize, overlap, "hanning", true, false);
+
+    // the plain istft of the analysis is the reference. NOTE: istft's
+    // polar -> rect conversion happens in place on the caller's
+    // vectors, so it gets its own copies (see the window-caching test
+    // for the same trap)
+    std::vector<float> ref_mags = mags, ref_phases = phases;
+    std::vector<float> ref(total + step, 0.0f);
+    istft.process(ref_mags, ref_phases, ref, fftsize, overlap, "hanning", true, false);
+
+    // Griffin-Lim seeded with the true phases: one iteration
+    GriffinLim gl;
+    std::vector<float> in_mags = mags, in_phases = phases;
+    std::vector<float> out(total + step, 0.0f);
+    gl.process(in_mags, in_phases, total, out, fftsize, overlap, "hanning", 1, 0.0, false);
+
+    double max_diff = 0.0;
+    for (size_t i = fftsize; i + fftsize < n; ++i)
+        max_diff = std::max(max_diff, std::fabs(double(out[i]) - double(ref[i])));
+    check(max_diff < 1e-2, "griffin-lim seeded with true phases matches the istft", max_diff);
+}
+
 int main()
 {
     run_parity();
@@ -1446,6 +1489,7 @@ int main()
     run_peak_pruning();
     run_partial_tracking();
     run_mq_synth();
+    run_gl_seeding();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

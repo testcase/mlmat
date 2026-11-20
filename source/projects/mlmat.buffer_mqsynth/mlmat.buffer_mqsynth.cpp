@@ -343,7 +343,7 @@ void mlmat_mqsynth_assist(void* x, void* b, long io, long index, char* s) {
        case 2:
            switch(index) {
                case 0:
-                   snprintf(s, 64, "(matrix) data");
+                   snprintf(s, 64, "dumpout");
                    break;
                default:
                    snprintf(s, 64, "dumpout");

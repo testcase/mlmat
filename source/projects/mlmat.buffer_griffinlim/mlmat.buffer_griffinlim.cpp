@@ -41,10 +41,11 @@ void mlmat_notify(max::t_object* x, max::t_symbol *s, max::t_symbol *msg, void *
 class mlmat_buffer_griffinlim : public object<mlmat_buffer_griffinlim>, public matrix_operator<>
 {
 public:
-    MIN_DESCRIPTION    { "Performs Griffin-Lim which is an iterative method for reconstructing a time-domain signal from a magnitude-only Short-Time Fourier Transform. " };
+    MIN_DESCRIPTION    { "Reconstructs a time-domain signal in a buffer~ from a magnitude spectrogram, using (momentum-accelerated) Griffin-Lim phase reconstruction. The input is a 1-plane magnitude matrix or the stack's 2-plane spectral matrix." };
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "fft~, ifft~, pfft~, jit.fft" };
+    MIN_DISCUSSION  {"The input is a magnitude spectrogram, reconstructed into the named buffer~ by iterated analysis and synthesis: each Griffin-Lim iteration synthesizes a candidate signal from the current phase estimate, re-analyzes it, and restores the input magnitudes (optionally blending the previous estimate via <at>momentum</at>, the fast Griffin-Lim formulation). The input may be 1-plane (magnitudes only -- the classic magnitude-only cold start with zero phases) or the stack's 2-plane matrix: with <at>input_polar</at> set, plane 0 and plane 1 hold magnitudes and an initial phase estimate; with rectangular input (the default) the magnitudes are computed as hypot(re, im) and the phase seed as atan2(im, re) -- so <o>mlmat.buffer_stft</o>'s default output connects directly, and an unmodified analysis seeds the iteration with its true phases. <at>fftsize</at> and <at>overlap</at> must match the analysis; the output length is frames * fftsize / overlap samples, written into the buffer~ named by the object's argument (or the set message)."};
     
     max::t_buffer_ref *m_buffer_reference {nullptr};
 
@@ -76,11 +77,11 @@ public:
         description {
             "If set, output full spectrum."
     }};
-//    
-//    attribute<bool> input_polar { this, "input_polar", false,
-//        description {
-//            "If set, output polar."
-//    }};
+    attribute<bool> input_polar { this, "input_polar", false,
+        description {
+            "If set, the input planes hold magnitudes and phases (the initial phase estimate for the iteration). Otherwise (the default) the input is rectangular: the magnitudes are computed as hypot(re, im) and the phase seed as atan2(im, re), so mlmat.buffer_stft's default output connects directly. A 1-plane input is always magnitudes, regardless of this attribute."
+        }
+    };
     
     attribute<min::symbol> initial_buffer { this, "initial_buffer", true,
         visibility(visibility::hide)
@@ -182,8 +183,10 @@ public:
             goto out;
         }
 
-        if(in_minfo.planecount != 2) {
-            cerr << "input matrix has " << in_minfo.planecount << " planes. needs to have 2." << endl;
+        if(in_minfo.planecount != 1 && in_minfo.planecount != 2) {
+            cerr << "input matrix has " << in_minfo.planecount << " planes; needs 1 (magnitudes) or 2 (magnitudes + phase seed, or rectangular re/im)." << endl;
+            err = c74::max::JIT_ERR_INVALID_INPUT;
+            goto out;
         }
 
         if (buffer && tab) {
@@ -198,25 +201,42 @@ public:
             m_in_imag.resize(b_frame_count+step);
             const string window_string = window.get().c_str();
 
-            /* write fft frames to vector (plane 0: magnitudes, plane 1: phases)*/
+            /* write fft frames to vector: m_in_real takes the
+               magnitudes, m_in_imag the initial phase seed. a 1-plane
+               input is the magnitude-only cold start (zero phases);
+               a polar input passes through; a rectangular input is
+               converted (magnitudes = hypot, seed = atan2), so the
+               default buffer_stft chain works with no configuration */
             max::uchar *dataptr = nullptr;
             max::uchar *ip = nullptr;
 
             err = (max::t_jit_err)max::object_method(src_matrix, max::_jit_sym_getdata, &dataptr);
 
             size_t buf_pos = 0;
+            const bool one_plane = (in_minfo.planecount == 1);
 
             for(auto width=0;width<in_minfo.dim[0];width++) {
                 ip = dataptr + (width*in_minfo.dimstride[0]);
                 for(auto height=0;height<num_bins;height++) {
+                    double p0, p1;
                     if(input_is_float64) {
                         double *fp = (double*)ip;
-                        m_in_real[buf_pos] = float(fp[0]);
-                        m_in_imag[buf_pos++] = float(fp[1]);
+                        p0 = fp[0];
+                        p1 = one_plane ? 0.0 : fp[1];
                     } else {
                         float *fp = (float*)ip;
-                        m_in_real[buf_pos] = fp[0];
-                        m_in_imag[buf_pos++] = fp[1];
+                        p0 = fp[0];
+                        p1 = one_plane ? 0.0 : static_cast<double>(fp[1]);
+                    }
+                    if (one_plane) {
+                        m_in_real[buf_pos] = static_cast<float>(p0);
+                        m_in_imag[buf_pos++] = 0.0f;
+                    } else if (input_polar) {
+                        m_in_real[buf_pos] = static_cast<float>(p0);
+                        m_in_imag[buf_pos++] = static_cast<float>(p1);
+                    } else {
+                        m_in_real[buf_pos] = static_cast<float>(std::sqrt(p0 * p0 + p1 * p1));
+                        m_in_imag[buf_pos++] = static_cast<float>(std::atan2(p1, p0));
                     }
                     ip = ip + in_minfo.dimstride[1];
                 }
@@ -401,7 +421,7 @@ void mlmat_assist(void* x, void* b, long io, long index, char* s) {
        case 2:
            switch(index) {
                case 0:
-                   snprintf(s, 64, "(matrix) data");
+                   snprintf(s, 64, "dumpout");
                    break;
 
                default:
