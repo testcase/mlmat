@@ -56,7 +56,7 @@ public:
 
     attribute<min::symbol> phase_mode { this, "phase_mode", "locked",
         description {
-            "Phase handling. locked (the default) anchors the cubic phase interpolation on the matrix's analysis phases, exact for stable partials and transients. free ignores the anchors after each partial's first frame and accumulates the interpolated frequency -- immune to unreliable anchors, the smoother mode for noisy content."
+            "Phase handling. locked (the default) anchors the cubic phase interpolation on the matrix's analysis phases, exact for stable partials and transients. free ignores the anchors after each partial's first frame and accumulates the interpolated frequency, immune to unreliable anchors, the smoother mode for noisy content."
         },
         range {"locked", "free"}
     };
