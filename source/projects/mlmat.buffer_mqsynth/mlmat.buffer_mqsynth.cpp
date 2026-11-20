@@ -33,7 +33,7 @@ public:
     max::t_buffer_ref *m_buffer_reference {nullptr};
 
     attribute<int, threadsafe::no, limit::clamp> channel {this, "channel", 1,
-        description {"Channel to write in the buffer~. The channel number uses 1-based counting."},
+        description {"Channel to write into the buffer~ (1-based counting). The resynthesis replaces that channel's samples; other channels keep their content as long as the buffer is already the right length -- a resize clears the whole buffer."},
         range {1, buffer_reference::k_max_channels}
     };
 
@@ -220,7 +220,11 @@ public:
                 err = max::JIT_ERR_INVALID_PTR;
                 goto out;
             }
-            max::object_method(static_cast<max::t_object*>(buffer), max::gensym("sizeinsamps"), (void*)static_cast<long>(output_length), 0);
+            // resize only when the length actually changes: resizing
+            // a buffer~ clears the whole buffer (every channel)
+            if (static_cast<size_t>(max::buffer_getframecount(buffer)) != output_length) {
+                max::object_method(static_cast<max::t_object*>(buffer), max::gensym("sizeinsamps"), (void*)static_cast<long>(output_length), 0);
+            }
 
             max::object_method(in_matrix, max::_jit_sym_getdata, &pk_data);
             if (pk_data == nullptr) {

@@ -50,7 +50,7 @@ public:
 
         
     attribute<int, threadsafe::no, limit::clamp> channel {this, "channel", 1,
-        description {"Channel to read from the buffer~. The channel number uses 1-based counting."},
+        description {"Channel to write into the buffer~ (1-based counting). The resynthesis replaces that channel's samples; other channels keep their content as long as the buffer is already the right length -- a resize clears the whole buffer."},
         range {1, buffer_reference::k_max_channels}
     };
     
@@ -153,7 +153,13 @@ public:
             max::object_method(in_matrix, c74::max::_jit_sym_lock, in_savelock);
             return max::JIT_ERR_INVALID_PTR;
         }
-        max::object_method(static_cast<max::t_object*>(buffer), max::gensym("sizeinsamps"), (void*)output_length, 0);
+        // resize only when the length actually changes: resizing a
+        // buffer~ clears the whole buffer (every channel), so a
+        // same-length render into another channel of the same buffer
+        // must not touch the size
+        if (static_cast<size_t>(max::buffer_getframecount(buffer)) != output_length) {
+            max::object_method(static_cast<max::t_object*>(buffer), max::gensym("sizeinsamps"), (void*)output_length, 0);
+        }
 
         float *tab = buffer_locksamples(buffer);
 
