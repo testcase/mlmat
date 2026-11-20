@@ -64,7 +64,7 @@ public:
 
     attribute<bool> track { this, "track", false,
         description {
-            "If set, track partials across frames (McAulay-Quatieri matching): each output column holds one partial's trajectory, with births taking the next free column and deaths zero-filling after track_hold coast frames, instead of the per-frame amplitude ranking."
+            "If set, track partials across frames (McAulay-Quatieri matching). Each output column then holds one partial's trajectory: births take the next free column, deaths zero-fill after track_hold coast frames, instead of the per-frame amplitude ranking."
         }
     };
 

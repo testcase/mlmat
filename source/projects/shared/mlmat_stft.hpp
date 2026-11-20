@@ -510,10 +510,13 @@ inline void spectral_multiply(const float* re1, const float* im1,
 
 /// Bin-wise masking of one spectral matrix by another (the core of
 /// mlmat.spectral_mask). mag/phase hold `bins` values each; left is
-/// the source, right the masker. Real (sign-encoded) values -- the
-/// real DC, or the real Nyquist packed in im[0] by the half-spectrum
-/// convention -- can be run through the same core by giving their
-/// magnitude and a phase of 0 or pi.
+/// the source, right the masker. threshold_raw gates hard AND soft
+/// modes, in the inputs' own magnitude domain (mlmat.spectral_mask
+/// holds its threshold in amplitude dB and converts with the
+/// analysis window's coherent gain). Real (sign-encoded) values --
+/// the real DC, or the real Nyquist packed in im[0] by the
+/// half-spectrum convention -- can be run through the same core by
+/// giving their magnitude and a phase of 0 or pi.
 enum class mask_mode {
     mag_from,    // magnitude from left, phase from right
     phase_from,  // magnitude from right, phase from left
@@ -527,9 +530,12 @@ inline void spectral_mask(const float* mag_l, const float* phase_l,
                           float* mag_out, float* phase_out,
                           size_t bins,
                           mask_mode mode,
-                          float threshold_db)
+                          float threshold_raw)
 {
-    const float thr = db_to_lin(threshold_db);
+    // threshold is a RAW magnitude in the same domain as the inputs
+    // (mlmat.spectral_mask converts its amplitude-dB threshold by the
+    // window's coherent gain before calling)
+    const float thr = threshold_raw;
     for (size_t k = 0; k < bins; ++k) {
         float m = 0.0f, p = 0.0f;
         switch (mode) {
@@ -548,11 +554,16 @@ inline void spectral_mask(const float* mag_l, const float* phase_l,
                 }
                 break;
             case mask_mode::soft: {
-                const float lr = mag_l[k] * mag_l[k];
-                const float rr = mag_r[k] * mag_r[k];
-                const float d = lr + rr;
-                m = (d > 0.0f) ? mag_l[k] * (rr / d) : 0.0f;
-                p = phase_l[k];
+                // the Wiener weight, gated: a masker below the
+                // threshold zeroes the bin entirely (the weight alone
+                // lets noise-floor bins leak)
+                if (mag_r[k] >= thr) {
+                    const float lr = mag_l[k] * mag_l[k];
+                    const float rr = mag_r[k] * mag_r[k];
+                    const float d = lr + rr;
+                    m = (d > 0.0f) ? mag_l[k] * (rr / d) : 0.0f;
+                    p = phase_l[k];
+                }
                 break;
             }
             case mask_mode::subtract: {

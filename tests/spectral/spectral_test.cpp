@@ -814,10 +814,10 @@ static void run_spectral_mask()
         ok = ok && std::fabs(m[k] - mr[k]) < 1e-6 && std::fabs(p[k] - pl[k]) < 1e-6;
     check(ok, "mask phase_from: magnitude from right, phase from left");
 
-    // hard: at -20 dB the threshold is 0.1 -- only bin 1 (masker 0.05)
-    // is gated; the zeroed bin is magnitude and phase 0
+    // hard: raw threshold 0.1 -- only bin 1 (masker 0.05) and the
+    // empty bin 4 are gated; the zeroed bin is magnitude and phase 0
     NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
-                              NEW::mlmat::mask_mode::hard, -20.0f);
+                              NEW::mlmat::mask_mode::hard, 0.1f);
     ok = std::fabs(m[0] - 0.5f) < 1e-6 && std::fabs(p[0] - 0.1f) < 1e-6
       && m[1] == 0.0f && p[1] == 0.0f
       && std::fabs(m[2] - 0.7f) < 1e-6 && std::fabs(p[2] - 0.3f) < 1e-6
@@ -828,7 +828,7 @@ static void run_spectral_mask()
     // soft: the Wiener weight |r|^2 / (|l|^2 + |r|^2), phase from the
     // source; both-zero bins give zero (no 0/0)
     NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
-                              NEW::mlmat::mask_mode::soft, -60.0f);
+                              NEW::mlmat::mask_mode::soft, 0.0f);
     ok = true;
     for (size_t k = 0; k < 4; ++k) {
         const double expect = double(ml[k]) * (double(mr[k]) * mr[k])
@@ -839,10 +839,21 @@ static void run_spectral_mask()
     ok = ok && m[4] == 0.0f;
     check(ok, "mask soft: Wiener weight, phase from the source");
 
+    // soft gate: a masker below the raw threshold zeroes the bin
+    // instead of leaking a small Wiener weight
+    NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
+                              NEW::mlmat::mask_mode::soft, 0.5f);
+    ok = m[1] == 0.0f && p[1] == 0.0f        // masker 0.05 < 0.5
+      && m[4] == 0.0f                        // masker 0.0 < 0.5
+      && std::fabs(m[0] - (0.5f * 0.36f / (0.25f + 0.36f))) < 1e-5
+      && std::fabs(m[2] - (0.7f * 0.81f / (0.49f + 0.81f))) < 1e-5
+      && std::fabs(m[3] - 0.4f) < 1e-5;       // 0.8 vs 0.8: weight 1/2
+    check(ok, "mask soft: below-threshold masker zeroes the bin");
+
     // subtract: positive differences kept, negative floored at zero,
     // phase from the source
     NEW::mlmat::spectral_mask(ml, pl, mr, pr, m, p, n,
-                              NEW::mlmat::mask_mode::subtract, -60.0f);
+                              NEW::mlmat::mask_mode::subtract, 0.0f);
     ok = m[0] == 0.0f                                   // 0.5 - 0.6 < 0
       && std::fabs(m[1] - 0.25f) < 1e-6 && std::fabs(p[1] - 0.2f) < 1e-6
       && m[2] == 0.0f                                   // 0.7 - 0.9 < 0

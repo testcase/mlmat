@@ -26,18 +26,25 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, mlmat.buffer_istft, mlmat.spectral_crosssynth, mlmat.spectral_op" };
-    MIN_DISCUSSION  {"The two inputs are the 2-plane spectral matrices output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute); the output uses the same format as the input and feeds <o>mlmat.buffer_istft</o> directly. Input 1 (the right inlet) is the masker. In <at>mode</at> mag_from the output takes the magnitude of input 0 with the phase of input 1 -- the classic phase-vocoder cross-synthesis: one signal's timbre under another's temporal behavior; phase_from is the reverse. In mode hard, bins of input 0 are kept where input 1's magnitude is at least <at>threshold</at> (dB) and zeroed below it -- vocoder gating and noise suppression. In mode soft each bin of input 0 is scaled by |input 1|^2 / (|input 0|^2 + |input 1|^2), the Wiener soft mask -- smooth, artifact-free cross-synthesis. In mode subtract input 1's magnitudes are subtracted from input 0's (floored at zero, phase from input 0) -- spectral-subtraction noise reduction when input 1 is a noise-floor estimate. Both inputs must use the same fftsize; the output frame count matches input 0, and input 1 loops if shorter, so a short masker can shape a longer signal without truncating the output."};
+    MIN_DISCUSSION  {"The two inputs are the 2-plane spectral matrices output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute); the output uses the same format as the input and feeds <o>mlmat.buffer_istft</o> directly. Input 1 (the right inlet) is the masker. In <at>mode</at> mag_from the output takes the magnitude of input 0 with the phase of input 1 -- the classic phase-vocoder cross-synthesis: one signal's timbre under another's temporal behavior; phase_from is the reverse. In mode hard, bins of input 0 are kept where input 1's amplitude is at least <at>threshold</at> (dB, full scale -- set <at>window</at> to match the analysis) and zeroed below it -- vocoder gating and noise suppression. In mode soft each bin of input 0 is scaled by |input 1|^2 / (|input 0|^2 + |input 1|^2), the Wiener soft mask, and the same threshold gates it: bins whose masker is below the floor are zeroed instead of leaking -- smooth, artifact-free cross-synthesis. The threshold has no effect in mag_from and phase_from modes. In mode subtract input 1's magnitudes are subtracted from input 0's (floored at zero, phase from input 0) -- spectral-subtraction noise reduction when input 1 is a noise-floor estimate. Both inputs must use the same fftsize; the output frame count matches input 0, and input 1 loops if shorter, so a short masker can shape a longer signal without truncating the output."};
 
     attribute<min::symbol> mode { this, "mode", "mag_from",
         description {
-            "Mask operation: mag_from (magnitude from input 0, phase from input 1), phase_from (the reverse), hard (input 0 gated by input 1 against threshold), soft (input 0 scaled by the Wiener weight |input 1|^2 / (|input 0|^2 + |input 1|^2)), or subtract (input 0's magnitudes minus input 1's, floored at zero)."
+            "Mask operation: mag_from, phase_from, hard (gated by threshold), soft (Wiener weight, threshold-gated) or subtract (floored at zero). See the discussion for the per-mode formulas."
         },
         range {"mag_from", "phase_from", "hard", "soft", "subtract"}
     };
 
+    attribute<min::symbol> window { this, "window", "hanning",
+        description {
+            "The analysis window used by the STFT whose output is being gated. Must match mlmat.buffer_stft's window: the window's coherent gain converts the amplitude-domain threshold to the analysis magnitudes' scale."
+        },
+        range{"square", "triangle", "hanning", "hamming", "blackman"}
+    };
+
     attribute<double> threshold { this, "threshold", -60.0,
         description {
-            "Minimum masker magnitude in dB for hard mode. Bins of input 0 whose input 1 magnitude is below this are zeroed."
+            "Minimum masker amplitude in dB (full scale), for hard and soft modes: bins whose masker amplitude is below this are zeroed. Set window to match the analysis. In mag_from and phase_from modes the threshold has no effect."
         },
         range {-120.0, 0.0}
     };
@@ -124,6 +131,26 @@ public:
             // half-spectrum input (polar output of buffer_stft drops it)
             const bool packed_nyquist = !static_cast<bool>(input_polar) && !static_cast<bool>(full_spectrum);
 
+            // infer the analysis fftsize from the matrix width, as
+            // the other spectral consumers do
+            const int fftsize = full_spectrum ? static_cast<int>(bins)
+                                              : static_cast<int>(bins) * 2;
+
+            // the threshold is amplitude-domain (full scale): convert
+            // to the analysis magnitudes' raw scale with the window's
+            // coherent gain (a bin-centered sinusoid of amplitude A
+            // has raw magnitude A * fftsize * cg / 2). the packed real
+            // Nyquist is a single real bin, so its gate is twice that
+            const string window_string = window.get().c_str();
+            if (m_gain_fftsize != fftsize || m_gain_window != window_string) {
+                m_gain = mlmat::window_coherent_gain(fftsize, window_string);
+                m_gain_fftsize = fftsize;
+                m_gain_window = window_string;
+            }
+            const double amp_thr = static_cast<double>(mlmat::db_to_lin(static_cast<float>(threshold)));
+            const double thr_raw = amp_thr * double(fftsize) * m_gain / 2.0;
+            const double thr_nyq = amp_thr * double(fftsize) * m_gain;
+
             max::uchar* in0_data = nullptr;
             max::uchar* in1_data = nullptr;
             max::object_method(in0_matrix, max::_jit_sym_getdata, &in0_data);
@@ -199,10 +226,11 @@ public:
                 unpack(row_a, in0_minfo, is0_64, mag_a.data(), phase_a.data());
                 unpack(row_b, in1_minfo, is1_64, mag_b.data(), phase_b.data());
 
+
                 mlmat::spectral_mask(mag_a.data(), phase_a.data(),
                                      mag_b.data(), phase_b.data(),
                                      mag_o.data(), phase_o.data(), bins,
-                                     mm, static_cast<float>(threshold));
+                                     mm, static_cast<float>(thr_raw));
 
                 // the packed real Nyquist (rect half spectrum) rides
                 // through the same core as a sign-encoded real bin
@@ -220,7 +248,7 @@ public:
                     float pnb = (nb >= 0.0) ? 0.0f : static_cast<float>(M_PI);
                     float mno = 0.0f, pno = 0.0f;
                     mlmat::spectral_mask(&mna, &pna, &mnb, &pnb, &mno, &pno, 1, mm,
-                                         static_cast<float>(threshold));
+                                         static_cast<float>(thr_nyq));
                     nyq_o = mno * static_cast<float>(std::cos(pno));
                 }
 
@@ -253,6 +281,13 @@ public:
         matrix_type output;
         return output;
     }
+
+    // threshold conversion: coherent gain of the analysis window,
+    // cached per (fftsize, window)
+    double m_gain = 1.0;
+    int m_gain_fftsize = 0;
+    string m_gain_window;
+
 };
 
 max::t_jit_err mlmat_spectral_mask_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs) {
