@@ -248,8 +248,6 @@ public:
                 cerr << e.what() << endl;
                 goto out;
             }
-            float o = overlap;
-            for (auto& s : m_samples) { s *= o; }
             max::buffer_setdirty(buffer);
             update_buffer.set();
         } else {

@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 86.0, 119.0, 1373.0, 988.0 ],
+        "rect": [ 733.0, 163.0, 797.0, 905.0 ],
         "default_fontsize": 13.0,
         "gridsize": [ 5.0, 5.0 ],
         "showrootpatcherontab": 0,
@@ -48,7 +48,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 86.0, 145.0, 1373.0, 962.0 ],
+                        "rect": [ 733.0, 189.0, 797.0, 879.0 ],
                         "default_fontsize": 13.0,
                         "gridsize": [ 5.0, 5.0 ],
                         "showrootpatcherontab": 0,
@@ -56,13 +56,69 @@
                         "boxes": [
                             {
                                 "box": {
-                                    "buffername": "",
+                                    "id": "obj-16",
+                                    "maxclass": "ezdac~",
+                                    "numinlets": 2,
+                                    "numoutlets": 0,
+                                    "patching_rect": [ 300.0, 628.0, 45.0, 45.0 ]
+                                }
+                            },
+                            {
+                                "box": {
+                                    "id": "obj-12",
+                                    "lastchannelcount": 0,
+                                    "maxclass": "live.gain~",
+                                    "numinlets": 2,
+                                    "numoutlets": 5,
+                                    "orientation": 1,
+                                    "outlettype": [ "signal", "signal", "", "float", "list" ],
+                                    "parameter_enable": 1,
+                                    "patching_rect": [ 300.0, 568.8, 136.0, 47.0 ],
+                                    "saved_attribute_attributes": {
+                                        "valueof": {
+                                            "parameter_longname": "live.gain~",
+                                            "parameter_mmax": 6.0,
+                                            "parameter_mmin": -70.0,
+                                            "parameter_modmode": 3,
+                                            "parameter_shortname": "live.gain~",
+                                            "parameter_type": 0,
+                                            "parameter_unitstyle": 4
+                                        }
+                                    },
+                                    "varname": "live.gain~"
+                                }
+                            },
+                            {
+                                "box": {
+                                    "id": "obj-11",
+                                    "maxclass": "toggle",
+                                    "numinlets": 1,
+                                    "numoutlets": 1,
+                                    "outlettype": [ "int" ],
+                                    "parameter_enable": 0,
+                                    "patching_rect": [ 300.0, 485.6, 24.0, 24.0 ]
+                                }
+                            },
+                            {
+                                "box": {
+                                    "id": "obj-4",
+                                    "maxclass": "newobj",
+                                    "numinlets": 1,
+                                    "numoutlets": 2,
+                                    "outlettype": [ "signal", "bang" ],
+                                    "patching_rect": [ 300.0, 521.6, 111.0, 23.0 ],
+                                    "text": "play~ gl_help_out"
+                                }
+                            },
+                            {
+                                "box": {
+                                    "buffername": "gl_help_out",
                                     "id": "obj-10",
                                     "maxclass": "waveform~",
                                     "numinlets": 5,
                                     "numoutlets": 6,
                                     "outlettype": [ "float", "float", "float", "float", "list", "" ],
-                                    "patching_rect": [ 241.0, 644.0, 256.0, 64.0 ]
+                                    "patching_rect": [ 22.4, 492.8, 256.0, 64.0 ]
                                 }
                             },
                             {
@@ -72,7 +128,7 @@
                                     "numinlets": 1,
                                     "numoutlets": 2,
                                     "outlettype": [ "float", "bang" ],
-                                    "patching_rect": [ 400.0, 405.0, 120.0, 23.0 ],
+                                    "patching_rect": [ 372.0, 383.2, 120.0, 23.0 ],
                                     "text": "buffer~ gl_help_out"
                                 }
                             },
@@ -82,8 +138,8 @@
                                     "maxclass": "comment",
                                     "numinlets": 1,
                                     "numoutlets": 0,
-                                    "patching_rect": [ 140.0, 309.0, 150.0, 21.0 ],
-                                    "text": "get magn"
+                                    "patching_rect": [ 112.0, 287.2, 150.0, 21.0 ],
+                                    "text": "get magnitudes"
                                 }
                             },
                             {
@@ -93,7 +149,7 @@
                                     "numinlets": 1,
                                     "numoutlets": 3,
                                     "outlettype": [ "jit_matrix", "jit_matrix", "" ],
-                                    "patching_rect": [ 50.0, 304.0, 74.0, 23.0 ],
+                                    "patching_rect": [ 22.4, 282.4, 74.0, 23.0 ],
                                     "text": "jit.unpack 2"
                                 }
                             },
@@ -105,7 +161,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "bang" ],
                                     "parameter_enable": 0,
-                                    "patching_rect": [ 54.0, 194.0, 24.0, 24.0 ]
+                                    "patching_rect": [ 22.4, 192.8, 24.0, 24.0 ]
                                 }
                             },
                             {
@@ -118,7 +174,7 @@
                                     "numinlets": 1,
                                     "numoutlets": 2,
                                     "outlettype": [ "jit_matrix", "" ],
-                                    "patching_rect": [ 50.0, 362.0, 200.0, 60.0 ],
+                                    "patching_rect": [ 68.0, 316.8, 200.0, 60.0 ],
                                     "pwinoutlettype": 0,
                                     "stereo": 0,
                                     "sync": 1
@@ -131,7 +187,7 @@
                                     "numinlets": 1,
                                     "numoutlets": 2,
                                     "outlettype": [ "float", "bang" ],
-                                    "patching_rect": [ 365.0, 215.0, 148.0, 23.0 ],
+                                    "patching_rect": [ 336.8, 192.8, 148.0, 23.0 ],
                                     "text": "buffer~ gl_help anton.aif"
                                 }
                             },
@@ -154,53 +210,13 @@
                                 "box": {
                                     "fontname": "Arial",
                                     "fontsize": 13.0,
-                                    "id": "c-10-10",
-                                    "maxclass": "comment",
-                                    "numinlets": 1,
-                                    "numoutlets": 0,
-                                    "patching_rect": [ 929.0, 319.0, 380.0, 21.0 ],
-                                    "text": "Feed a magnitude-only matrix from mlmat.buffer_stft"
-                                }
-                            },
-                            {
-                                "box": {
-                                    "fontname": "Arial",
-                                    "fontsize": 13.0,
-                                    "id": "c-10-30",
-                                    "maxclass": "comment",
-                                    "numinlets": 1,
-                                    "numoutlets": 0,
-                                    "patching_rect": [ 929.0, 339.0, 380.0, 21.0 ],
-                                    "text": "Griffin-Lim iteratively reconstructs the missing phases"
-                                }
-                            },
-                            {
-                                "box": {
-                                    "fontname": "Arial",
-                                    "fontsize": 13.0,
                                     "id": "box-10-155",
                                     "maxclass": "newobj",
                                     "numinlets": 1,
                                     "numoutlets": 2,
                                     "outlettype": [ "jit_matrix", "" ],
-                                    "patching_rect": [ 50.0, 246.0, 514.0, 23.0 ],
+                                    "patching_rect": [ 22.4, 224.0, 514.0, 23.0 ],
                                     "text": "mlmat.buffer_stft gl_help @output_polar 1 @fftsize 1024 @overlap 4 @window hanning"
-                                }
-                            },
-                            {
-                                "box": {
-                                    "depthbuffer": 1,
-                                    "doublebuffer": 1,
-                                    "fsaa": 0,
-                                    "id": "pw-270-155",
-                                    "maxclass": "jit.pwindow",
-                                    "numinlets": 1,
-                                    "numoutlets": 2,
-                                    "outlettype": [ "jit_matrix", "" ],
-                                    "patching_rect": [ 610.0, 372.0, 160.0, 120.0 ],
-                                    "pwinoutlettype": 0,
-                                    "stereo": 0,
-                                    "sync": 1
                                 }
                             },
                             {
@@ -212,24 +228,8 @@
                                     "numinlets": 1,
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
-                                    "patching_rect": [ 50.0, 476.0, 420.0, 23.0 ],
-                                    "text": "mlmat.buffer_griffinlim gl_help_out @fftsize 1024 @overlap 4 @iters 50"
-                                }
-                            },
-                            {
-                                "box": {
-                                    "depthbuffer": 1,
-                                    "doublebuffer": 1,
-                                    "fsaa": 0,
-                                    "id": "pw-380-350",
-                                    "maxclass": "jit.pwindow",
-                                    "numinlets": 1,
-                                    "numoutlets": 2,
-                                    "outlettype": [ "jit_matrix", "" ],
-                                    "patching_rect": [ 412.0, 574.0, 200.0, 60.0 ],
-                                    "pwinoutlettype": 0,
-                                    "stereo": 0,
-                                    "sync": 1
+                                    "patching_rect": [ 22.4, 454.4, 512.0, 23.0 ],
+                                    "text": "mlmat.buffer_griffinlim gl_help_out @fftsize 1024 @input_polar 1 @overlap 4 @iters 50"
                                 }
                             },
                             {
@@ -243,7 +243,19 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "parameter_enable": 0,
-                                    "patching_rect": [ 151.0, 433.0, 200.0, 23.0 ]
+                                    "patching_rect": [ 123.2, 411.2, 200.0, 23.0 ]
+                                }
+                            },
+                            {
+                                "box": {
+                                    "attr": "input_polar",
+                                    "id": "obj-17",
+                                    "maxclass": "attrui",
+                                    "numinlets": 1,
+                                    "numoutlets": 1,
+                                    "outlettype": [ "" ],
+                                    "parameter_enable": 0,
+                                    "patching_rect": [ 326.4, 424.8, 150.0, 23.0 ]
                                 }
                             }
                         ],
@@ -256,6 +268,44 @@
                             },
                             {
                                 "patchline": {
+                                    "destination": [ "obj-4", 0 ],
+                                    "source": [ "obj-11", 0 ]
+                                }
+                            },
+                            {
+                                "patchline": {
+                                    "destination": [ "obj-16", 1 ],
+                                    "source": [ "obj-12", 1 ]
+                                }
+                            },
+                            {
+                                "patchline": {
+                                    "destination": [ "obj-16", 0 ],
+                                    "source": [ "obj-12", 0 ]
+                                }
+                            },
+                            {
+                                "patchline": {
+                                    "destination": [ "box-270-290", 0 ],
+                                    "source": [ "obj-17", 0 ]
+                                }
+                            },
+                            {
+                                "patchline": {
+                                    "destination": [ "obj-12", 1 ],
+                                    "order": 0,
+                                    "source": [ "obj-4", 0 ]
+                                }
+                            },
+                            {
+                                "patchline": {
+                                    "destination": [ "obj-12", 0 ],
+                                    "order": 1,
+                                    "source": [ "obj-4", 0 ]
+                                }
+                            },
+                            {
+                                "patchline": {
                                     "destination": [ "box-10-155", 0 ],
                                     "source": [ "obj-5", 0 ]
                                 }
@@ -263,14 +313,14 @@
                             {
                                 "patchline": {
                                     "destination": [ "box-270-290", 0 ],
-                                    "order": 0,
+                                    "order": 1,
                                     "source": [ "obj-6", 0 ]
                                 }
                             },
                             {
                                 "patchline": {
                                     "destination": [ "obj-3", 0 ],
-                                    "order": 1,
+                                    "order": 0,
                                     "source": [ "obj-6", 0 ]
                                 }
                             },
@@ -325,7 +375,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 0.0, 26.0, 1373.0, 962.0 ],
+                        "rect": [ 0.0, 26.0, 797.0, 879.0 ],
                         "showontab": 1,
                         "boxes": [],
                         "lines": []
@@ -337,6 +387,18 @@
             }
         ],
         "lines": [],
+        "parameters": {
+            "obj-5::obj-12": [ "live.gain~", "live.gain~", 0 ],
+            "parameterbanks": {
+                "0": {
+                    "index": 0,
+                    "name": "",
+                    "parameters": [ "-", "-", "-", "-", "-", "-", "-", "-" ],
+                    "buttons": [ "-", "-", "-", "-", "-", "-", "-", "-" ]
+                }
+            },
+            "inherited_shortname": 1
+        },
         "autosave": 0
     }
 }
