@@ -195,6 +195,35 @@ public:
 
             err = (max::t_jit_err)max::object_method(src_matrix, max::_jit_sym_getdata, &dataptr);
 
+            // polar-input heuristic (one warning per object instance):
+            // phases are bounded by pi by definition, so a
+            // rect-configured resynthesizer receiving a 2-plane matrix
+            // whose plane-1 values all fit in [-pi, pi] while plane 0
+            // carries meaningful magnitudes is almost certainly being
+            // fed a magnitude/phase matrix -- the unpack then destroys
+            // every phase and the buffer fills with noise
+            if (!m_polar_warned && !input_polar) {
+                double p0max = 0.0, p1max = 0.0;
+                for (size_t k = 0; k < num_bins; ++k) {
+                    const max::uchar* ip = dataptr + static_cast<size_t>(k) * in_minfo.dimstride[1];
+                    double a, b;
+                    if (input_is_float64) {
+                        a = reinterpret_cast<const double*>(ip)[0];
+                        b = reinterpret_cast<const double*>(ip)[1];
+                    } else {
+                        a = static_cast<double>(reinterpret_cast<const float*>(ip)[0]);
+                        b = static_cast<double>(reinterpret_cast<const float*>(ip)[1]);
+                    }
+                    p0max = std::max(p0max, std::fabs(a));
+                    p1max = std::max(p1max, std::fabs(b));
+                }
+                if (p1max <= 3.15 && p0max > 1.0) {
+                    m_polar_warned = true;
+                    cerr << "mlmat.buffer_istft: the input looks like a POLAR (magnitude/phase) matrix but the object expects rectangular -- every phase would be misread and the output is noise. Set @input_polar 1, or make the analysis output rectangular." << endl;
+                }
+            }
+
+
             size_t buf_pos = 0;
 
             for(auto width=0;width<in_minfo.dim[0];width++) {
@@ -342,6 +371,8 @@ private:
     }};
 
 
+    // one-shot polar-input warning
+    bool m_polar_warned = false;
     std::vector<float> m_samples;
     std::vector<float> m_in_real;
     std::vector<float> m_in_imag;

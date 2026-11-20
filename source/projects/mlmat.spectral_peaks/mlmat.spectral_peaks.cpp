@@ -214,6 +214,33 @@ public:
                 goto out;
             }
 
+            // polar-input heuristic (one warning per object instance):
+            // phases are bounded by pi by definition, so a
+            // rect-configured object receiving a 2-plane matrix whose
+            // plane-1 values all fit in [-pi, pi] while plane 0
+            // carries meaningful magnitudes is almost certainly being
+            // fed a magnitude/phase matrix -- the unpack then destroys
+            // every phase
+            if (!m_polar_warned && !static_cast<bool>(input_polar)) {
+                double p0max = 0.0, p1max = 0.0;
+                for (size_t k = 0; k < bins; ++k) {
+                    const max::uchar* ip = in_data + static_cast<size_t>(k) * in_minfo.dimstride[1];
+                    double a, b;
+                    if (is64) {
+                        a = reinterpret_cast<const double*>(ip)[0];
+                        b = reinterpret_cast<const double*>(ip)[1];
+                    } else {
+                        a = static_cast<double>(reinterpret_cast<const float*>(ip)[0]);
+                        b = static_cast<double>(reinterpret_cast<const float*>(ip)[1]);
+                    }
+                    p0max = std::max(p0max, std::fabs(a));
+                    p1max = std::max(p1max, std::fabs(b));
+                }
+                if (p1max <= 3.15 && p0max > 1.0) {
+                    m_polar_warned = true;
+                    cerr << "mlmat.spectral_peaks: the input looks like a POLAR (magnitude/phase) matrix but the object expects rectangular -- every phase would be misread. Set @input_polar 1, or make the analysis output rectangular." << endl;
+                }
+            }
             max::t_jit_matrix_info out_minfo;
             out_minfo.type = max::_jit_sym_float64;
             out_minfo.planecount = 3;
@@ -423,6 +450,9 @@ public:
     double m_gain = 1.0;
     int m_gain_fftsize = 0;
     string m_gain_window;
+
+    // one-shot polar-input warning
+    bool m_polar_warned = false;
 };
 
 max::t_jit_err mlmat_spectral_peaks_matrix_calc(max::t_object* x, max::t_object* inputs, max::t_object* outputs) {
