@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 100.0, 100.0, 1275.0, 995.0 ],
+        "rect": [ 86.0, 92.0, 676.0, 878.0 ],
         "default_fontsize": 13.0,
         "gridsize": [ 5.0, 5.0 ],
         "showrootpatcherontab": 0,
@@ -48,7 +48,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 100.0, 126.0, 1275.0, 969.0 ],
+                        "rect": [ 86.0, 118.0, 676.0, 852.0 ],
                         "default_fontsize": 13.0,
                         "gridsize": [ 5.0, 5.0 ],
                         "showrootpatcherontab": 0,
@@ -155,7 +155,7 @@
                                     "numinlets": 1,
                                     "numoutlets": 2,
                                     "outlettype": [ "float", "bang" ],
-                                    "patching_rect": [ 357.0, 534.0, 117.0, 23.0 ],
+                                    "patching_rect": [ 91.0, 764.0, 117.0, 23.0 ],
                                     "text": "buffer~ so_out_buf"
                                 }
                             },
@@ -335,17 +335,6 @@
                             },
                             {
                                 "box": {
-                                    "id": "btn-300-260",
-                                    "maxclass": "button",
-                                    "numinlets": 1,
-                                    "numoutlets": 1,
-                                    "outlettype": [ "bang" ],
-                                    "parameter_enable": 0,
-                                    "patching_rect": [ 253.0, 553.0, 20.0, 20.0 ]
-                                }
-                            },
-                            {
-                                "box": {
                                     "attr": "output_polar",
                                     "id": "obj-25",
                                     "maxclass": "attrui",
@@ -497,7 +486,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "parameter_enable": 0,
-                                    "patching_rect": [ 313.0, 596.0, 150.0, 23.0 ]
+                                    "patching_rect": [ 407.0, 522.0, 150.0, 23.0 ]
                                 }
                             },
                             {
@@ -509,7 +498,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "parameter_enable": 0,
-                                    "patching_rect": [ 466.0, 596.0, 150.0, 23.0 ]
+                                    "patching_rect": [ 407.0, 551.0, 150.0, 23.0 ]
                                 }
                             },
                             {
@@ -521,7 +510,7 @@
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
                                     "parameter_enable": 0,
-                                    "patching_rect": [ 619.0, 596.0, 150.0, 23.0 ]
+                                    "patching_rect": [ 246.0, 533.0, 150.0, 23.0 ]
                                 }
                             }
                         ],
@@ -595,18 +584,21 @@
                             {
                                 "patchline": {
                                     "destination": [ "box-10-130", 0 ],
+                                    "midpoints": [ 416.5, 555.0, 221.5, 555.0, 221.5, 502.0, 26.5, 502.0 ],
                                     "source": [ "obj-19", 0 ]
                                 }
                             },
                             {
                                 "patchline": {
                                     "destination": [ "box-10-130", 0 ],
+                                    "midpoints": [ 416.5, 584.0, 221.5, 584.0, 221.5, 502.0, 26.5, 502.0 ],
                                     "source": [ "obj-20", 0 ]
                                 }
                             },
                             {
                                 "patchline": {
                                     "destination": [ "box-10-130", 0 ],
+                                    "midpoints": [ 255.5, 566.0, 141.0, 566.0, 141.0, 502.0, 26.5, 502.0 ],
                                     "source": [ "obj-21", 0 ]
                                 }
                             },
@@ -699,7 +691,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 0.0, 26.0, 1275.0, 969.0 ],
+                        "rect": [ 0.0, 26.0, 676.0, 852.0 ],
                         "showontab": 1,
                         "boxes": [],
                         "lines": []

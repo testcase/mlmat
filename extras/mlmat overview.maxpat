@@ -33,7 +33,7 @@
                     "spacing_x": 12.0,
                     "spacing_y": 14.0,
                     "tabcolor": [ 0.664532, 0.706344, 0.714923, 1.0 ],
-                    "tabs": [ "mlmat.buffer_stft", "mlmat.buffer_istft", "mlmat.buffer_griffinlim", "mlmat.buffer_mqsynth", "mlmat.spectral_crosssynth", "mlmat.spectral_mask", "mlmat.spectral_op", "mlmat.spectral_peaks", "mlmat.specatral_reassign" ],
+                    "tabs": [ "mlmat.buffer_stft", "mlmat.buffer_istft", "mlmat.buffer_griffinlim", "mlmat.buffer_mqsynth", "mlmat.spectral_crosssynth", "mlmat.spectral_mask", "mlmat.spectral_op", "mlmat.spectral_peaks", "mlmat.spectral_reassign" ],
                     "textcolor": [ 0.29971, 0.332965, 0.409308, 1.0 ]
                 }
             },
