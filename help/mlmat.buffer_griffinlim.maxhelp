@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 733.0, 163.0, 797.0, 905.0 ],
+        "rect": [ 950.0, 260.0, 797.0, 905.0 ],
         "default_fontsize": 13.0,
         "gridsize": [ 5.0, 5.0 ],
         "showrootpatcherontab": 0,
@@ -48,12 +48,34 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 733.0, 189.0, 797.0, 879.0 ],
+                        "rect": [ 950.0, 286.0, 797.0, 879.0 ],
                         "default_fontsize": 13.0,
                         "gridsize": [ 5.0, 5.0 ],
                         "showrootpatcherontab": 0,
                         "showontab": 1,
                         "boxes": [
+                            {
+                                "box": {
+                                    "id": "obj-15",
+                                    "linecount": 2,
+                                    "maxclass": "comment",
+                                    "numinlets": 1,
+                                    "numoutlets": 0,
+                                    "patching_rect": [ 195.0, 294.5, 307.0, 36.0 ],
+                                    "text": "flip matrix to see it the 'normal' way with lower freqs on bottom"
+                                }
+                            },
+                            {
+                                "box": {
+                                    "id": "obj-7",
+                                    "maxclass": "newobj",
+                                    "numinlets": 1,
+                                    "numoutlets": 2,
+                                    "outlettype": [ "jit_matrix", "" ],
+                                    "patching_rect": [ 48.0, 308.0, 138.0, 23.0 ],
+                                    "text": "jit.dimmap @invert 0 1"
+                                }
+                            },
                             {
                                 "box": {
                                     "id": "obj-16",
@@ -138,7 +160,7 @@
                                     "maxclass": "comment",
                                     "numinlets": 1,
                                     "numoutlets": 0,
-                                    "patching_rect": [ 112.0, 287.2, 150.0, 21.0 ],
+                                    "patching_rect": [ 112.0, 264.0, 150.0, 21.0 ],
                                     "text": "get magnitudes"
                                 }
                             },
@@ -149,7 +171,7 @@
                                     "numinlets": 1,
                                     "numoutlets": 3,
                                     "outlettype": [ "jit_matrix", "jit_matrix", "" ],
-                                    "patching_rect": [ 22.4, 282.4, 74.0, 23.0 ],
+                                    "patching_rect": [ 22.4, 263.0, 74.0, 23.0 ],
                                     "text": "jit.unpack 2"
                                 }
                             },
@@ -174,7 +196,7 @@
                                     "numinlets": 1,
                                     "numoutlets": 2,
                                     "outlettype": [ "jit_matrix", "" ],
-                                    "patching_rect": [ 68.0, 316.8, 200.0, 60.0 ],
+                                    "patching_rect": [ 87.0, 342.0, 200.0, 60.0 ],
                                     "pwinoutlettype": 0,
                                     "stereo": 0,
                                     "sync": 1
@@ -319,9 +341,15 @@
                             },
                             {
                                 "patchline": {
-                                    "destination": [ "obj-3", 0 ],
+                                    "destination": [ "obj-7", 0 ],
                                     "order": 0,
                                     "source": [ "obj-6", 0 ]
+                                }
+                            },
+                            {
+                                "patchline": {
+                                    "destination": [ "obj-3", 0 ],
+                                    "source": [ "obj-7", 0 ]
                                 }
                             },
                             {

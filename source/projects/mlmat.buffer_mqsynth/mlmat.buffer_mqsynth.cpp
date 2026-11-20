@@ -28,7 +28,7 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, mlmat.spectral_peaks, mlmat.buffer_istft" };
-    MIN_DISCUSSION  {"Sinusoidal-model resynthesis: each tracked partial becomes one continuous sinusoid, interpolated frame to frame with linear amplitude and a cubic phase polynomial that matches the measured phase and the frequency (its own derivative) at both frame boundaries -- the construction that makes partials glide smoothly instead of clicking at every frame boundary. Feed the tracked output of <o>mlmat.spectral_peaks</o> (with <at>track</at> set) into the inlet: plane 0 holds the partial amplitudes, plane 1 the frequencies in Hz, plane 2 the analysis phases in radians that anchor the interpolation. Set <at>fftsize</at> and <at>overlap</at> to match the analysis (the hop between synthesis points is fftsize / overlap, and the output length is the matrix's frame count times the hop). Births fade in over the frame before the partial, deaths fade out over the frame after, and <o>mlmat.spectral_peaks</o>'s coasting frames (zero amplitude, frequency held) fade down and back within one partial. Because the phases travel inside the matrix, edits between the objects are phase-safe: transform the matrix -- drop, transpose or rescale partials, repeat frames for time stretching -- and this object resynthesizes the result without detaching partials from their phase data. Untracked input (the default per-frame amplitude ranking) synthesizes unrelated glissandi; use tracked output. The partials carry amplitudes, so set mlmat.spectral_peaks' <at>output</at> to amplitudes for true-level resynthesis. Frequencies are computed against <at>samplerate</at> if set, otherwise the current MSP sample rate (which matches the buffer_stft chain)."};
+    MIN_DISCUSSION  {"Sinusoidal-model resynthesis: each tracked partial becomes one continuous sinusoid, interpolated frame to frame with linear amplitude and a cubic phase polynomial that matches the measured phase and the frequency (its own derivative) at both frame boundaries -- the construction that makes partials glide smoothly instead of clicking at every frame boundary. Feed the tracked output of <o>mlmat.spectral_peaks</o> (with <at>track</at> set) into the inlet: plane 0 holds the partial amplitudes, plane 1 the frequencies in Hz, plane 2 the analysis phases in radians that anchor the interpolation. Set <at>fftsize</at> and <at>overlap</at> to match the analysis (the hop between synthesis points is fftsize / overlap, and the output length is the matrix's frame count times the hop). Births fade in over the frame before the partial, deaths fade out over the frame after, and <o>mlmat.spectral_peaks</o>'s coasting frames (zero amplitude, frequency held) fade down and back within one partial. Because the phases travel inside the matrix, edits between the objects are phase-safe: transform the matrix -- drop, transpose or rescale partials, repeat frames for time stretching -- and this object resynthesizes the result without detaching partials from their phase data. Untracked input (the default per-frame amplitude ranking) synthesizes unrelated glissandi; use tracked output. The partials carry amplitudes, so set mlmat.spectral_peaks' <at>output</at> to amplitudes for true-level resynthesis. Good companion analysis settings: mlmat.spectral_peaks <at>spacing</at> 3 (prune hanning side-lobes), <at>track_hold</at> 1 or 2 (bridge brief dropouts at the analysis side) and a <at>threshold</at> no lower than the content's noise floor -- the synth faithfully amplifies whatever partials the analysis keeps. Warble on noisy content means the phase anchors are unreliable: switch <at>phase_mode</at> to free, raise <at>smooth</at>, or filter with <at>minamp</at> / <at>maxfreq</at> / <at>count</at>; gaps in a partial mean tracking dropouts: raise <at>bridge</at> (or the analysis's <at>track_hold</at>). Frequencies are computed against <at>samplerate</at> if set, otherwise the current MSP sample rate (which matches the buffer_stft chain)."};
 
     max::t_buffer_ref *m_buffer_reference {nullptr};
 
@@ -52,6 +52,68 @@ public:
             "Sample rate in Hz the partial frequencies refer to. If 0 (the default), the current MSP sample rate is used, which matches the mlmat.buffer_stft chain when its resampling is on."
         },
         range {0.0, 192000.0}
+    };
+
+    attribute<min::symbol> phase_mode { this, "phase_mode", "locked",
+        description {
+            "Phase handling. locked (the default) anchors the cubic phase interpolation on the matrix's analysis phases, exact for stable partials and transients. free ignores the anchors after each partial's first frame and accumulates the interpolated frequency -- immune to unreliable anchors, the smoother mode for noisy content."
+        },
+        range {"locked", "free"}
+    };
+
+    attribute<int, threadsafe::no, limit::clamp> smooth { this, "smooth", 1,
+        description {
+            "Frames of centered moving average on the partial amplitudes and frequencies before synthesis (1 = off). Reduces frame-to-frame jitter in the analysis, the fuel of warble. Phases are never averaged."
+        },
+        range {1, 64}
+    };
+
+    attribute<double> minamp { this, "minamp", -60.0,
+        description {
+            "Amplitude floor in dB: partials quieter than this in a frame are not synthesized (they fade via their held frequency, like coasting). Removes noise-floor fizz."
+        },
+        range {-120.0, 0.0}
+    };
+
+    attribute<double> minfreq { this, "minfreq", 0.0,
+        description {
+            "Lower frequency limit in Hz (0 = off): partials below it are not synthesized. Also removes DC drift from near-0 Hz partials."
+        },
+        range {0.0, 192000.0}
+    };
+
+    attribute<double> maxfreq { this, "maxfreq", 0.0,
+        description {
+            "Upper frequency limit in Hz (0 = off): partials above it are not synthesized."
+        },
+        range {0.0, 192000.0}
+    };
+
+    attribute<int, threadsafe::no, limit::clamp> count { this, "count", 0,
+        description {
+            "Synthesize only the N partials (columns) with the highest mean amplitude over the whole matrix (0 = all). A stable, identity-preserving selection: per-frame selection would churn the columns."
+        },
+        range {0, 1024}
+    };
+
+    attribute<int, threadsafe::no, limit::clamp> bridge { this, "bridge", 0,
+        description {
+            "Bridge tracking dropouts: dead runs of at most this many frames between live frames are crossed with amplitude and frequency interpolation and phase-continuous anchors, so the partial glides across the gap with no dip. 0 (the default) keeps every death and birth as a fade."
+        },
+        range {0, 64}
+    };
+
+    attribute<double> gain { this, "gain", 1.0,
+        description {
+            "Output gain."
+        }
+    };
+
+    attribute<double> spread { this, "spread", 0.0,
+        description {
+            "Per-partial detune in cents, deterministically assigned per column (the same partial is always detuned the same way). Thickens exact-phase resynthesis; 0 (the default) is exact."
+        },
+        range {0.0, 100.0}
     };
 
     attribute<min::symbol> initial_buffer { this, "initial_buffer", true,
@@ -95,6 +157,7 @@ public:
                 m_buffer_reference = c74::max::buffer_ref_new(min::object_base::maxobj(), args[0]);
             else
                 max::buffer_ref_set(m_buffer_reference, args[0]);
+            m_buffer_name = args[0];
             return {};
     }};
 
@@ -152,7 +215,8 @@ public:
 
             max::t_buffer_obj *buffer = max::buffer_ref_getobject(m_buffer_reference);
             if (!(buffer && m_buffer_reference)) {
-                cerr << "mlmat.buffer_mqsynth: buffer specified is not valid" << endl;
+                cerr << "mlmat.buffer_mqsynth: buffer \"" << m_buffer_name
+                     << "\" specified is not valid" << endl;
                 err = max::JIT_ERR_INVALID_PTR;
                 goto out;
             }
@@ -188,7 +252,14 @@ public:
             m_mqsynth.process(m_peak_amps, m_peak_freqs, m_peak_phases,
                               static_cast<size_t>(frames), slots,
                               fftsize, overlap, sr,
-                              m_samples);
+                              m_samples,
+                              (phase_mode == min::symbol("free")),
+                              smooth,
+                              mlmat::db_to_lin(static_cast<float>(minamp)),
+                              minfreq, maxfreq,
+                              static_cast<size_t>(count),
+                              static_cast<size_t>(bridge),
+                              gain, spread);
 
             max::buffer_setdirty(buffer);
             buffer_update();
@@ -217,6 +288,7 @@ public:
 
 protected:
     void* m_dumpoutlet { nullptr };
+    min::symbol m_buffer_name;
 
 private:
     message<> buffer_update {this, "buffer_update",

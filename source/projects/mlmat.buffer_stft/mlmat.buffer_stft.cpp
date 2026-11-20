@@ -123,6 +123,7 @@ public:
                 m_buffer_reference = c74::max::buffer_ref_new(min::object_base::maxobj(), args[0]);
             else
                 max::buffer_ref_set(m_buffer_reference, args[0]);
+            m_buffer_name = args[0];
             return {};
         }};
     
@@ -241,6 +242,7 @@ public:
 
 protected:
     void* m_dumpoutlet { nullptr };
+    min::symbol m_buffer_name;
     
 private:
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {

@@ -1477,6 +1477,225 @@ static void run_gl_seeding()
     check(max_diff < 1e-2, "griffin-lim seeded with true phases matches the istft", max_diff);
 }
 
+// ---------------------------------------------------------------------------
+// MQ synthesis v2 tuning: phase modes, amplitude floor, band limits,
+// column count, gap bridging, trajectory smoothing
+// ---------------------------------------------------------------------------
+static void run_mq_tuning()
+{
+    const int fftsize = 512;
+    const int overlap = 4;
+    const double sr = 48000.0;
+    const size_t step = size_t(fftsize) / size_t(overlap);
+    const size_t bins = size_t(fftsize) / 2;
+    const size_t t_frames = 10;
+    const double f0 = 20.0 * sr / fftsize;   // bin 20: 1875 Hz
+    const size_t out_len = t_frames * step;
+
+    auto mk_phases = [&](size_t frames, double f) {
+        std::vector<float> P(frames, 0.0f);
+        for (size_t fr = 0; fr < frames; ++fr)
+            P[fr] = float(std::fmod(2.0 * M_PI * f * double(fr) * step / sr, 2.0 * M_PI));
+        return P;
+    };
+    auto rms = [](const std::vector<float>& v, size_t a, size_t b) {
+        double s = 0.0;
+        for (size_t i = a; i < b && i < v.size(); ++i)
+            s += double(v[i]) * double(v[i]);
+        return std::sqrt(s / double(b - a));
+    };
+
+    NEW::MQSynth mq;
+    std::vector<float> out;
+
+    // ---- free mode: a steady sinusoid reconstructs with the right
+    // amplitude (free integrates the same constant frequency from the
+    // run's first anchor, so it matches locked for steady content)
+    {
+        std::vector<float> A(t_frames, 0.5f), F(t_frames, float(f0)), P = mk_phases(t_frames, f0);
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 0.0, 0.0, 0, 0, 1.0, 0.0);
+        const double rms_locked = rms(out, step, out_len - step);
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   true, 1, 0.0, 0.0, 0.0, 0, 0, 1.0, 0.0);
+        const double rms_free = rms(out, step, out_len - step);
+        check(std::fabs(rms_free - 0.5 / std::sqrt(2.0)) < 0.02
+              && std::fabs(rms_locked - rms_free) < 1e-3,
+              "mq free mode: steady sinusoid amplitude", rms_free - 0.5 / std::sqrt(2.0));
+    }
+
+    // ---- minamp: a partial below the floor is silent, above is kept
+    {
+        std::vector<float> A(t_frames, 0.001f), F(t_frames, float(f0)), P = mk_phases(t_frames, f0);
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.01, 0.0, 0.0, 0, 0, 1.0, 0.0);   // floor 0.01
+        check(rms(out, step, out_len - step) < 1e-4,
+              "mq minamp: below-floor partial is silent", rms(out, step, out_len - step));
+
+        std::fill(A.begin(), A.end(), 0.5f);
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.01, 0.0, 0.0, 0, 0, 1.0, 0.0);
+        check(rms(out, step, out_len - step) > 0.2,
+              "mq minamp: above-floor partial is kept", rms(out, step, out_len - step));
+    }
+
+    // ---- band limits: outside partials are not synthesized
+    {
+        const double flo = 5.0 * sr / fftsize;    // 468.75 Hz
+        std::vector<float> A(t_frames, 0.5f), F(t_frames, float(flo)), P = mk_phases(t_frames, flo);
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 1000.0, 0.0, 0, 0, 1.0, 0.0);  // minfreq 1000
+        check(rms(out, step, out_len - step) < 1e-4,
+              "mq minfreq: below-band partial is silent", rms(out, step, out_len - step));
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 0.0, 200.0, 0, 0, 1.0, 0.0);   // maxfreq 200
+        check(rms(out, step, out_len - step) < 1e-4,
+              "mq maxfreq: above-band partial is silent", rms(out, step, out_len - step));
+    }
+
+    // ---- count: only the strongest column is synthesized
+    {
+        const double f1 = 5.0 * sr / fftsize;
+        std::vector<float> A(t_frames * 2, 0.0f), F(t_frames * 2, 0.0f), P(t_frames * 2, 0.0f);
+        for (size_t fr = 0; fr < t_frames; ++fr) {
+            A[fr * 2] = 0.4f;  F[fr * 2] = float(f0);  P[fr * 2] = mk_phases(1, f0)[0] * 0.0f + P[fr * 2];
+            A[fr * 2 + 1] = 0.1f; F[fr * 2 + 1] = float(f1);
+        }
+        // build consistent phases per column
+        auto ph0 = mk_phases(t_frames, f0), ph1 = mk_phases(t_frames, f1);
+        for (size_t fr = 0; fr < t_frames; ++fr) {
+            P[fr * 2] = ph0[fr];
+            P[fr * 2 + 1] = ph1[fr];
+        }
+        mq.process(A, F, P, t_frames, 2, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 0.0, 0.0, 1, 0, 1.0, 0.0);     // count 1
+        const double r = rms(out, step, out_len - step);
+        check(std::fabs(r - 0.4 / std::sqrt(2.0)) < 0.01,
+              "mq count: only the strongest column is synthesized", r - 0.4 / std::sqrt(2.0));
+    }
+
+    // ---- bridge: a 2-frame dead gap is crossed with no dip
+    {
+        std::vector<float> A(t_frames, 0.5f), F(t_frames, float(f0)), P = mk_phases(t_frames, f0);
+        for (size_t fr = 4; fr < 6; ++fr) { A[fr] = 0.0f; F[fr] = 0.0f; P[fr] = 0.0f; }
+
+        // unbridged: death + birth fades leave a hole between them
+        // (the death fade ends at 4*step, the birth fade starts at
+        // 5*step; the gap itself is silent)
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 0.0, 0.0, 0, 0, 1.0, 0.0);
+        double hole = 0.0;
+        for (size_t i = 4 * step; i < 5 * step; ++i)
+            hole = std::max(hole, std::fabs(double(out[i])));
+
+        // bridged: the partial glides across the whole gap
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 0.0, 0.0, 0, 2, 1.0, 0.0);
+        double crossed = 0.0;
+        for (size_t i = 4 * step; i < 6 * step; ++i)
+            crossed = std::max(crossed, std::fabs(double(out[i])));
+
+        check(crossed > 0.35 && hole < 0.05,
+              "mq bridge: gaps are crossed with no dip", crossed);
+    }
+
+    // ---- smooth: jittered amplitudes flatten across frames
+    {
+        std::vector<float> A(t_frames), F(t_frames, float(f0)), P = mk_phases(t_frames, f0);
+        for (size_t fr = 0; fr < t_frames; ++fr)
+            A[fr] = (fr % 2) ? 0.3f : 0.5f;
+
+        // per-frame rms ripple, unsmoothed vs smoothed
+        auto ripple = [&](const std::vector<float>& o) {
+            std::vector<double> fr_rms(t_frames);
+            for (size_t fr = 0; fr < t_frames; ++fr)
+                fr_rms[fr] = rms(o, fr * step, (fr + 1) * step);
+            double mean = 0.0;
+            for (double v : fr_rms) mean += v;
+            mean /= double(t_frames);
+            double var = 0.0;
+            for (double v : fr_rms) var += (v - mean) * (v - mean);
+            return var / double(t_frames);
+        };
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 0.0, 0.0, 0, 0, 1.0, 0.0);
+        const double r1 = ripple(out);
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 5, 0.0, 0.0, 0.0, 0, 0, 1.0, 0.0);
+        const double r5 = ripple(out);
+        check(r5 < r1, "mq smooth: amplitude jitter is flattened", r5 - r1);
+    }
+
+    // ---- locked mode with garbage anchors stays bounded (the clamp
+    // corridor keeps the mid-segment frequency near the interpolation)
+    {
+        std::vector<float> A(t_frames, 0.5f), F(t_frames, float(f0)), P(t_frames, 0.0f);
+        for (size_t fr = 0; fr < t_frames; ++fr) {
+            const double r = std::sin(double(fr) * 99.482) * 2847.112;
+            P[fr] = float((r - std::floor(r)) * 2.0 * M_PI);   // garbage anchors
+        }
+        mq.process(A, F, P, t_frames, 1, fftsize, overlap, sr, out,
+                   false, 1, 0.0, 0.0, 0.0, 0, 0, 1.0, 0.0);
+        double peak = 0.0;
+        for (size_t i = step; i < out_len - step; ++i)
+            peak = std::max(peak, std::fabs(double(out[i])));
+        check(peak <= 0.51, "mq locked with garbage anchors stays bounded", peak);
+    }
+    (void)bins;
+}
+
+// ---------------------------------------------------------------------------
+// reassign fine tuning: the clamp corridor and the first-frame
+// extrapolation (mlmat.spectral_reassign's @clamp and frame-0 fix-up)
+// ---------------------------------------------------------------------------
+static void run_reassign_tuning()
+{
+    const int fftsize = 512;
+    const double sr = 48000.0;
+    const double bin = sr / fftsize;             // 93.75 Hz
+    const double center20 = 20.0 * bin;          // bin 20
+
+    // clamp: off keeps the raw estimate, bin keeps +-1/2 bin, lobe
+    // keeps +-1 bin; clamped modes floor at 0 Hz
+    {
+        const double wild = center20 + 3.0 * bin;   // 3 bins off center
+        check(NEW::mlmat::clamp_reassigned(wild, 20.0, sr, fftsize,
+                                           NEW::mlmat::reassign_clamp::off) == wild,
+              "reassign clamp off keeps the raw estimate");
+        check(std::fabs(NEW::mlmat::clamp_reassigned(wild, 20.0, sr, fftsize,
+                                           NEW::mlmat::reassign_clamp::bin) - (center20 + 0.5 * bin)) < 1e-9,
+              "reassign clamp bin keeps half a bin");
+        check(std::fabs(NEW::mlmat::clamp_reassigned(wild, 20.0, sr, fftsize,
+                                           NEW::mlmat::reassign_clamp::lobe) - (center20 + 1.0 * bin)) < 1e-9,
+              "reassign clamp lobe keeps one bin");
+        // inside the corridor: untouched
+        const double good = center20 + 0.3 * bin;
+        check(std::fabs(NEW::mlmat::clamp_reassigned(good, 20.0, sr, fftsize,
+                                           NEW::mlmat::reassign_clamp::bin) - good) < 1e-12,
+              "reassign clamp leaves in-corridor estimates alone");
+        // negative frequencies floor at 0 in clamped modes: the DC
+        // bin's corridor starts at 0 (higher bins clamp into their own
+        // corridors instead)
+        check(NEW::mlmat::clamp_reassigned(-500.0, 0.0, sr, fftsize,
+                                           NEW::mlmat::reassign_clamp::bin) == 0.0,
+              "reassign clamp floors at 0 Hz");
+    }
+
+    // first-frame extrapolation: an agreeable chirp carries its slope
+    // into frame 0; a transient disagreement holds frame 1; no second
+    // frame holds frame 1
+    {
+        const double f1 = 1000.5, f2 = 1001.5;   // +1 Hz per frame, well inside a bin
+        check(std::fabs(NEW::mlmat::extrapolate_first_frame(f1, f2, true, sr, fftsize) - 999.5) < 1e-9,
+              "reassign frame 0: chirp trend extrapolates backward");
+        const double j1 = 1000.0, j2 = 1100.0;   // 100 Hz apart: a transient
+        check(std::fabs(NEW::mlmat::extrapolate_first_frame(j1, j2, true, sr, fftsize) - j1) < 1e-9,
+              "reassign frame 0: transient holds frame 1");
+        check(std::fabs(NEW::mlmat::extrapolate_first_frame(f1, 0.0, false, sr, fftsize) - f1) < 1e-9,
+              "reassign frame 0: no second frame holds frame 1");
+    }
+}
+
 int main()
 {
     run_parity();
@@ -1490,6 +1709,8 @@ int main()
     run_partial_tracking();
     run_mq_synth();
     run_gl_seeding();
+    run_mq_tuning();
+    run_reassign_tuning();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

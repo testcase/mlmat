@@ -25,7 +25,7 @@ public:
     MIN_TAGS        { "audio, analysis" };
     MIN_AUTHOR        { "Todd Ingalls" };
     MIN_RELATED        { "mlmat.buffer_stft, mlmat.spectral_peaks, sigmund~, jit.fft" };
-    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). The output has the same dimensions, with plane 0 holding the amplitude, plane 1 the reassigned frequency in Hz, and plane 2 the input's phase in radians of every bin. By default (<at>output</at> amplitudes) plane 0 is corrected with the coherent gain of the <at>window</at>, so a sinusoid of amplitude A reads back as A regardless of the window or fftsize -- set <at>window</at> to match the analysis window of mlmat.buffer_stft (raw windowed magnitudes would instead show, e.g., half amplitude for a hanning). <at>output</at> magnitudes returns the raw magnitudes instead. Frequencies are reassigned: computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), giving exact sub-bin precision for stable sinusoids; the first frame (and any frame after an <at>overlap</at> or <at>samplerate</at> change) falls back to the bin center frequencies. Set <at>overlap</at> to match the STFT analysis overlap. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate). For <at>full_spectrum</at> input only the first half of the bins is meaningful (mlmat.buffer_stft's full-spectrum output mirrors the half spectrum, so the mirrored bins repeat the first half's data with the wrong bin indices). Use <o>mlmat.spectral_peaks</o> instead when only the strongest peaks are wanted."};
+    MIN_DISCUSSION  {"The input is the 2-plane spectral matrix output by <o>mlmat.buffer_stft</o> (plane 0 and plane 1 hold either real and imaginary parts, or magnitudes and phases, according to the <at>input_polar</at> attribute). The output has the same dimensions, with plane 0 holding the amplitude, plane 1 the reassigned frequency in Hz, and plane 2 the input's phase in radians of every bin. By default (<at>output</at> amplitudes) plane 0 is corrected with the coherent gain of the <at>window</at>, so a sinusoid of amplitude A reads back as A regardless of the window or fftsize -- set <at>window</at> to match the analysis window of mlmat.buffer_stft (raw windowed magnitudes would instead show, e.g., half amplitude for a hanning). <at>output</at> magnitudes returns the raw magnitudes instead. Frequencies are reassigned: computed from the STFT phase difference between consecutive frames (instantaneous frequency estimation), giving exact sub-bin precision for stable sinusoids. The first frame's frequencies are extrapolated backward from the trend of the next two frames (held at frame 1's values when the trend is a transient, bin centers when there is no trend to read). On transient-heavy material set <at>clamp</at> to bin or lobe: outside about half a bin of its bin center the phase-difference estimate is not trustworthy, and clamped modes keep the output inside the valid region (and non-negative). <at>minamp</at> gates the noise floor: bins quieter than the floor report their bin-center frequency instead of a pseudo-precise estimate. Set <at>overlap</at> to match the STFT analysis overlap. Frequencies are computed from <at>samplerate</at> if set, otherwise from the current MSP sample rate (which matches the buffer_stft chain, since its resampling converts its input to the MSP rate). For <at>full_spectrum</at> input only the first half of the bins is meaningful (mlmat.buffer_stft's full-spectrum output mirrors the half spectrum, so the mirrored bins repeat the first half's data with the wrong bin indices). Use <o>mlmat.spectral_peaks</o> instead when only the strongest peaks are wanted."};
 
     attribute<min::symbol> window { this, "window", "hanning",
         description {
@@ -65,6 +65,20 @@ public:
             "The STFT overlap factor used in the analysis. Must match mlmat.buffer_stft's overlap setting for correct frequency reassignment."
         },
         range {1, 65536}
+    };
+
+    attribute<min::symbol> clamp { this, "clamp", "off",
+        description {
+            "Restrict each bin's reassigned frequency to the validity corridor around its bin center -- outside about half a bin the phase-difference estimate is not trustworthy (on transients it is garbage). off (the default) keeps the raw estimate; bin clamps to +-1/2 bin (the textbook reassigned-spectrogram region); lobe clamps to +-1 bin. Clamped modes also floor at 0 Hz."
+        },
+        range {"off", "bin", "lobe"}
+    };
+
+    attribute<double> minamp { this, "minamp", -120.0,
+        description {
+            "Amplitude floor in dB: bins whose output amplitude is below this fall back to their bin-center frequency (their phase difference is noise dressed as precision). -120 (the default) effectively disables the gate. Amplitudes and phases are unaffected."
+        },
+        range {-120.0, 0.0}
     };
 
     message<> jitclass_setup {this, "jitclass_setup", MIN_FUNCTION {
@@ -165,6 +179,13 @@ public:
                 goto out;
             }
 
+            mlmat::reassign_clamp clamp_mode = mlmat::reassign_clamp::off;
+            if (clamp == min::symbol("bin"))
+                clamp_mode = mlmat::reassign_clamp::bin;
+            else if (clamp == min::symbol("lobe"))
+                clamp_mode = mlmat::reassign_clamp::lobe;
+            const double minamp_lin = mlmat::db_to_lin(static_cast<float>(minamp));
+
             // amplitude correction: the unscaled forward DFT puts a
             // bin-centered sinusoid of amplitude A at A * fftsize * cg / 2
             // in the complex bins; the real DC bin (half spectrum, bin 0:
@@ -213,9 +234,13 @@ public:
                                                  : mag * scale_complex;
 
                     // reassigned frequency: the phase difference from
-                    // the previous frame; bin centers on the first
+                    // the previous frame, gated by minamp (a quiet bin's
+                    // phase difference is noise) and clamped to the
+                    // validity corridor; bin centers on the first frame
+                    // (the frame-0 fix-up below refines those)
                     double freq = mlmat::bin_frequency(static_cast<double>(k), sr, fftsize);
-                    if (m_have_prev_frame && k < m_prev_phases.size()) {
+                    if (m_have_prev_frame && k < m_prev_phases.size()
+                        && amp >= minamp_lin) {
                         const double rf = mlmat::reassigned_frequency(
                             static_cast<long>(k), phases[k], m_prev_phases[k],
                             fftsize, overlap, sr);
@@ -223,6 +248,8 @@ public:
                             freq = rf;
                         }
                     }
+                    freq = mlmat::clamp_reassigned(freq, static_cast<double>(k),
+                                                   sr, fftsize, clamp_mode);
 
                     double* op = reinterpret_cast<double*>(orow + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
                     op[0] = amp;
@@ -232,6 +259,30 @@ public:
 
                 m_prev_phases = phases;
                 m_have_prev_frame = true;
+            }
+
+            // frame 0 has no previous frame to difference against:
+            // its frequencies were bin-center fallbacks. extrapolate
+            // them backward from the trend of frames 1 and 2 (held at
+            // frame 1's values when the trend is a transient)
+            if (frames >= 2) {
+                max::uchar* row1 = dataptr + static_cast<size_t>(1) * dest_minfo.dimstride[0];
+                const bool have_f2 = (frames >= 3);
+                max::uchar* row2 = have_f2
+                    ? dataptr + static_cast<size_t>(2) * dest_minfo.dimstride[0]
+                    : nullptr;
+                for (size_t k = 0; k < bins; ++k) {
+                    double* o1 = reinterpret_cast<double*>(row1 + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
+                    const double f1 = o1[1];
+                    double f2 = 0.0;
+                    if (have_f2) {
+                        double* o2 = reinterpret_cast<double*>(row2 + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
+                        f2 = o2[1];
+                    }
+                    double* o0 = reinterpret_cast<double*>(dataptr + static_cast<size_t>(k) * dest_minfo.dimstride[1]);
+                    const double f0 = mlmat::extrapolate_first_frame(f1, f2, have_f2, sr, fftsize);
+                    o0[1] = mlmat::clamp_reassigned(f0, static_cast<double>(k), sr, fftsize, clamp_mode);
+                }
             }
         }
 

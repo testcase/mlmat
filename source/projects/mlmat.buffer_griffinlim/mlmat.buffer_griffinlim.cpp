@@ -134,6 +134,7 @@ public:
                 m_buffer_reference = c74::max::buffer_ref_new(min::object_base::maxobj(), args[0]);
             else
                 max::buffer_ref_set(m_buffer_reference, args[0]);
+            m_buffer_name = args[0];
             return {};
     }};
     
@@ -158,7 +159,8 @@ public:
         // sample lock (they dereference it). return directly: nothing
         // but the input matrix is locked at this point
         if (!(buffer && m_buffer_reference)) {
-            cerr << "mlmat.buffer_griffinlim: buffer specified is not valid" << endl;
+            cerr << "mlmat.buffer_griffinlim: buffer \"" << m_buffer_name
+                 << "\" specified is not valid" << endl;
             max::object_method(in_matrix, c74::max::_jit_sym_lock, in_savelock);
             return max::JIT_ERR_INVALID_PTR;
         }
@@ -286,6 +288,7 @@ public:
 
 protected:
     void* m_dumpoutlet { nullptr };
+    min::symbol m_buffer_name;
     
     
 private:

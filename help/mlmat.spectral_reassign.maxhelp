@@ -67,7 +67,7 @@
                             134.0,
                             190.0,
                             700.0,
-                            730.0
+                            790.0
                         ],
                         "default_fontsize": 13.0,
                         "gridsize": [
@@ -361,6 +361,48 @@
                                     "patching_rect": [
                                         43.0,
                                         699.0,
+                                        200.0,
+                                        23.0
+                                    ]
+                                }
+                            },
+                            {
+                                "box": {
+                                    "attr": "clamp",
+                                    "fontname": "Arial",
+                                    "fontsize": 13.0,
+                                    "id": "obj-attr-6",
+                                    "maxclass": "attrui",
+                                    "numinlets": 1,
+                                    "numoutlets": 1,
+                                    "outlettype": [
+                                        ""
+                                    ],
+                                    "parameter_enable": 0,
+                                    "patching_rect": [
+                                        43.0,
+                                        721.0,
+                                        200.0,
+                                        23.0
+                                    ]
+                                }
+                            },
+                            {
+                                "box": {
+                                    "attr": "minamp",
+                                    "fontname": "Arial",
+                                    "fontsize": 13.0,
+                                    "id": "obj-attr-7",
+                                    "maxclass": "attrui",
+                                    "numinlets": 1,
+                                    "numoutlets": 1,
+                                    "outlettype": [
+                                        ""
+                                    ],
+                                    "parameter_enable": 0,
+                                    "patching_rect": [
+                                        43.0,
+                                        743.0,
                                         200.0,
                                         23.0
                                     ]

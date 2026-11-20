@@ -283,6 +283,48 @@ inline double reassigned_frequency(long k, double curr_phase, double prev_phase,
     return (double(k) + delta) * samplerate / double(fftsize);
 }
 
+/// Clamp a reassigned frequency into the validity corridor around its
+/// bin center (mlmat.spectral_reassign's @clamp): the phase-difference
+/// estimate is only trustworthy within about half a bin of the bin
+/// that measured it -- outside that the math still produces numbers,
+/// but on transients they are garbage. "bin" keeps +-1/2 bin (the
+/// textbook reassigned-spectrogram region), "lobe" keeps +-1 bin,
+/// "off" keeps the raw estimate. Clamped modes also floor at 0 Hz.
+enum class reassign_clamp { off, bin, lobe };
+
+inline double clamp_reassigned(double freq, double k, double samplerate,
+                               int fftsize, reassign_clamp mode)
+{
+    if (mode == reassign_clamp::off) {
+        return freq;
+    }
+    const double corridor = (mode == reassign_clamp::bin) ? 0.5 : 1.0;
+    const double center = k * samplerate / double(fftsize);
+    const double half = corridor * samplerate / double(fftsize);
+    const double lo = std::max(0.0, center - half);
+    const double hi = center + half;
+    return std::min(std::max(freq, lo), hi);
+}
+
+/// First-frame frequency estimate for reassignment (mlmat.spectral_
+/// reassign's frame-0 fix-up): extrapolate backward from the trend of
+/// the next two frames when they agree (a chirp carries its slope into
+/// frame 0), hold frame 1's value when they disagree (a transient --
+/// no trustworthy trend), and hold frame 1 whenever there is no
+/// second frame to extrapolate from. Floors at 0 Hz.
+inline double extrapolate_first_frame(double f1, double f2, bool have_f2,
+                                      double samplerate, int fftsize)
+{
+    if (!have_f2) {
+        return f1;
+    }
+    const double one_bin = samplerate / double(fftsize);
+    if (std::fabs(f1 - f2) > one_bin) {
+        return f1;
+    }
+    return std::max(0.0, 2.0 * f1 - f2);
+}
+
 /// Side-lobe pruning of a peak list (spectral_peaks' @spacing /
 /// @spacing_db). Walks the peaks strongest-first and rejects any
 /// peak that sits within `min_spacing_bins` bins of an already-kept
@@ -956,18 +998,42 @@ private:
 /// one continuous sinusoid, interpolated frame to frame with linear
 /// amplitude and a cubic phase polynomial that matches the measured
 /// phase AND the frequency (its own derivative) at both frame
-/// boundaries -- the construction that makes the partial glide
-/// smoothly instead of clicking at every frame boundary.
+/// boundaries.
 ///
 /// The partial inputs hold `slots` amplitudes, frequencies and phases
 /// per frame (frames * slots values each), as output by
 /// mlmat.spectral_peaks with @track 1: a slot with zero amplitude AND
 /// zero frequency is dead; zero amplitude with the frequency held is a
-/// coasting partial (it fades down and back within one run). The
-/// phases are the analysis phases at each partial's bin -- they anchor
-/// the cubic interpolation, and because they travel inside the matrix,
-/// frequency edits (transposition) never detach a partial from its
-/// phase data.
+/// coasting partial. The phases anchor the cubic interpolation, and
+/// because they travel inside the matrix, frequency edits never detach
+/// a partial from its phase data.
+///
+/// Fine tuning (mlmat.buffer_mqsynth's v2 attributes):
+///   phase_free   free mode ignores the phase anchors after a run's
+///                first frame and accumulates the interpolated
+///                frequency -- immune to unreliable anchors (the
+///                smooth mode for noisy content). locked mode (the
+///                default) keeps the anchors and additionally clamps
+///                the cubic's instantaneous frequency into a corridor
+///                of one bin around the linear interpolation, so
+///                disagreeing anchors cannot cause mid-segment
+///                frequency excursions (the classic MQ warble).
+///   smooth       frames of centered moving average on the amplitude
+///                and frequency trajectories (1 = off). phases are
+///                never averaged (they wrap); dead frames are skipped.
+///   minamp       linear amplitude floor: quieter partials coast
+///                (fade) instead of being synthesized
+///   minfreq/
+///   maxfreq      band limits in Hz (0 = off): outside partials coast
+///   count        synthesize only the N columns with the highest mean
+///                amplitude (0 = all) -- a stable, identity-preserving
+///                selection
+///   bridge       dead runs of at most this many frames *between*
+///                live frames are crossed with amplitude/frequency
+///                interpolation and phase-continuous anchors: the
+///                partial glides across tracking dropouts with no dip
+///   gain         output scale
+///   spread_cents deterministic per-partial detune in cents
 ///
 /// Births fade in over the frame before the run, deaths fade out over
 /// the frame after; a partial alive at the buffer edges simply starts
@@ -984,52 +1050,205 @@ public:
                  size_t frames, size_t slots,
                  int fftsize, int overlap,
                  double samplerate,
-                 std::vector<float>& out_samples)
+                 std::vector<float>& out_samples,
+                 bool phase_free = false,
+                 int smooth = 1,
+                 double minamp_lin = 0.0,
+                 double minfreq = 0.0,
+                 double maxfreq = 0.0,
+                 size_t count = 0,
+                 size_t bridge = 0,
+                 double gain = 1.0,
+                 double spread_cents = 0.0)
     {
         m_sr = samplerate;
+        m_fftsize = fftsize;
         const size_t hop = size_t(fftsize) / size_t(overlap);
         out_samples.assign(frames * hop, 0.0f);
         if (frames == 0 || slots == 0 || hop == 0 || samplerate <= 0.0) {
             return;
         }
+        const size_t n = frames * slots;
 
-        for (size_t s = 0; s < slots; ++s) {
-            // one partial trajectory = a maximal run of frames where
-            // the slot is not dead (dead = zero amplitude and zero
-            // frequency; coasting frames keep the frequency)
+        // working copies: none of the transforms below may mutate the
+        // caller's matrices
+        std::vector<float> A(peak_amps.begin(), peak_amps.end());
+        std::vector<float> F(peak_freqs.begin(), peak_freqs.end());
+        std::vector<float> P(peak_phases.begin(), peak_phases.end());
+
+        // ---- amplitude floor and band limits: filtered frames coast
+        // (amplitude zeroed, frequency held) so partials fade rather
+        // than click; dead frames stay dead
+        if (minamp_lin > 0.0 || minfreq > 0.0 || maxfreq > 0.0) {
+            for (size_t i = 0; i < n; ++i) {
+                if (A[i] == 0.0f && F[i] == 0.0f) {
+                    continue;
+                }
+                const double f = double(F[i]);
+                if (double(A[i]) < minamp_lin || f < minfreq
+                    || (maxfreq > 0.0 && f > maxfreq)) {
+                    A[i] = 0.0f;
+                }
+            }
+        }
+
+        // ---- deterministic per-partial detune
+        if (spread_cents != 0.0) {
+            for (size_t sl = 0; sl < slots; ++sl) {
+                const double r = std::sin(double(sl) * 12.9898 + 78.233) * 43758.5453;
+                const double u = r - std::floor(r);
+                const double cents = (2.0 * u - 1.0) * std::fabs(spread_cents);
+                const double scale = std::pow(2.0, cents / 1200.0);
+                for (size_t f = 0; f < frames; ++f) {
+                    F[f * slots + sl] = static_cast<float>(double(F[f * slots + sl]) * scale);
+                }
+            }
+        }
+
+        // ---- trajectory smoothing: centered moving average of the
+        // amplitude and frequency over frames, skipping dead entries
+        // (phases wrap and are never averaged)
+        if (smooth > 1) {
+            const long w = long(smooth) / 2;
+            std::vector<float> A2(A), F2(F);
+            for (size_t sl = 0; sl < slots; ++sl) {
+                for (size_t f = 0; f < frames; ++f) {
+                    double asum = 0.0, fsum = 0.0;
+                    size_t cnt = 0;
+                    for (long k = long(f) - w; k <= long(f) + w; ++k) {
+                        if (k < 0 || k >= long(frames)) {
+                            continue;
+                        }
+                        const size_t i = size_t(k) * slots + sl;
+                        if (A[i] == 0.0f && F[i] == 0.0f) {
+                            continue;
+                        }
+                        asum += double(A[i]);
+                        fsum += double(F[i]);
+                        ++cnt;
+                    }
+                    if (cnt > 0) {
+                        A2[f * slots + sl] = static_cast<float>(asum / double(cnt));
+                        F2[f * slots + sl] = static_cast<float>(fsum / double(cnt));
+                    }
+                }
+            }
+            A.swap(A2);
+            F.swap(F2);
+        }
+
+        // ---- gap bridging: dead runs of at most `bridge` frames
+        // between two live frames are crossed with amplitude and
+        // frequency interpolation and phase-continuous anchors, so the
+        // partial glides across tracking dropouts with no dip
+        if (bridge > 0) {
+            for (size_t sl = 0; sl < slots; ++sl) {
+                size_t f = 0;
+                while (f < frames) {
+                    if (!(A[f * slots + sl] == 0.0f && F[f * slots + sl] == 0.0f)) {
+                        ++f;
+                        continue;
+                    }
+                    size_t e = f;
+                    while (e < frames && A[e * slots + sl] == 0.0f
+                                        && F[e * slots + sl] == 0.0f) {
+                        ++e;
+                    }
+                    if (f > 0 && e < frames && (e - f) <= bridge) {
+                        const size_t i0 = (f - 1) * slots + sl;
+                        const size_t i1 = e * slots + sl;
+                        const double a0 = double(A[i0]), a1 = double(A[i1]);
+                        const double f0 = double(F[i0]), f1 = double(F[i1]);
+                        const double th0 = double(P[i0]);
+                        const double span = double(e - (f - 1));
+                        for (size_t k = f; k < e; ++k) {
+                            const double t = double(k - (f - 1)) / span;
+                            const double fk = f0 + (f1 - f0) * t;
+                            A[k * slots + sl] = static_cast<float>(a0 + (a1 - a0) * t);
+                            F[k * slots + sl] = static_cast<float>(fk);
+                            P[k * slots + sl] = static_cast<float>(
+                                th0 + 2.0 * M_PI * fk * double(hop * (k - (f - 1))) / m_sr);
+                        }
+                    }
+                    f = e;
+                }
+            }
+        }
+
+        // ---- column selection: the `count` columns with the highest
+        // mean amplitude (a stable, identity-preserving choice --
+        // per-frame selection would churn columns)
+        std::vector<char> active(slots, 1);
+        if (count > 0 && count < slots) {
+            std::vector<std::pair<double, size_t>> means;
+            means.reserve(slots);
+            for (size_t sl = 0; sl < slots; ++sl) {
+                double sum = 0.0;
+                for (size_t f = 0; f < frames; ++f) {
+                    sum += double(A[f * slots + sl]);
+                }
+                means.emplace_back(sum / double(frames), sl);
+            }
+            std::sort(means.begin(), means.end(),
+                      [](const auto& a, const auto& b) {
+                          if (a.first != b.first) {
+                              return a.first > b.first;
+                          }
+                          return a.second < b.second;
+                      });
+            std::fill(active.begin(), active.end(), 0);
+            for (size_t i = 0; i < count && i < means.size(); ++i) {
+                active[means[i].second] = 1;
+            }
+        }
+
+        // ---- synthesis
+        for (size_t sl = 0; sl < slots; ++sl) {
+            if (!active[sl]) {
+                continue;
+            }
             size_t f = 0;
             while (f < frames) {
-                if (slot_dead(peak_amps, peak_freqs, f, s, slots)) {
+                if (A[f * slots + sl] == 0.0f && F[f * slots + sl] == 0.0f) {
                     ++f;
                     continue;
                 }
                 size_t end = f;
                 while (end + 1 < frames
-                       && !slot_dead(peak_amps, peak_freqs, end + 1, s, slots)) {
+                       && !(A[(end + 1) * slots + sl] == 0.0f
+                            && F[(end + 1) * slots + sl] == 0.0f)) {
                     ++end;
                 }
-                synth_run(peak_amps, peak_freqs, peak_phases, s, f, end,
-                          slots, frames, hop, out_samples);
+                if (phase_free) {
+                    synth_run_free(A, F, P, sl, f, end, slots, frames, hop, out_samples);
+                } else {
+                    synth_run_locked(A, F, P, sl, f, end, slots, frames, hop, out_samples);
+                }
                 f = end + 1;
+            }
+        }
+
+        // ---- output gain
+        if (gain != 1.0) {
+            for (auto& v : out_samples) {
+                v = static_cast<float>(double(v) * gain);
             }
         }
     }
 
 private:
-    static bool slot_dead(const std::vector<float>& amps, const std::vector<float>& freqs,
-                          size_t frame, size_t slot, size_t slots)
-    {
-        return amps[frame * slots + slot] == 0.0f
-            && freqs[frame * slots + slot] == 0.0f;
-    }
-
-    // synthesize one partial run, frames f0..f1 (inclusive)
-    void synth_run(const std::vector<float>& amps, const std::vector<float>& freqs,
-                   const std::vector<float>& phases,
-                   size_t s, size_t f0, size_t f1, size_t slots, size_t frames,
-                   size_t hop, std::vector<float>& out)
+    // locked mode: cubic phase anchored on the measured phases, with
+    // the instantaneous frequency clamped into a one-bin corridor
+    // around the linear interpolation (disagreeing anchors cannot
+    // cause mid-segment frequency excursions); the endpoint anchor is
+    // preserved exactly by a linear phase-correction term
+    void synth_run_locked(const std::vector<float>& amps, const std::vector<float>& freqs,
+                          const std::vector<float>& phases,
+                          size_t s, size_t f0, size_t f1, size_t slots, size_t frames,
+                          size_t hop, std::vector<float>& out)
     {
         const double T = double(hop);
+        const double w_bin = 2.0 * M_PI / double(m_fftsize);
 
         // birth: fade in over the frame before the run, at constant
         // frequency, landing exactly on the run's first phase
@@ -1044,7 +1263,7 @@ private:
             }
         }
 
-        // MQ cubic-phase segments between consecutive points
+        // segments between consecutive points
         for (size_t f = f0; f < f1; ++f) {
             const double a0 = double(amps[f * slots + s]);
             const double a1 = double(amps[(f + 1) * slots + s]);
@@ -1058,8 +1277,8 @@ private:
             const double th0 = double(phases[f * slots + s]);
             const double th1 = double(phases[(f + 1) * slots + s]);
 
-            // phase the partial would reach by continuing at fr0, and
-            // the measured deviation from it, unwrapped to (-pi, pi]
+            // the phase the partial would reach by continuing at fr0,
+            // and the measured deviation from it, unwrapped to (-pi, pi]
             const double dev = th1 - (th0 + w0 * T);
             const double dphi = dev - 2.0 * M_PI * std::round(dev / (2.0 * M_PI));
 
@@ -1068,11 +1287,34 @@ private:
             const double c = 3.0 * dphi / (T * T) - (w1 - w0) / T;
             const double d = (w1 - w0) / (T * T) - 2.0 * dphi / (T * T * T);
 
+            // clamped instantaneous frequency corridor
+            const double w_lo = std::min(w0, w1) - w_bin;
+            const double w_hi = std::max(w0, w1) + w_bin;
+            const double target = th0 + w0 * T + dphi;
+
+            // pass 1: integrate the clamped path to learn the endpoint
+            // error against the anchor
+            double th_acc = 0.0;
             for (size_t n = 0; n < hop; ++n) {
                 const double nn = double(n);
+                double w = w0 + 2.0 * c * nn + 3.0 * d * nn * nn;
+                w = std::max(w_lo, std::min(w_hi, w));
+                th_acc += w;
+            }
+            double err = target - (th0 + th_acc);
+            err -= 2.0 * M_PI * std::round(err / (2.0 * M_PI));
+
+            // pass 2: write the samples with the linear phase
+            // correction (lands exactly on the anchor at the segment
+            // end; the correction stays small while the clamps hold)
+            double th = th0;
+            for (size_t n = 0; n < hop; ++n) {
+                const double nn = double(n);
+                double w = w0 + 2.0 * c * nn + 3.0 * d * nn * nn;
+                w = std::max(w_lo, std::min(w_hi, w));
                 const double a = a0 + (a1 - a0) * nn / T;
-                const double th = th0 + w0 * nn + c * nn * nn + d * nn * nn * nn;
-                out[f * hop + n] += static_cast<float>(a * std::cos(th));
+                out[f * hop + n] += static_cast<float>(a * std::cos(th + err * nn / T));
+                th += w;
             }
         }
 
@@ -1090,5 +1332,62 @@ private:
         }
     }
 
+    // free mode: phase-continuous accumulation of the interpolated
+    // frequency; the anchors are only used to set the run's starting
+    // phase. immune to unreliable anchors -- the smooth mode
+    void synth_run_free(const std::vector<float>& amps, const std::vector<float>& freqs,
+                        const std::vector<float>& phases,
+                        size_t s, size_t f0, size_t f1, size_t slots, size_t frames,
+                        size_t hop, std::vector<float>& out)
+    {
+        const double T = double(hop);
+
+        // running phase, seeded by the run's first anchor
+        double th = double(phases[f0 * slots + s]);
+
+        // birth: fade in over the frame before the run
+        if (f0 > 0) {
+            const double a1 = double(amps[f0 * slots + s]);
+            const double w = 2.0 * M_PI * double(freqs[f0 * slots + s]) / m_sr;
+            const double th_start = th - w * T;
+            for (size_t n = 0; n < hop; ++n) {
+                const double a = a1 * double(n) / T;
+                out[(f0 - 1) * hop + n] += static_cast<float>(a * std::cos(th_start + w * double(n)));
+            }
+        }
+
+        for (size_t f = f0; f < f1; ++f) {
+            const double a0 = double(amps[f * slots + s]);
+            const double a1 = double(amps[(f + 1) * slots + s]);
+            if (a0 == 0.0 && a1 == 0.0) {
+                // inaudible gap segment: keep the phase advancing at
+                // the held frequency so the partial stays continuous
+                const double w = 2.0 * M_PI * double(freqs[f * slots + s]) / m_sr;
+                th += w * T;
+                continue;
+            }
+            const double w0 = 2.0 * M_PI * double(freqs[f * slots + s]) / m_sr;
+            const double w1 = 2.0 * M_PI * double(freqs[(f + 1) * slots + s]) / m_sr;
+            for (size_t n = 0; n < hop; ++n) {
+                const double nn = double(n);
+                const double a = a0 + (a1 - a0) * nn / T;
+                out[f * hop + n] += static_cast<float>(a * std::cos(th));
+                th += w0 + (w1 - w0) * nn / T;
+            }
+        }
+
+        // death: fade out over the frame after the run
+        if (f1 + 1 < frames) {
+            const double a0 = double(amps[f1 * slots + s]);
+            const double w = 2.0 * M_PI * double(freqs[f1 * slots + s]) / m_sr;
+            for (size_t n = 0; n < hop; ++n) {
+                const double a = a0 * (1.0 - double(n) / T);
+                out[f1 * hop + n] += static_cast<float>(a * std::cos(th));
+                th += w;
+            }
+        }
+    }
+
     double m_sr = 48000.0;
+    int m_fftsize = 512;
 };
