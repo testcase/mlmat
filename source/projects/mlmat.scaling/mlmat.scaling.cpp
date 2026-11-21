@@ -125,7 +125,13 @@ public:
     
     message<> read {this, "read",
         MIN_FUNCTION {
-            load_file(args);
+            // min::error() THROWS by design: canceling the file dialog
+            // or a bad file escapes here without this catch
+            try {
+                load_file(args);
+            } catch (const std::exception& s) {
+                cerr << s.what() << endl;
+            }
             return {};
         }
     };

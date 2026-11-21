@@ -92,9 +92,19 @@ public:
     
     message<> read {this, "read",
         MIN_FUNCTION {
-            load_model_file(args);
-            autoscale = m_model.autoscale;
-            m_mode_changed = false;
+            // min::error() THROWS std::runtime_error by design (it is
+            // not a console post) -- canceling the file dialog throws
+            // "file not chosen" from the path constructor, and a bad
+            // model file throws from mlpack::Load. without this catch
+            // the exception escapes into Max's event loop and
+            // terminates the process
+            try {
+                load_model_file(args);
+                autoscale = m_model.autoscale;
+                m_mode_changed = false;
+            } catch (const std::exception& s) {
+                cerr << s.what() << endl;
+            }
             return {};
         }
     };
