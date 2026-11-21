@@ -103,10 +103,38 @@ inline double window_coherent_gain(int fftsize, const string& window_string)
     return sum / static_cast<double>(fftsize);
 }
 
-/// Cubic Hermite (Catmull-Rom) resampling of `input` (sampled at
-/// `input_rate`) to `output_rate`. The output vector is resized to
-/// round(input.size() * output_rate / input_rate) and holds the signal
-/// resampled onto the output-rate sample grid.
+/// Modified Bessel function of the first kind, order 0 (power
+/// series; converges quickly for the Kaiser beta values used here).
+inline double bessel_i0(double x)
+{
+    double sum = 1.0, term = 1.0;
+    for (int k = 1; k < 32; ++k) {
+        term *= (x / (2.0 * double(k))) * (x / (2.0 * double(k)));
+        sum += term;
+        if (term < 1e-12 * sum)
+            break;
+    }
+    return sum;
+}
+
+/// Band-limited resampling of `input` (sampled at `input_rate`) to
+/// `output_rate`, by a Kaiser-windowed sinc kernel (beta 9, half-width
+/// 16 input samples, per-tap renormalized). The output vector is
+/// resized to round(input.size() * output_rate / input_rate).
+///
+/// This REPLACED a cubic Hermite (Catmull-Rom) interpolator, which is
+/// not an anti-aliasing resampler: a measured 23 kHz tone above the
+/// target's Nyquist survived a 48k -> 44.1k downsample at FULL
+/// amplitude (aliased to 21.1 kHz), and that inharmonic junk was then
+/// faithfully modeled and distributed by every downstream NMF --
+/// the "resample mode sounds worse" symptom. The sinc kernel's cutoff
+/// is min(in, out) Nyquist, so above-target-Nyquist content is
+/// attenuated by the Kaiser stopband (~90 dB) instead of aliased.
+///
+/// Per-tap renormalization keeps DC exact (a constant resamples to
+/// the same constant), which matters for the @nodc chain. Same-rate
+/// resampling is the exact identity: the normalized kernel evaluates
+/// to a delta at integer offsets.
 inline void resample(const std::vector<float>& input,
                      std::vector<float>& output,
                      double input_rate,
@@ -124,20 +152,59 @@ inline void resample(const std::vector<float>& input,
         return;
     }
     output.resize(out_size);
+
     const double step = static_cast<double>(in_size) / static_cast<double>(out_size);
-    for (size_t i = 0; i < out_size; ++i) {
-        const double pos = std::min(static_cast<double>(i) * step,
+    // cutoff in input-normalized units. downsampling: 0.9x of the
+    // target Nyquist (a guard band, so the kernel's transition band
+    // completes BELOW the frequency where content would alias -- the
+    // un-guarded cutoff leaves a 32-tap Kaiser's ~0.1-fs-wide
+    // transition straddling the alias point). upsampling and
+    // same-rate: 1.0 (no aliasing possible going up, and 1.0 keeps
+    // the same-rate kernel an exact delta at integer offsets)
+    const double c = (output_rate < input_rate)
+        ? 0.9 * output_rate / input_rate
+        : 1.0;
+    const int half_width = 32;
+    const double beta = 9.0;
+
+    // kaiser window over t in [0, 1] as a table (the window depends
+    // only on |u|/half_width; the table avoids a bessel per tap)
+    const int ktable_n = 1024;
+    std::vector<double> ktable(static_cast<size_t>(ktable_n) + 1);
+    const double i0_beta = bessel_i0(beta);
+    for (int i = 0; i <= ktable_n; ++i) {
+        const double t = double(i) / double(ktable_n);
+        ktable[static_cast<size_t>(i)] =
+            bessel_i0(beta * std::sqrt(std::max(0.0, 1.0 - t * t))) / i0_beta;
+    }
+
+    for (size_t m = 0; m < out_size; ++m) {
+        const double pos = std::min(static_cast<double>(m) * step,
                                     static_cast<double>(in_size - 1));
-        const size_t p = static_cast<size_t>(pos);
-        const double t = pos - static_cast<double>(p);
-        const float p0 = input[p > 0 ? p - 1 : 0];
-        const float p1 = input[p];
-        const float p2 = input[p + 1 < in_size ? p + 1 : in_size - 1];
-        const float p3 = input[p + 2 < in_size ? p + 2 : in_size - 1];
-        output[i] = static_cast<float>(0.5 * ((2.0 * p1)
-            + (-static_cast<double>(p0) + p2) * t
-            + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t * t
-            + (-static_cast<double>(p0) + 3.0 * p1 - 3.0 * p2 + p3) * t * t * t));
+        long k_center = static_cast<long>(std::floor(pos));
+        long k_lo = std::max(0L, k_center - half_width + 1);
+        long k_hi = std::min(static_cast<long>(in_size) - 1, k_center + half_width);
+        double sum = 0.0, wsum = 0.0;
+        for (long k = k_lo; k <= k_hi; ++k) {
+            const double u = pos - static_cast<double>(k);
+            const double au = std::fabs(u);
+            if (au > static_cast<double>(half_width))
+                continue;
+            // h(u) = c * sinc(c*u) * kaiser(|u| / half_width)
+            const double z = c * u;
+            const double sinc = (std::fabs(z) < 1e-12) ? 1.0 : std::sin(M_PI * z) / (M_PI * z);
+            const double tf = au / static_cast<double>(half_width);
+            const double xk = tf * double(ktable_n);
+            const size_t ki = static_cast<size_t>(xk);
+            const double frac = xk - double(ki);
+            const double kw = (ki < static_cast<size_t>(ktable_n))
+                ? ktable[ki] + frac * (ktable[ki + 1] - ktable[ki])
+                : ktable[static_cast<size_t>(ktable_n)];
+            const double h = c * sinc * kw;
+            sum += static_cast<double>(input[static_cast<size_t>(k)]) * h;
+            wsum += h;
+        }
+        output[m] = (wsum != 0.0) ? static_cast<float>(sum / wsum) : 0.0f;
     }
 }
 

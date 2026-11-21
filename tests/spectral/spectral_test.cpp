@@ -1779,6 +1779,48 @@ static void run_dc_removal()
     }
 }
 
+// ---------------------------------------------------------------------------
+// resampler aliasing: a tone above the TARGET's Nyquist must vanish on
+// downsampling. the current resampler is cubic Hermite (no anti-alias
+// filter), so this measures what actually happens -- polynomial
+// interpolation is not a band-limited resampler
+// ---------------------------------------------------------------------------
+static void run_resample_aliasing()
+{
+    // 48k source with a 23 kHz tone (below the source Nyquist 24k,
+    // ABOVE the target Nyquist 22.05k). a proper resampler removes it;
+    // an aliased copy lands at 44100 - 23000 = 21100 Hz
+    const double src_rate = 48000.0, dst_rate = 44100.0;
+    const double tone = 23000.0, alias = dst_rate - tone;   // 21100 Hz
+    const size_t n = 16384;
+
+    std::vector<float> x(n);
+    for (size_t i = 0; i < n; ++i)
+        x[i] = float(0.5 * std::sin(2.0 * M_PI * tone * double(i) / src_rate));
+
+    std::vector<float> y;
+    NEW::mlmat::resample(x, y, src_rate, dst_rate);
+
+    // measure the energy at the alias frequency (and at the tone's
+    // would-be surviving frequency) via correlation against pure
+    // references, over the interior of the resampled signal
+    // phase-aware amplitude: correlate against sin AND cos at the
+    // alias frequency (a sine-only dot misses the cos component)
+    double dot_s = 0.0, dot_c = 0.0;
+    const size_t a = 512, b = y.size() - 512;
+    const double count = double(b - a);
+    for (size_t i = a; i < b; ++i) {
+        const double t = double(i);
+        const double th = 2.0 * M_PI * alias * t / dst_rate;
+        dot_s += double(y[i]) * std::sin(th);
+        dot_c += double(y[i]) * std::cos(th);
+    }
+    const double alias_amp = 2.0 * std::sqrt(dot_s * dot_s + dot_c * dot_c) / count;
+    printf("  [resample] 23kHz tone above target Nyquist: aliased energy at 21.1kHz = %.6f\n",
+           alias_amp);
+    check(alias_amp < 0.02, "resampler rejects above-Nyquist content (anti-aliasing)", alias_amp);
+}
+
 int main()
 {
     run_parity();
@@ -1795,6 +1837,7 @@ int main()
     run_mq_tuning();
     run_reassign_tuning();
     run_dc_removal();
+    run_resample_aliasing();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }
