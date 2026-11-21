@@ -12,8 +12,8 @@
       "rect": [
          100.0,
          100.0,
-         960.0,
-         800.0
+         1000.0,
+         720.0
       ],
       "bglocked": 0,
       "openinpresentation": 0,
@@ -36,10 +36,10 @@
                "patching_rect": [
                   25,
                   18,
-                  560,
+                  620,
                   20.0
                ],
-               "text": "mlmat NMF separation -- the whole chain"
+               "text": "mlmat NMF separation -- the whole chain (pure stock objects)"
             }
          },
          {
@@ -53,10 +53,10 @@
                "patching_rect": [
                   25,
                   45,
-                  900,
+                  940,
                   48
                ],
-               "text": "buffer_stft (polar, @nodc 1) -> magnitudes to mlmat.nfm @mode 1 -> the js computes Vhat_i and T -> mask: share = Vhat_i / T, mag_i = V * share -> jit.pack with the original phases -> buffer_istft. Zeros in V stay zero: the factorization cannot refill the bins @nodc cleaned. Bang once after loading audio; pick a component with the number."
+               "text": "buffer_stft (polar, @nodc 1) -> magnitudes to mlmat.nfm @mode 1 -> jit.submatrix extracts w_i and h_i (offsets from the number) -> jit.la.mult computes Vhat_i = w_i x h_i; a second jit.la.mult computes T = W*H -> mask: share = Vhat_i / floored T, mag_i = V * share -> jit.pack with the original phases -> buffer_istft. Zeros in V stay zero: the factorization cannot refill the bins @nodc cleaned. Bang once after loading audio; pick a component with the number."
             }
          },
          {
@@ -170,7 +170,7 @@
                ],
                "patching_rect": [
                   270,
-                  235,
+                  230,
                   200,
                   22.0
                ],
@@ -186,19 +186,19 @@
                "numinlets": 1,
                "numoutlets": 0,
                "patching_rect": [
-                  60,
-                  315,
-                  140,
+                  25,
+                  285,
+                  560,
                   20.0
                ],
-               "text": "W (frames x rank) holder"
+               "text": "W (frames x rank) and H (rank x bins), mode 1"
             }
          },
          {
             "box": {
                "fontname": "Arial",
                "fontsize": 12.0,
-               "id": "w_hold",
+               "id": "sub_w",
                "maxclass": "newobj",
                "numinlets": 1,
                "numoutlets": 1,
@@ -206,19 +206,19 @@
                   "jit_matrix"
                ],
                "patching_rect": [
-                  60,
-                  335,
-                  230,
+                  25,
+                  320,
+                  190,
                   22.0
                ],
-               "text": "jit.matrix mlmat.nmf.W 1 float64 1 1"
+               "text": "jit.submatrix @offset 0 0"
             }
          },
          {
             "box": {
                "fontname": "Arial",
                "fontsize": 12.0,
-               "id": "h_hold",
+               "id": "sub_h",
                "maxclass": "newobj",
                "numinlets": 1,
                "numoutlets": 1,
@@ -226,69 +226,128 @@
                   "jit_matrix"
                ],
                "patching_rect": [
-                  400,
-                  335,
-                  230,
+                  270,
+                  320,
+                  190,
                   22.0
                ],
-               "text": "jit.matrix mlmat.nmf.H 1 float64 1 1"
+               "text": "jit.submatrix @offset 0 0"
+            }
+         },
+         {
+            "box": {
+               "fontname": "Arial",
+               "fontsize": 12.0,
+               "id": "copy_w",
+               "maxclass": "newobj",
+               "numinlets": 1,
+               "numoutlets": 1,
+               "outlettype": [
+                  "jit_matrix"
+               ],
+               "patching_rect": [
+                  25,
+                  360,
+                  240,
+                  22.0
+               ],
+               "text": "jit.matrix mlmat.nmf.wi 1 float64 1 1"
+            }
+         },
+         {
+            "box": {
+               "fontname": "Arial",
+               "fontsize": 12.0,
+               "id": "copy_h",
+               "maxclass": "newobj",
+               "numinlets": 1,
+               "numoutlets": 1,
+               "outlettype": [
+                  "jit_matrix"
+               ],
+               "patching_rect": [
+                  270,
+                  360,
+                  240,
+                  22.0
+               ],
+               "text": "jit.matrix mlmat.nmf.hi 1 float64 1 1"
             }
          },
          {
             "box": {
                "fontname": "Arial",
                "fontsize": 11,
-               "id": "n_h",
+               "id": "n_copy",
                "maxclass": "comment",
                "numinlets": 1,
                "numoutlets": 0,
                "patching_rect": [
-                  400,
-                  315,
-                  160,
-                  20.0
+                  520,
+                  365,
+                  380,
+                  30
                ],
-               "text": "H (rank x bins) holder"
+               "text": "jit.matrix copies: jit.submatrix outputs a REFERENCE, which jit.la.mult may not consume directly (per the jit.submatrix docs)"
             }
          },
          {
             "box": {
                "fontname": "Arial",
                "fontsize": 12.0,
-               "id": "t_b",
+               "id": "la_comp",
                "maxclass": "newobj",
-               "numinlets": 1,
-               "numoutlets": 1,
+               "numinlets": 2,
+               "numoutlets": 2,
                "outlettype": [
-                  "bang"
-               ],
-               "patching_rect": [
-                  400,
-                  395,
-                  40,
-                  22.0
-               ],
-               "text": "t b"
-            }
-         },
-         {
-            "box": {
-               "fontname": "Arial",
-               "fontsize": 12.0,
-               "id": "msg_trig",
-               "maxclass": "newobj",
-               "numinlets": 1,
-               "numoutlets": 1,
-               "outlettype": [
+                  "jit_matrix",
                   ""
                ],
                "patching_rect": [
                   270,
-                  395,
-                  150,
-                  20.0
+                  410,
+                  100,
+                  22.0
                ],
-               "text": "total, component"
+               "text": "jit.la.mult"
+            }
+         },
+         {
+            "box": {
+               "fontname": "Arial",
+               "fontsize": 12.0,
+               "id": "la_total",
+               "maxclass": "newobj",
+               "numinlets": 2,
+               "numoutlets": 2,
+               "outlettype": [
+                  "jit_matrix",
+                  ""
+               ],
+               "patching_rect": [
+                  270,
+                  285,
+                  100,
+                  22.0
+               ],
+               "text": "jit.la.mult"
+            }
+         },
+         {
+            "box": {
+               "fontname": "Arial",
+               "fontsize": 11,
+               "id": "n_la",
+               "maxclass": "comment",
+               "numinlets": 1,
+               "numoutlets": 0,
+               "patching_rect": [
+                  390,
+                  285,
+                  470,
+                  36
+               ],
+               "text": "T = W*H direct; Vhat_i = (w_i column) x (h_i row) via the two submatrix slices. If the component comes out transposed, swap the two offset messages below."
             }
          },
          {
@@ -304,8 +363,8 @@
                   "bang"
                ],
                "patching_rect": [
-                  100,
-                  395,
+                  25,
+                  410,
                   60,
                   20.0
                ],
@@ -316,58 +375,100 @@
             "box": {
                "fontname": "Arial",
                "fontsize": 12.0,
-               "id": "msg_idx",
+               "id": "t_num",
                "maxclass": "newobj",
                "numinlets": 1,
-               "numoutlets": 1,
+               "numoutlets": 3,
                "outlettype": [
-                  ""
+                  "int",
+                  "int",
+                  "int"
                ],
                "patching_rect": [
-                  100,
-                  430,
-                  130,
-                  20.0
+                  25,
+                  445,
+                  50,
+                  22.0
                ],
-               "text": "message index $1"
+               "text": "t i i i"
             }
          },
          {
             "box": {
                "fontname": "Arial",
                "fontsize": 12.0,
-               "id": "js",
+               "id": "msg_w",
+               "maxclass": "message",
+               "numinlets": 1,
+               "numoutlets": 1,
+               "outlettype": [
+                  ""
+               ],
+               "patching_rect": [
+                  105,
+                  445,
+                  100,
+                  20.0
+               ],
+               "text": "offset 0 $1"
+            }
+         },
+         {
+            "box": {
+               "fontname": "Arial",
+               "fontsize": 12.0,
+               "id": "msg_h",
+               "maxclass": "message",
+               "numinlets": 1,
+               "numoutlets": 1,
+               "outlettype": [
+                  ""
+               ],
+               "patching_rect": [
+                  105,
+                  480,
+                  100,
+                  20.0
+               ],
+               "text": "offset $1 0"
+            }
+         },
+         {
+            "box": {
+               "fontname": "Arial",
+               "fontsize": 12.0,
+               "id": "t_bang",
                "maxclass": "newobj",
                "numinlets": 1,
                "numoutlets": 2,
                "outlettype": [
-                  "jit_matrix",
-                  "jit_matrix"
+                  "bang",
+                  "bang"
                ],
                "patching_rect": [
-                  270,
-                  440,
-                  220,
+                  25,
+                  480,
+                  50,
                   22.0
                ],
-               "text": "js mlmat.nmf-component.js"
+               "text": "t b b"
             }
          },
          {
             "box": {
                "fontname": "Arial",
                "fontsize": 11,
-               "id": "n_js",
+               "id": "n_order",
                "maxclass": "comment",
                "numinlets": 1,
                "numoutlets": 0,
                "patching_rect": [
-                  500,
-                  440,
-                  260,
-                  20.0
+                  105,
+                  510,
+                  430,
+                  30
                ],
-               "text": "outlet 1: Vhat_i; outlet 2: T = W*H (slow: cell-wise js)"
+               "text": "h_i re-slices first, w_i last: the left-inlet arrival into jit.la.mult is the trigger, so the right input must already be current"
             }
          },
          {
@@ -384,7 +485,7 @@
                ],
                "patching_rect": [
                   270,
-                  500,
+                  460,
                   170,
                   22.0
                ],
@@ -405,7 +506,7 @@
                ],
                "patching_rect": [
                   270,
-                  550,
+                  510,
                   100,
                   22.0
                ],
@@ -426,7 +527,7 @@
                ],
                "patching_rect": [
                   270,
-                  600,
+                  555,
                   100,
                   22.0
                ],
@@ -447,7 +548,7 @@
                ],
                "patching_rect": [
                   270,
-                  650,
+                  600,
                   100,
                   22.0
                ],
@@ -468,7 +569,7 @@
                ],
                "patching_rect": [
                   270,
-                  700,
+                  645,
                   520,
                   22.0
                ],
@@ -489,7 +590,7 @@
                ],
                "patching_rect": [
                   25,
-                  700,
+                  645,
                   170,
                   22.0
                ],
@@ -506,7 +607,7 @@
                "numoutlets": 0,
                "patching_rect": [
                   640,
-                  605,
+                  560,
                   280,
                   20.0
                ],
@@ -523,32 +624,15 @@
                "numoutlets": 0,
                "patching_rect": [
                   640,
-                  655,
+                  605,
                   280,
                   20.0
                ],
                "text": "plane 0 = masked magnitudes, plane 1 = original phases"
             }
-         },
-         {
-            "box": {
-               "fontname": "Arial",
-               "fontsize": 11,
-               "id": "n_out",
-               "maxclass": "comment",
-               "numinlets": 1,
-               "numoutlets": 0,
-               "patching_rect": [
-                  25,
-                  735,
-                  900,
-                  20.0
-               ],
-               "text": "Compare against the fragment (extras/mlmat nmf masking.maxpat): same three jit.ops. Wiener variant: square Vhat_i and T before the div."
-            }
          }
       ],
-      "lines": [
+      "patchlines": [
          {
             "destination": {
                "id": "stft",
@@ -601,7 +685,7 @@
          },
          {
             "destination": {
-               "id": "w_hold",
+               "id": "sub_w",
                "inlet": 0
             },
             "source": {
@@ -611,7 +695,17 @@
          },
          {
             "destination": {
-               "id": "h_hold",
+               "id": "la_total",
+               "inlet": 0
+            },
+            "source": {
+               "id": "nmf",
+               "outlet": 0
+            }
+         },
+         {
+            "destination": {
+               "id": "sub_h",
                "inlet": 0
             },
             "source": {
@@ -621,51 +715,61 @@
          },
          {
             "destination": {
-               "id": "t_b",
+               "id": "la_total",
+               "inlet": 1
+            },
+            "source": {
+               "id": "nmf",
+               "outlet": 1
+            }
+         },
+         {
+            "destination": {
+               "id": "copy_w",
                "inlet": 0
             },
             "source": {
-               "id": "h_hold",
+               "id": "sub_w",
                "outlet": 0
             }
          },
          {
             "destination": {
-               "id": "msg_trig",
+               "id": "copy_h",
                "inlet": 0
             },
             "source": {
-               "id": "t_b",
+               "id": "sub_h",
                "outlet": 0
             }
          },
          {
             "destination": {
-               "id": "js",
+               "id": "la_comp",
                "inlet": 0
             },
             "source": {
-               "id": "msg_trig",
+               "id": "copy_w",
                "outlet": 0
             }
          },
          {
             "destination": {
-               "id": "msg_idx",
-               "inlet": 0
+               "id": "la_comp",
+               "inlet": 1
             },
             "source": {
-               "id": "num",
+               "id": "copy_h",
                "outlet": 0
             }
          },
          {
             "destination": {
-               "id": "js",
+               "id": "div",
                "inlet": 0
             },
             "source": {
-               "id": "msg_idx",
+               "id": "la_comp",
                "outlet": 0
             }
          },
@@ -675,8 +779,8 @@
                "inlet": 0
             },
             "source": {
-               "id": "js",
-               "outlet": 1
+               "id": "la_total",
+               "outlet": 0
             }
          },
          {
@@ -686,16 +790,6 @@
             },
             "source": {
                "id": "floor",
-               "outlet": 0
-            }
-         },
-         {
-            "destination": {
-               "id": "div",
-               "inlet": 0
-            },
-            "source": {
-               "id": "js",
                "outlet": 0
             }
          },
@@ -726,6 +820,86 @@
             },
             "source": {
                "id": "pack",
+               "outlet": 0
+            }
+         },
+         {
+            "destination": {
+               "id": "t_num",
+               "inlet": 0
+            },
+            "source": {
+               "id": "num",
+               "outlet": 0
+            }
+         },
+         {
+            "destination": {
+               "id": "msg_w",
+               "inlet": 0
+            },
+            "source": {
+               "id": "t_num",
+               "outlet": 2
+            }
+         },
+         {
+            "destination": {
+               "id": "msg_h",
+               "inlet": 0
+            },
+            "source": {
+               "id": "t_num",
+               "outlet": 1
+            }
+         },
+         {
+            "destination": {
+               "id": "sub_w",
+               "inlet": 0
+            },
+            "source": {
+               "id": "msg_w",
+               "outlet": 0
+            }
+         },
+         {
+            "destination": {
+               "id": "sub_h",
+               "inlet": 0
+            },
+            "source": {
+               "id": "msg_h",
+               "outlet": 0
+            }
+         },
+         {
+            "destination": {
+               "id": "t_bang",
+               "inlet": 0
+            },
+            "source": {
+               "id": "t_num",
+               "outlet": 0
+            }
+         },
+         {
+            "destination": {
+               "id": "sub_h",
+               "inlet": 0
+            },
+            "source": {
+               "id": "t_bang",
+               "outlet": 1
+            }
+         },
+         {
+            "destination": {
+               "id": "sub_w",
+               "inlet": 0
+            },
+            "source": {
+               "id": "t_bang",
                "outlet": 0
             }
          }

@@ -280,7 +280,13 @@
             }
          }
       ],
-      "lines": [
+      "parameters": {
+         "obj-..": {}
+      },
+      "dependency_cache": [],
+      "autosave": 0,
+      "styles": [],
+      "patchlines": [
          {
             "destination": {
                "id": "div",
@@ -311,12 +317,6 @@
                "outlet": 0
             }
          }
-      ],
-      "parameters": {
-         "obj-..": {}
-      },
-      "dependency_cache": [],
-      "autosave": 0,
-      "styles": []
+      ]
    }
 }
