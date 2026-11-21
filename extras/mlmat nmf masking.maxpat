@@ -280,43 +280,49 @@
             }
          }
       ],
+      "lines": [
+         {
+            "patchline": {
+               "destination": [
+                  "div",
+                  1
+               ],
+               "source": [
+                  "floor",
+                  0
+               ]
+            }
+         },
+         {
+            "patchline": {
+               "destination": [
+                  "mask",
+                  0
+               ],
+               "source": [
+                  "div",
+                  0
+               ]
+            }
+         },
+         {
+            "patchline": {
+               "destination": [
+                  "pack",
+                  0
+               ],
+               "source": [
+                  "mask",
+                  0
+               ]
+            }
+         }
+      ],
       "parameters": {
          "obj-..": {}
       },
       "dependency_cache": [],
       "autosave": 0,
-      "styles": [],
-      "patchlines": [
-         {
-            "destination": {
-               "id": "div",
-               "inlet": 1
-            },
-            "source": {
-               "id": "floor",
-               "outlet": 0
-            }
-         },
-         {
-            "destination": {
-               "id": "mask",
-               "inlet": 0
-            },
-            "source": {
-               "id": "div",
-               "outlet": 0
-            }
-         },
-         {
-            "destination": {
-               "id": "pack",
-               "inlet": 0
-            },
-            "source": {
-               "id": "mask",
-               "outlet": 0
-            }
-         }
-      ]
+      "styles": []
    }
 }

@@ -632,275 +632,329 @@
             }
          }
       ],
-      "patchlines": [
+      "lines": [
          {
-            "destination": {
-               "id": "stft",
-               "inlet": 0
-            },
-            "source": {
-               "id": "bang",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "stft",
+                  0
+               ],
+               "source": [
+                  "bang",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "unpack",
-               "inlet": 0
-            },
-            "source": {
-               "id": "stft",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "unpack",
+                  0
+               ],
+               "source": [
+                  "stft",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "nmf",
-               "inlet": 0
-            },
-            "source": {
-               "id": "unpack",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "nmf",
+                  0
+               ],
+               "source": [
+                  "unpack",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "mask",
-               "inlet": 1
-            },
-            "source": {
-               "id": "unpack",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "mask",
+                  1
+               ],
+               "source": [
+                  "unpack",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "pack",
-               "inlet": 1
-            },
-            "source": {
-               "id": "unpack",
-               "outlet": 1
+            "patchline": {
+               "destination": [
+                  "pack",
+                  1
+               ],
+               "source": [
+                  "unpack",
+                  1
+               ]
             }
          },
          {
-            "destination": {
-               "id": "sub_w",
-               "inlet": 0
-            },
-            "source": {
-               "id": "nmf",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "sub_w",
+                  0
+               ],
+               "source": [
+                  "nmf",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "la_total",
-               "inlet": 0
-            },
-            "source": {
-               "id": "nmf",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "la_total",
+                  0
+               ],
+               "source": [
+                  "nmf",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "sub_h",
-               "inlet": 0
-            },
-            "source": {
-               "id": "nmf",
-               "outlet": 1
+            "patchline": {
+               "destination": [
+                  "sub_h",
+                  0
+               ],
+               "source": [
+                  "nmf",
+                  1
+               ]
             }
          },
          {
-            "destination": {
-               "id": "la_total",
-               "inlet": 1
-            },
-            "source": {
-               "id": "nmf",
-               "outlet": 1
+            "patchline": {
+               "destination": [
+                  "la_total",
+                  1
+               ],
+               "source": [
+                  "nmf",
+                  1
+               ]
             }
          },
          {
-            "destination": {
-               "id": "copy_w",
-               "inlet": 0
-            },
-            "source": {
-               "id": "sub_w",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "copy_w",
+                  0
+               ],
+               "source": [
+                  "sub_w",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "copy_h",
-               "inlet": 0
-            },
-            "source": {
-               "id": "sub_h",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "copy_h",
+                  0
+               ],
+               "source": [
+                  "sub_h",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "la_comp",
-               "inlet": 0
-            },
-            "source": {
-               "id": "copy_w",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "la_comp",
+                  0
+               ],
+               "source": [
+                  "copy_w",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "la_comp",
-               "inlet": 1
-            },
-            "source": {
-               "id": "copy_h",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "la_comp",
+                  1
+               ],
+               "source": [
+                  "copy_h",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "div",
-               "inlet": 0
-            },
-            "source": {
-               "id": "la_comp",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "div",
+                  0
+               ],
+               "source": [
+                  "la_comp",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "floor",
-               "inlet": 0
-            },
-            "source": {
-               "id": "la_total",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "floor",
+                  0
+               ],
+               "source": [
+                  "la_total",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "div",
-               "inlet": 1
-            },
-            "source": {
-               "id": "floor",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "div",
+                  1
+               ],
+               "source": [
+                  "floor",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "mask",
-               "inlet": 0
-            },
-            "source": {
-               "id": "div",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "mask",
+                  0
+               ],
+               "source": [
+                  "div",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "pack",
-               "inlet": 0
-            },
-            "source": {
-               "id": "mask",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "pack",
+                  0
+               ],
+               "source": [
+                  "mask",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "istft",
-               "inlet": 0
-            },
-            "source": {
-               "id": "pack",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "istft",
+                  0
+               ],
+               "source": [
+                  "pack",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "t_num",
-               "inlet": 0
-            },
-            "source": {
-               "id": "num",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "t_num",
+                  0
+               ],
+               "source": [
+                  "num",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "msg_w",
-               "inlet": 0
-            },
-            "source": {
-               "id": "t_num",
-               "outlet": 2
+            "patchline": {
+               "destination": [
+                  "msg_w",
+                  0
+               ],
+               "source": [
+                  "t_num",
+                  2
+               ]
             }
          },
          {
-            "destination": {
-               "id": "msg_h",
-               "inlet": 0
-            },
-            "source": {
-               "id": "t_num",
-               "outlet": 1
+            "patchline": {
+               "destination": [
+                  "msg_h",
+                  0
+               ],
+               "source": [
+                  "t_num",
+                  1
+               ]
             }
          },
          {
-            "destination": {
-               "id": "sub_w",
-               "inlet": 0
-            },
-            "source": {
-               "id": "msg_w",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "sub_w",
+                  0
+               ],
+               "source": [
+                  "msg_w",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "sub_h",
-               "inlet": 0
-            },
-            "source": {
-               "id": "msg_h",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "sub_h",
+                  0
+               ],
+               "source": [
+                  "msg_h",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "t_bang",
-               "inlet": 0
-            },
-            "source": {
-               "id": "t_num",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "t_bang",
+                  0
+               ],
+               "source": [
+                  "t_num",
+                  0
+               ]
             }
          },
          {
-            "destination": {
-               "id": "sub_h",
-               "inlet": 0
-            },
-            "source": {
-               "id": "t_bang",
-               "outlet": 1
+            "patchline": {
+               "destination": [
+                  "sub_h",
+                  0
+               ],
+               "source": [
+                  "t_bang",
+                  1
+               ]
             }
          },
          {
-            "destination": {
-               "id": "sub_w",
-               "inlet": 0
-            },
-            "source": {
-               "id": "t_bang",
-               "outlet": 0
+            "patchline": {
+               "destination": [
+                  "sub_w",
+                  0
+               ],
+               "source": [
+                  "t_bang",
+                  0
+               ]
             }
          }
       ],
