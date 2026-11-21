@@ -80,6 +80,12 @@ public:
         }
     };
 
+    attribute<bool> nodc { this, "nodc", false,
+        description {
+            "If set, zero the DC bin of every analysis frame. Localized DC events in the source (edit boundaries, splices, offset regions) produce very large bin-0 magnitudes that dominate factorizations and resynthesize as one-sided offsets; this removes them at the source."
+        }
+    };
+
     attribute<bool> resample { this, "resample", true,
         description {
             "If set, resample the buffer~ contents to match the current Max sample rate when the buffer~ reports a different one (for example when a loaded file's sample rate differs from the Max sample rate), so the transform output is pitch-correct at the Max rate."
@@ -188,6 +194,15 @@ public:
             } catch ( const std::invalid_argument& e ) {
                 cerr << e.what() << endl;
                 goto out;
+            }
+
+            // @nodc: zero the DC bin of every frame. localized DC
+            // events in the source (edit steps, splices) otherwise
+            // produce bin-0 magnitudes that dominate factorizations
+            // and resynthesize as one-sided offsets
+            if (nodc) {
+                for (size_t f = 0; f < num_fft_frames; ++f)
+                    m_out_magnitudes[f * spec_dim] = 0.0f;
             }
 
             // resize the destination and write the analysis directly into

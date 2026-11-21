@@ -13,7 +13,7 @@
         "boxes": [
             {
                 "box": {
-                    "cols": 1440,
+                    "cols": 1323,
                     "fontface": 0,
                     "fontname": "Arial",
                     "fontsize": 12.0,
@@ -28,7 +28,7 @@
             },
             {
                 "box": {
-                    "cols": 1440,
+                    "cols": 1323,
                     "fontface": 0,
                     "fontname": "Arial",
                     "fontsize": 12.0,
@@ -86,7 +86,7 @@
                     "maxclass": "comment",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 455.0, 354.0, 156.0, 33.0 ],
+                    "patching_rect": [ 455.0, 354.0, 160.0, 33.0 ],
                     "text": "turn on playback of different decomposed parts"
                 }
             },
@@ -503,7 +503,7 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 326.0, 773.0, 139.0, 62.0 ],
+                    "patching_rect": [ 326.0, 773.0, 142.0, 62.0 ],
                     "text": "mlmat.buffer_istft nmf_ex_buf @channel 2 @input_polar 1 @overlap 2"
                 }
             },
@@ -560,7 +560,7 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 167.0, 791.0, 130.0, 62.0 ],
+                    "patching_rect": [ 167.0, 791.0, 132.0, 62.0 ],
                     "text": "mlmat.buffer_istft nmf_ex_buf @channel 1 @input_polar 1 @overlap 2"
                 }
             },

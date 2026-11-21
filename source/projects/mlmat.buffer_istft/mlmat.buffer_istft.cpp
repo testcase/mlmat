@@ -200,7 +200,6 @@ public:
             max::uchar *ip = nullptr;
 
             err = (max::t_jit_err)max::object_method(src_matrix, max::_jit_sym_getdata, &dataptr);
-
             // polar-input heuristic (one warning per object instance):
             // phases are bounded by pi by definition, so a
             // rect-configured resynthesizer receiving a 2-plane matrix
@@ -379,6 +378,7 @@ private:
 
     // one-shot polar-input warning
     bool m_polar_warned = false;
+
     std::vector<float> m_samples;
     std::vector<float> m_in_real;
     std::vector<float> m_in_imag;
