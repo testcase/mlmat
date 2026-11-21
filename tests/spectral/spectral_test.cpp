@@ -1707,6 +1707,78 @@ static void run_reassign_tuning()
     }
 }
 
+// ---------------------------------------------------------------------------
+// @nodc (buffer_stft): exact per-frame DC removal via window-weighted
+// mean subtraction. a constant's windowed DFT spans bin 0 and the
+// Hann family's +-1 neighbors at half the gain -- mean subtraction
+// removes all of it for any window; bin 0 zeroing does not
+// ---------------------------------------------------------------------------
+static void run_dc_removal()
+{
+    const int fftsize = 512;
+    const double sr = 48000.0;
+    const size_t bins = size_t(fftsize) / 2;
+    const double cg = NEW::mlmat::window_coherent_gain(fftsize, "hanning");
+
+    // a constant input: without removal, bin 0 carries c * N * cg and
+    // bin 1 carries HALF of it (the Hann leakage) -- pin both; with
+    // removal, every bin is empty
+    {
+        const double c = 0.5;
+        std::vector<float> x(static_cast<size_t>(fftsize), static_cast<float>(c));
+        STFT stft;
+        std::vector<float> mags(bins, 0.0f), phases(bins, 0.0f);
+
+        stft.process(x, mags, phases, fftsize, 1, "hanning", true, false);
+        check(std::fabs(double(mags[0]) - c * double(fftsize) * cg) < 1e-2,
+              "nodc off: constant puts c*N*cg in bin 0",
+              double(mags[0]) - c * double(fftsize) * cg);
+        check(std::fabs(double(mags[1]) - c * double(fftsize) * cg / 2.0) < 1e-2,
+              "nodc off: the Hann leakage leaves HALF the DC gain in bin 1",
+              double(mags[1]) - c * double(fftsize) * cg / 2.0);
+
+        stft.process(x, mags, phases, fftsize, 1, "hanning", true, false, true);
+        double mmax = 0.0;
+        for (size_t k = 0; k < bins; ++k)
+            mmax = std::max(mmax, std::fabs(double(mags[k])));
+        check(mmax < 1e-4, "nodc on: a constant analyzes to an empty spectrum", mmax);
+    }
+
+    // a bin-1 sinusoid survives the removal untouched (only the
+    // constant is removed)
+    {
+        const double A = 0.5;
+        const double f1 = 1.0 * sr / fftsize;   // bin 1 exactly
+        std::vector<float> x(size_t(fftsize), 0.0f);
+        for (int i = 0; i < fftsize; ++i)
+            x[size_t(i)] = float(A * std::sin(2.0 * M_PI * f1 * i / sr));
+
+        STFT stft;
+        std::vector<float> mags(bins, 0.0f), phases(bins, 0.0f);
+        stft.process(x, mags, phases, fftsize, 1, "hanning", true, false, true);
+        check(std::fabs(double(mags[1]) - A * double(fftsize) * cg / 2.0) < 5e-2,
+              "nodc on: a bin-1 sinusoid survives",
+              double(mags[1]) - A * double(fftsize) * cg / 2.0);
+    }
+
+    // a DC step: without removal some frames carry huge bin-0; with
+    // removal no frame does (each frame's local constant is removed)
+    {
+        std::vector<float> x(4 * size_t(fftsize), 0.0f);
+        for (size_t i = 2 * size_t(fftsize); i < x.size(); ++i)
+            x[i] = 0.5f;
+
+        STFT stft;
+        const size_t frames = 5;
+        std::vector<float> mags(frames * bins, 0.0f), phases(frames * bins, 0.0f);
+        stft.process(x, mags, phases, fftsize, 1, "hanning", true, false, true);
+        double b0 = 0.0;
+        for (size_t f = 0; f < frames; ++f)
+            b0 = std::max(b0, double(mags[f * bins]));
+        check(b0 < 1e-2, "nodc on: a DC step leaves no bin-0 content in any frame", b0);
+    }
+}
+
 int main()
 {
     run_parity();
@@ -1722,6 +1794,7 @@ int main()
     run_gl_seeding();
     run_mq_tuning();
     run_reassign_tuning();
+    run_dc_removal();
     printf("spectral parity: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

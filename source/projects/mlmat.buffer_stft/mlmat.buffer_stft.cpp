@@ -82,7 +82,7 @@ public:
 
     attribute<bool> nodc { this, "nodc", false,
         description {
-            "If set, zero the DC bin of every analysis frame. Localized DC events in the source (edit boundaries, splices, offset regions) produce very large bin-0 magnitudes that dominate factorizations and resynthesize as one-sided offsets; this removes them at the source."
+            "If set, remove each analysis frame's local DC exactly. The frame's window-weighted mean is subtracted from the segment before windowing, so the constant's spectral footprint vanishes for any window -- zeroing bin 0 alone would leave the window leakage in the neighboring bins at half the DC gain. Localized DC events in the source (edit steps, splices) otherwise resynthesize as one-sided offsets."
         }
     };
 
@@ -190,19 +190,10 @@ public:
             const string window_string = window.get().c_str();
 
             try {
-                stft.process(m_input, m_out_magnitudes, m_out_phases, fftsize, overlap, window_string, output_polar, full_spectrum);
+                stft.process(m_input, m_out_magnitudes, m_out_phases, fftsize, overlap, window_string, output_polar, full_spectrum, nodc);
             } catch ( const std::invalid_argument& e ) {
                 cerr << e.what() << endl;
                 goto out;
-            }
-
-            // @nodc: zero the DC bin of every frame. localized DC
-            // events in the source (edit steps, splices) otherwise
-            // produce bin-0 magnitudes that dominate factorizations
-            // and resynthesize as one-sided offsets
-            if (nodc) {
-                for (size_t f = 0; f < num_fft_frames; ++f)
-                    m_out_magnitudes[f * spec_dim] = 0.0f;
             }
 
             // resize the destination and write the analysis directly into

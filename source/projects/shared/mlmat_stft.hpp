@@ -671,7 +671,8 @@ public:
                  int overlap,
                  const string window_string,
                  bool output_polar = true,
-                 bool full_spectrum = false)
+                 bool full_spectrum = false,
+                 bool remove_dc = false)
     {
         if (!mlmat::fftsize_is_valid(fftsize)) {
             std::stringstream ss;
@@ -728,6 +729,36 @@ public:
             else {
                 std::copy_n(input.begin()+i, fftsize, m_in_samples.begin());
             }
+            // @nodc (mlmat.buffer_stft): remove the frame's local
+            // constant exactly, BEFORE windowing: estimate the
+            // window-weighted mean and subtract it from the segment.
+            // the constant's windowed DFT spans bin 0 and its
+            // neighbors (the Hann family's +-1 bins carry half the DC
+            // gain), so removing it in the time domain clears every
+            // affected bin for any window -- zeroing bin 0 alone
+            // leaves that leakage behind
+            if (remove_dc) {
+                if (window_string == "square") {
+                    double sum = 0.0;
+                    for (auto j = 0; j < fftsize; ++j)
+                        sum += double(m_in_samples[j]);
+                    const double c = sum / double(fftsize);
+                    for (auto j = 0; j < fftsize; ++j)
+                        m_in_samples[j] = static_cast<float>(double(m_in_samples[j]) - c);
+                } else {
+                    double sw = 0.0, ww = 0.0;
+                    for (auto j = 0; j < fftsize; ++j) {
+                        sw += double(m_in_samples[j]) * double(m_window_vector[j]);
+                        ww += double(m_window_vector[j]);
+                    }
+                    if (ww > 0.0) {
+                        const double c = sw / ww;
+                        for (auto j = 0; j < fftsize; ++j)
+                            m_in_samples[j] = static_cast<float>(double(m_in_samples[j]) - c);
+                    }
+                }
+            }
+
             //window
             if (window_string != "square") {
                 for(auto j=0;j<fftsize;j++) {
