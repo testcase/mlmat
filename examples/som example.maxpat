@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 102.0, 144.0, 1425.0, 1022.0 ],
+        "rect": [ 43.0, 100.0, 1425.0, 1022.0 ],
         "boxes": [
             {
                 "box": {
@@ -28,7 +28,7 @@
                     "maxclass": "comment",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 89.53488372093024, 186.88372093023256, 127.90697674418605, 33.0 ],
+                    "patching_rect": [ 89.53488372093024, 175.88372093023258, 127.90697674418605, 33.0 ],
                     "text": "1) analyze buffer channel 1"
                 }
             },
@@ -46,12 +46,13 @@
             {
                 "box": {
                     "id": "obj-37",
+                    "linecount": 2,
                     "maxclass": "newobj",
                     "numinlets": 1,
                     "numoutlets": 2,
                     "outlettype": [ "float", "bang" ],
-                    "patching_rect": [ 334.8837209302326, 137.2093023255814, 169.0, 22.0 ],
-                    "text": "buffer~ anton.aif anton.aif -1 2"
+                    "patching_rect": [ 334.8837209302326, 137.2093023255814, 169.0, 35.0 ],
+                    "text": "buffer~ FemVoice.aif FemVoice.aif -1 2"
                 }
             },
             {
@@ -90,12 +91,13 @@
             {
                 "box": {
                     "id": "obj-24",
+                    "linecount": 2,
                     "maxclass": "newobj",
                     "numinlets": 1,
                     "numoutlets": 2,
                     "outlettype": [ "jit_matrix", "" ],
-                    "patching_rect": [ 44.79786741733551, 210.46511627906978, 374.0, 22.0 ],
-                    "text": "mlmat.buffer_stft anton.aif @fftsize 512 @overlap 2 @output_polar 1"
+                    "patching_rect": [ 44.79786741733551, 210.46511627906978, 374.0, 35.0 ],
+                    "text": "mlmat.buffer_stft FemVoice.aif @fftsize 512 @overlap 4 @output_polar 1"
                 }
             },
             {
@@ -121,11 +123,12 @@
             {
                 "box": {
                     "id": "obj-17",
+                    "linecount": 2,
                     "maxclass": "comment",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 55.79786741733551, 456.0, 150.0, 20.0 ],
-                    "text": "3) train model"
+                    "patching_rect": [ 55.79786741733551, 456.0, 150.0, 33.0 ],
+                    "text": "3) train model - may take a minute"
                 }
             },
             {
@@ -187,41 +190,6 @@
                     "spacing_x": 1.0,
                     "spacing_y": 3.0,
                     "tabs": [ "train", "clear", "read", "write" ]
-                }
-            },
-            {
-                "box": {
-                    "id": "obj-10",
-                    "lastchannelcount": 0,
-                    "maxclass": "live.gain~",
-                    "numinlets": 2,
-                    "numoutlets": 5,
-                    "orientation": 1,
-                    "outlettype": [ "signal", "signal", "", "float", "list" ],
-                    "parameter_enable": 1,
-                    "patching_rect": [ 304.0, 276.0, 136.0, 36.0 ],
-                    "saved_attribute_attributes": {
-                        "valueof": {
-                            "parameter_longname": "live.gain~[5]",
-                            "parameter_mmax": 6.0,
-                            "parameter_mmin": -70.0,
-                            "parameter_modmode": 0,
-                            "parameter_shortname": "live.gain~[5]",
-                            "parameter_type": 0,
-                            "parameter_unitstyle": 4
-                        }
-                    },
-                    "showname": 0,
-                    "varname": "live.gain~"
-                }
-            },
-            {
-                "box": {
-                    "id": "obj-9",
-                    "maxclass": "ezdac~",
-                    "numinlets": 2,
-                    "numoutlets": 0,
-                    "patching_rect": [ 303.0, 369.0, 45.0, 45.0 ]
                 }
             },
             {
@@ -334,22 +302,6 @@
             },
             {
                 "box": {
-                    "depthbuffer": 1,
-                    "doublebuffer": 1,
-                    "fsaa": 0,
-                    "id": "obj-148",
-                    "maxclass": "jit.pwindow",
-                    "numinlets": 1,
-                    "numoutlets": 2,
-                    "outlettype": [ "jit_matrix", "" ],
-                    "patching_rect": [ 122.0, 313.95348837209303, 80.0, 60.0 ],
-                    "pwinoutlettype": 0,
-                    "stereo": 0,
-                    "sync": 1
-                }
-            },
-            {
-                "box": {
                     "id": "obj-120",
                     "maxclass": "newobj",
                     "numinlets": 1,
@@ -423,7 +375,7 @@
                     "numoutlets": 1,
                     "outlettype": [ "signal" ],
                     "patching_rect": [ 500.0, 545.2000039815903, 212.0, 22.0 ],
-                    "text": "pfft~ mlmat-pv-resynth~ 512 2 args oh",
+                    "text": "pfft~ mlmat-pv-resynth~ 512 4 args oh",
                     "varname": "poly~[1]"
                 }
             },
@@ -591,20 +543,6 @@
             },
             {
                 "patchline": {
-                    "destination": [ "obj-9", 1 ],
-                    "order": 0,
-                    "source": [ "obj-10", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-9", 0 ],
-                    "order": 1,
-                    "source": [ "obj-10", 0 ]
-                }
-            },
-            {
-                "patchline": {
                     "destination": [ "obj-99", 0 ],
                     "source": [ "obj-101", 0 ]
                 }
@@ -741,15 +679,7 @@
             },
             {
                 "patchline": {
-                    "destination": [ "obj-148", 0 ],
-                    "order": 0,
-                    "source": [ "obj-32", 0 ]
-                }
-            },
-            {
-                "patchline": {
                     "destination": [ "obj-99", 0 ],
-                    "order": 1,
                     "source": [ "obj-32", 0 ]
                 }
             },
@@ -831,7 +761,6 @@
             }
         ],
         "parameters": {
-            "obj-10": [ "live.gain~[5]", "live.gain~[5]", 0 ],
             "obj-102": [ "live.gain~", "live.gain~", 0 ],
             "parameterbanks": {
                 "0": {

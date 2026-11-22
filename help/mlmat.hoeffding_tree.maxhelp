@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 766.0, 303.0, 635.0, 721.0 ],
+        "rect": [ 100.0, 100.0, 635.0, 721.0 ],
         "default_fontsize": 13.0,
         "gridsize": [ 5.0, 5.0 ],
         "showrootpatcherontab": 0,
@@ -50,7 +50,7 @@
                             "modernui": 1
                         },
                         "classnamespace": "box",
-                        "rect": [ 766.0, 329.0, 635.0, 695.0 ],
+                        "rect": [ 100.0, 126.0, 635.0, 695.0 ],
                         "default_fontsize": 13.0,
                         "gridsize": [ 5.0, 5.0 ],
                         "showontab": 1,
